@@ -8,9 +8,10 @@
     "@mui/icons-material": "^5.16.7",
     "@mui/material": "^5.16.7",
     "firebase": "^9.23.0",
+    "next": "^15.0.3",
     "qrcode.react": "^3.2.0",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
     "react-router-dom": "^6.28.0",
     "react-scripts": "5.0.1"
   },
