@@ -1,10 +1,29 @@
+import { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import NotificationBell from '../notifications/NotificationBell';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../../firebase/config';
+import { FaBars, FaTimes, FaTicketAlt } from 'react-icons/fa';
+import './Navbar.css';
 
 function Navbar() {
   const { currentUser, logout } = useAuth();
   const navigate = useNavigate();
+  const [userRole, setUserRole] = useState(null);
+  const [isOpen, setIsOpen] = useState(false);
+
+  useEffect(() => {
+    async function getUserRole() {
+      if (currentUser) {
+        const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+        if (userDoc.exists()) {
+          setUserRole(userDoc.data().role);
+        }
+      }
+    }
+    getUserRole();
+  }, [currentUser]);
 
   async function handleLogout() {
     try {
@@ -16,31 +35,29 @@ function Navbar() {
   }
 
   return (
-    <nav style={{
-      backgroundColor: '#1976d2',
-      padding: '1rem',
-      color: 'white',
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center'
-    }}>
-      <div>Ticket Management System</div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-        <NotificationBell />
-        <span>{currentUser?.email}</span>
-        <button
-          onClick={handleLogout}
-          style={{
-            backgroundColor: 'transparent',
-            border: '1px solid white',
-            color: 'white',
-            padding: '0.5rem 1rem',
-            cursor: 'pointer',
-            borderRadius: '4px'
-          }}
-        >
-          Logout
-        </button>
+    <nav className="navbar">
+      <div className="navbar-brand">
+        <FaTicketAlt size={24} className="navbar-logo" />
+        <span className="navbar-title">Ticket System</span>
+      </div>
+
+      <button className="navbar-toggle" onClick={() => setIsOpen(!isOpen)}>
+        {isOpen ? <FaTimes /> : <FaBars />}
+      </button>
+
+      <div className={`navbar-menu ${isOpen ? 'is-open' : ''}`}>
+        <Link to="/" className="navbar-item">Dashboard</Link>
+        {userRole === 'manager' && (
+          <Link to="/validate" className="navbar-item">Valida Biglietti</Link>
+        )}
+        
+        <div className="navbar-end">
+          <NotificationBell />
+          <span className="navbar-user">{currentUser?.email}</span>
+          <button className="navbar-logout" onClick={handleLogout}>
+            Logout
+          </button>
+        </div>
       </div>
     </nav>
   );

@@ -4,6 +4,7 @@ import { NotificationProvider } from './contexts/NotificationContext';
 import Login from './components/auth/Login';
 import Register from './components/auth/Register';
 import Dashboard from './components/dashboard/Dashboard';
+import TicketValidator from './components/tickets/TicketValidator';
 import PrivateRoute from './components/shared/PrivateRoute';
 
 function App() {
@@ -19,6 +20,14 @@ function App() {
               element={
                 <PrivateRoute>
                   <Dashboard />
+                </PrivateRoute>
+              } 
+            />
+            <Route 
+              path="/validate" 
+              element={
+                <PrivateRoute>
+                  <TicketValidator />
                 </PrivateRoute>
               } 
             />
