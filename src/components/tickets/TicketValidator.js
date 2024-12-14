@@ -3,7 +3,7 @@ import { db } from '../../firebase/config';
 import { doc, getDoc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { QrReader } from 'react-qr-reader';
+import { Html5QrcodeScanner } from 'html5-qrcode';
 import { FaQrcode, FaKeyboard } from 'react-icons/fa';
 import './TicketValidator.css';
 
@@ -15,6 +15,7 @@ function TicketValidator() {
   const [userRole, setUserRole] = useState(null);
   const [scannerActive, setScannerActive] = useState(false);
   const navigate = useNavigate();
+  const [scanner, setScanner] = useState(null);
 
   // Verifica il ruolo dell'utente
   useEffect(() => {
@@ -35,6 +36,31 @@ function TicketValidator() {
     }
     checkUserRole();
   }, [currentUser, navigate]);
+
+  useEffect(() => {
+    return () => {
+      if (scanner) {
+        scanner.clear();
+      }
+    };
+  }, [scanner]);
+
+  const startScanner = () => {
+    const html5QrcodeScanner = new Html5QrcodeScanner(
+      "reader",
+      { fps: 10, qrbox: { width: 250, height: 250 } },
+      /* verbose= */ false
+    );
+    
+    html5QrcodeScanner.render((decodedText) => {
+      handleValidateTicket(decodedText);
+      html5QrcodeScanner.clear();
+    }, (error) => {
+      console.warn(`Code scan error = ${error}`);
+    });
+
+    setScanner(html5QrcodeScanner);
+  };
 
   async function handleValidateTicket(code) {
     setLoading(true);
@@ -110,17 +136,6 @@ function TicketValidator() {
     }
   }
 
-  const handleScan = (result) => {
-    if (result) {
-      handleValidateTicket(result.text);
-    }
-  };
-
-  const handleError = (error) => {
-    console.error(error);
-    setMessage('Errore durante la scansione: ' + error.message);
-  };
-
   return (
     <div className="validator-container">
       <h2>Valida Biglietto</h2>
@@ -134,7 +149,10 @@ function TicketValidator() {
         </button>
         <button 
           className={`method-button ${scannerActive ? 'active' : ''}`}
-          onClick={() => setScannerActive(true)}
+          onClick={() => {
+            setScannerActive(true);
+            startScanner();
+          }}
         >
           <FaQrcode /> Scansiona QR
         </button>
@@ -142,12 +160,7 @@ function TicketValidator() {
 
       {scannerActive ? (
         <div className="scanner-container">
-          <QrReader
-            constraints={{ facingMode: 'environment' }}
-            onResult={handleScan}
-            onError={handleError}
-            style={{ width: '100%' }}
-          />
+          <div id="reader"></div>
         </div>
       ) : (
         <div className="manual-input">
@@ -159,7 +172,7 @@ function TicketValidator() {
             className="ticket-input"
           />
           <button
-            onClick={() => handleValidateTicket()}
+            onClick={() => handleValidateTicket(ticketCode)}
             disabled={loading || !ticketCode}
             className={`validate-button ${loading ? 'loading' : ''}`}
           >

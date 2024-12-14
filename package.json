@@ -9,10 +9,10 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-icons": "^5.4.0",
-    "react-qr-reader": "^3.0.0-beta-1",
     "react-router-dom": "^6.x.x",
     "react-scripts": "5.0.1",
-    "resend": "^4.0.1"
+    "resend": "^4.0.1",
+    "html5-qrcode": "^2.3.8"
   },
   "scripts": {
     "start": "react-scripts start",
