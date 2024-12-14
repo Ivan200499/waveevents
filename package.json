@@ -5,14 +5,15 @@
     "@emailjs/browser": "^4.4.1",
     "@sendgrid/mail": "^8.1.4",
     "firebase": "^10.x.x",
+    "html5-qrcode": "^2.3.8",
+    "qrcode": "^1.5.4",
     "qrcode.react": "^3.x.x",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-icons": "^5.4.0",
     "react-router-dom": "^6.x.x",
     "react-scripts": "5.0.1",
-    "resend": "^4.0.1",
-    "html5-qrcode": "^2.3.8"
+    "resend": "^4.0.1"
   },
   "scripts": {
     "start": "react-scripts start",
