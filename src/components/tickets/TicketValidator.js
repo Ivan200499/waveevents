@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { Html5QrcodeScanner } from 'html5-qrcode';
 import { FaQrcode, FaKeyboard } from 'react-icons/fa';
 import './TicketValidator.css';
+import QRCodeGenerator from './QRCodeGenerator';
 
 function TicketValidator() {
   const { currentUser } = useAuth();
@@ -17,14 +18,12 @@ function TicketValidator() {
   const navigate = useNavigate();
   const [scanner, setScanner] = useState(null);
 
-  // Verifica il ruolo dell'utente
   useEffect(() => {
     async function checkUserRole() {
       try {
         const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
         if (userDoc.exists()) {
           setUserRole(userDoc.data().role);
-          // Reindirizza se non è un manager
           if (userDoc.data().role !== 'manager') {
             setMessage('Solo i manager possono validare i biglietti');
             navigate('/');
@@ -45,47 +44,56 @@ function TicketValidator() {
     };
   }, [scanner]);
 
-  const startScanner = () => {
-    const html5QrcodeScanner = new Html5QrcodeScanner(
-      "reader",
-      { fps: 10, qrbox: { width: 250, height: 250 } },
-      /* verbose= */ false
-    );
-    
-    html5QrcodeScanner.render((decodedText) => {
-      handleValidateTicket(decodedText);
-      html5QrcodeScanner.clear();
-    }, (error) => {
-      console.warn(`Code scan error = ${error}`);
-    });
+  useEffect(() => {
+    if (scannerActive) {
+      const html5QrcodeScanner = new Html5QrcodeScanner(
+        "reader",
+        { fps: 10, qrbox: { width: 250, height: 250 } },
+        false
+      );
 
-    setScanner(html5QrcodeScanner);
-  };
+      html5QrcodeScanner.render((decodedText) => {
+        handleValidateTicket(decodedText);
+        html5QrcodeScanner.clear();
+      }, (error) => {
+        console.warn(`Code scan error = ${error}`);
+      });
+
+      setScanner(html5QrcodeScanner);
+    }
+  }, [scannerActive]);
 
   async function handleValidateTicket(code) {
     setLoading(true);
     try {
-      console.log('Codice ricevuto:', code); // Debug
+      console.log('Codice ricevuto:', code);
+      let ticketCode;
 
-      let ticketData;
+      // Se il codice è in formato JSON, estraiamo il ticketCode
       try {
-        ticketData = JSON.parse(code);
-        console.log('Dati QR decodificati:', ticketData); // Debug
+        const ticketData = JSON.parse(code);
+        console.log('Dati QR decodificati:', ticketData);
+        ticketCode = ticketData.ticketCode;
       } catch (e) {
         console.log('Usando il codice come stringa semplice');
-        ticketData = { ticketCode: code };
+        ticketCode = code;
       }
 
-      const ticketCode = ticketData.ticketCode;
+      console.log('Cercando biglietto con codice:', ticketCode);
 
-      // Cerca il biglietto
+      // Query per cercare il biglietto
       const salesQuery = query(
-        collection(db, 'sales'),
-        where('ticketCode', '==', ticketCode)
+        collection(db, 'tickets'),
+        where('ticketCode', '==', ticketCode.trim())
       );
 
       const salesSnapshot = await getDocs(salesQuery);
-      console.log('Risultati ricerca:', salesSnapshot.size); // Debug
+      console.log('Risultati ricerca:', salesSnapshot.size);
+
+      // Log dei documenti trovati
+      salesSnapshot.forEach(doc => {
+        console.log('Documento trovato:', doc.id, doc.data());
+      });
 
       if (salesSnapshot.empty) {
         throw new Error('Biglietto non trovato');
@@ -93,8 +101,9 @@ function TicketValidator() {
 
       const saleDoc = salesSnapshot.docs[0];
       const saleData = saleDoc.data();
+      console.log('Dati della vendita:', saleData);
 
-      if (saleData.used) {
+      if (saleData.validatedAt) {
         throw new Error('Questo biglietto è già stato utilizzato!');
       }
 
@@ -115,14 +124,14 @@ function TicketValidator() {
       }
 
       // Marca il biglietto come utilizzato
-      await updateDoc(doc(db, 'sales', saleDoc.id), {
-        used: true,
-        usedAt: now.toISOString(),
+      await updateDoc(doc(db, 'tickets', saleDoc.id), {
+        validatedAt: now.toISOString(),
+        status: 'used',
         validatedBy: currentUser.uid
       });
 
       setMessage(`Biglietto validato con successo!
-        Evento: ${eventData.name}
+        Evento: ${saleData.eventName}
         Cliente: ${saleData.customerEmail}
         Quantità: ${saleData.quantity}
       `);
@@ -139,7 +148,6 @@ function TicketValidator() {
   return (
     <div className="validator-container">
       <h2>Valida Biglietto</h2>
-      
       <div className="input-methods">
         <button 
           className={`method-button ${!scannerActive ? 'active' : ''}`}
@@ -151,7 +159,6 @@ function TicketValidator() {
           className={`method-button ${scannerActive ? 'active' : ''}`}
           onClick={() => {
             setScannerActive(true);
-            startScanner();
           }}
         >
           <FaQrcode /> Scansiona QR

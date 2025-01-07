@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { db } from '../../firebase/config';
-import { collection, getDocs, query, where, updateDoc, doc } from 'firebase/firestore';
+import { collection, getDocs, query, where, updateDoc, doc, writeBatch } from 'firebase/firestore';
 import CreateEvent from '../events/CreateEvent';
 import CreateTeamLeader from '../auth/CreateTeamLeader';
 import TeamStatistics from '../statistics/TeamStatistics';
@@ -100,20 +100,16 @@ function TeamLeaderCard({ leader, onViewStats, onDelete }) {
 
 function EventCard({ event, onEdit, onDelete }) {
   return (
-    <div className="card event-card">
+    <div className="event-card">
       <div className="card-header">
-        <h4>{event.name}</h4>
+        <h3>{event.name}</h3>
         <div className="event-status">
-          {event.availableTickets > 0 ? (
-            <span className="badge badge-success">
-              {event.availableTickets} biglietti disponibili
-            </span>
-          ) : (
-            <span className="badge badge-danger">Esaurito</span>
-          )}
+          <span className={`badge ${event.availableTickets > 0 ? 'badge-success' : 'badge-danger'}`}>
+            {event.availableTickets} biglietti disponibili
+          </span>
         </div>
       </div>
-
+      
       <div className="event-details">
         <div className="detail-item">
           <FaCalendar className="icon" />
@@ -125,21 +121,15 @@ function EventCard({ event, onEdit, onDelete }) {
         </div>
         <div className="detail-item">
           <FaEuroSign className="icon" />
-          <span>{event.price} €</span>
+          <span>{event.ticketPrice}€</span>
         </div>
       </div>
 
       <div className="card-actions">
-        <button 
-          className="btn btn-primary"
-          onClick={() => onEdit(event)}
-        >
+        <button onClick={() => onEdit(event)} className="edit-button">
           <FaEdit /> Modifica
         </button>
-        <button 
-          className="btn btn-danger"
-          onClick={() => onDelete(event.id)}
-        >
+        <button onClick={() => onDelete(event.id)} className="delete-button">
           <FaTrash /> Elimina
         </button>
       </div>
@@ -156,6 +146,8 @@ function ManagerDashboard() {
   const [loading, setLoading] = useState(true);
   const [editingEvent, setEditingEvent] = useState(null);
   const [showCreatePromoter, setShowCreatePromoter] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [leaderToDelete, setLeaderToDelete] = useState(null);
 
   useEffect(() => {
     fetchData();
@@ -163,16 +155,17 @@ function ManagerDashboard() {
 
   async function fetchData() {
     try {
-      // Recupera team leader
+      // Recupera solo i team leader non eliminati
       const teamLeadersQuery = query(
         collection(db, 'users'),
-        where('role', '==', 'teamLeader')
+        where('role', '==', 'teamLeader'),
+        where('status', '!=', 'deleted')
       );
       const teamLeadersSnapshot = await getDocs(teamLeadersQuery);
       const teamLeadersData = teamLeadersSnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
-        promoters: [] // Sarà popolato sotto
+        promoters: []
       }));
 
       // Per ogni team leader, recupera i suoi promoter
@@ -191,12 +184,18 @@ function ManagerDashboard() {
 
       setTeamLeaders(teamLeadersData);
 
-      // Recupera eventi
-      const eventsSnapshot = await getDocs(collection(db, 'events'));
-      setEvents(eventsSnapshot.docs.map(doc => ({
+      // Recupera eventi (modifichiamo questa parte)
+      const eventsQuery = query(
+        collection(db, 'events'),
+        where('status', '!=', 'deleted')  // Mostra solo eventi non eliminati
+      );
+      const eventsSnapshot = await getDocs(eventsQuery);
+      const eventsData = eventsSnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
-      })));
+      }));
+      console.log('Eventi recuperati:', eventsData); // Debug
+      setEvents(eventsData);
 
       setLoading(false);
     } catch (error) {
@@ -211,58 +210,68 @@ function ManagerDashboard() {
         await updateDoc(doc(db, 'events', eventId), {
           status: 'deleted'
         });
-        fetchData();
+        
+        // Invece di fetchData(), aggiorniamo solo gli eventi
+        setEvents(prevEvents => 
+          prevEvents.map(event => 
+            event.id === eventId 
+              ? { ...event, status: 'deleted' }
+              : event
+          )
+        );
+
       } catch (error) {
         console.error('Errore nella cancellazione dell\'evento:', error);
+        alert('Errore durante l\'eliminazione dell\'evento');
       }
     }
   }
 
-  async function handleDeleteTeamLeader(teamLeaderId) {
+  const handleDeleteLeader = async (leaderId) => {
     try {
-      // Prima aggiorna tutti i promoter del team leader
+      setLoading(true);
+      
+      // Prima verifica se ci sono promoter associati
       const promotersQuery = query(
         collection(db, 'users'),
-        where('teamLeaderId', '==', teamLeaderId)
+        where('teamLeaderId', '==', leaderId)
       );
       const promotersSnapshot = await getDocs(promotersQuery);
+
+      // Usa una batch write per l'operazione atomica
+      const batch = writeBatch(db);
+
+      // Elimina o aggiorna i promoter
+      promotersSnapshot.forEach((promoterDoc) => {
+        batch.delete(promoterDoc.ref);
+      });
+
+      // Elimina il team leader
+      const leaderRef = doc(db, 'users', leaderId);
+      batch.delete(leaderRef);
+
+      // Esegui il batch
+      await batch.commit();
+
+      // Aggiorna l'UI
+      setTeamLeaders(prevLeaders => 
+        prevLeaders.filter(leader => leader.id !== leaderId)
+      );
       
-      // Aggiorna lo stato di tutti i promoter
-      const promoterUpdates = promotersSnapshot.docs.map(doc => 
-        updateDoc(doc.ref, {
-          teamLeaderId: '',
-          status: 'inactive'
-        })
-      );
-      await Promise.all(promoterUpdates);
+      // Chiudi il modal
+      setShowDeleteConfirm(false);
+      setLeaderToDelete(null);
 
-      // Aggiorna lo stato del team leader
-      await updateDoc(doc(db, 'users', teamLeaderId), {
-        status: 'deleted',
-        deletedAt: new Date().toISOString()
-      });
+      // Mostra messaggio di successo
+      alert('Team Leader eliminato con successo');
 
-      // Notifica il team leader
-      await notifyTeamLeader(teamLeaderId, 
-        'Account Eliminato',
-        'Il tuo account è stato eliminato dall\'amministratore.'
-      );
-
-      // Notifica i promoter
-      promotersSnapshot.docs.forEach(async (promoterDoc) => {
-        await notifyPromoter(
-          promoterDoc.id,
-          'Team Leader Rimosso',
-          'Il tuo team leader è stato rimosso. Verrai assegnato a un nuovo team.'
-        );
-      });
-
-      // Aggiorna i dati nella dashboard
-      fetchData();
     } catch (error) {
-      console.error('Errore durante l\'eliminazione del team leader:', error);
+      console.error('Errore nell\'eliminazione del team leader:', error);
+      alert('Errore durante l\'eliminazione del team leader');
+    } finally {
+      setLoading(false);
     }
-  }
+  };
 
   if (loading) return <div>Caricamento...</div>;
 
@@ -332,7 +341,7 @@ function ManagerDashboard() {
               key={leader.id}
               leader={leader}
               onViewStats={() => setSelectedTeam(leader.id)}
-              onDelete={handleDeleteTeamLeader}
+              onDelete={handleDeleteLeader}
             />
           ))}
         </div>
@@ -341,16 +350,20 @@ function ManagerDashboard() {
       {/* Sezione Eventi */}
       <section className="dashboard-section">
         <h3><FaCalendarAlt /> Eventi</h3>
-        <div className="grid">
-          {events.filter(event => event.status !== 'deleted').map(event => (
-            <EventCard
-              key={event.id}
-              event={event}
-              onEdit={setEditingEvent}
-              onDelete={handleDeleteEvent}
-            />
-          ))}
-        </div>
+        {events.length === 0 ? (
+          <p>Nessun evento disponibile</p>
+        ) : (
+          <div className="grid">
+            {events.map(event => (
+              <EventCard
+                key={event.id}
+                event={event}
+                onEdit={setEditingEvent}
+                onDelete={handleDeleteEvent}
+              />
+            ))}
+          </div>
+        )}
       </section>
 
       {/* Modali */}
@@ -376,6 +389,39 @@ function ManagerDashboard() {
                 setEditingEvent(null);
               }}
             />
+          </div>
+        </div>
+      )}
+
+      {/* Modal di conferma eliminazione */}
+      {showDeleteConfirm && leaderToDelete && (
+        <div className="modal">
+          <div className="modal-content">
+            <h3>Conferma Eliminazione</h3>
+            <p>Sei sicuro di voler eliminare il team leader {leaderToDelete.name}?</p>
+            <p style={{ color: '#dc3545', fontWeight: 'bold' }}>
+              ATTENZIONE: Questa azione eliminerà permanentemente il team leader e tutti i suoi promoter.
+              L'operazione non può essere annullata.
+            </p>
+            <div className="confirmation-actions">
+              <button 
+                className="confirm-button"
+                onClick={() => handleDeleteLeader(leaderToDelete.id)}
+                disabled={loading}
+              >
+                {loading ? 'Eliminazione...' : 'Elimina Definitivamente'}
+              </button>
+              <button 
+                className="cancel-button"
+                onClick={() => {
+                  setShowDeleteConfirm(false);
+                  setLeaderToDelete(null);
+                }}
+                disabled={loading}
+              >
+                Annulla
+              </button>
+            </div>
           </div>
         </div>
       )}

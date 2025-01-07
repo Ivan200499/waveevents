@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import { db } from '../../firebase/config';
+import { doc, getDoc } from 'firebase/firestore';
 
 function Login() {
   const [email, setEmail] = useState('');
@@ -13,55 +15,61 @@ function Login() {
     e.preventDefault();
     try {
       setError('');
-      await login(email, password);
-      navigate('/');
+      const { user } = await login(email, password);
+      
+      // Verifica il ruolo dell'utente
+      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      const userData = userDoc.data();
+      
+      // Reindirizza in base al ruolo
+      switch(userData.role) {
+        case 'admin':
+          navigate('/admin');
+          break;
+        case 'manager':
+          navigate('/manager');
+          break;
+        case 'teamLeader':
+          navigate('/team-leader');
+          break;
+        case 'promoter':
+          navigate('/promoter');
+          break;
+        default:
+          setError('Ruolo non valido');
+          break;
+      }
     } catch (error) {
-      setError('Errore di login: ' + error.message);
+      setError('Credenziali non valide');
     }
   }
 
   return (
-    <div style={{ maxWidth: '400px', margin: '0 auto', padding: '20px' }}>
-      <h2>Login</h2>
-      {error && <div style={{color: 'red', marginBottom: '10px'}}>{error}</div>}
+    <div className="login-container">
+      <h2>Accesso al Sistema</h2>
+      {error && <div className="error-message">{error}</div>}
       <form onSubmit={handleSubmit}>
-        <div style={{ marginBottom: '15px' }}>
+        <div className="form-group">
           <label>Email:</label>
           <input 
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            style={{ width: '100%', padding: '8px' }}
           />
         </div>
-        <div style={{ marginBottom: '15px' }}>
+        <div className="form-group">
           <label>Password:</label>
           <input 
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            style={{ width: '100%', padding: '8px' }}
           />
         </div>
-        <button 
-          type="submit"
-          style={{
-            width: '100%',
-            padding: '10px',
-            backgroundColor: '#2196F3',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer'
-          }}
-        >
+        <button type="submit" className="login-button">
           Accedi
         </button>
-        <div style={{ marginTop: '15px', textAlign: 'center' }}>
-          Non hai un account? <Link to="/register">Registrati</Link>
-        </div>
       </form>
     </div>
   );

@@ -1,40 +1,33 @@
-import { useState, useEffect } from 'react';
-import { useAuth } from '../../contexts/AuthContext';
-import { db } from '../../firebase/config';
-import { doc, getDoc } from 'firebase/firestore';
-import Navbar from '../shared/Navbar';
+import { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuthorization } from '../../hooks/useAuthorization';
+import AdminDashboard from './AdminDashboard';
 import ManagerDashboard from './ManagerDashboard';
 import TeamLeaderDashboard from './TeamLeaderDashboard';
 import PromoterDashboard from './PromoterDashboard';
 
 function Dashboard() {
-  const { currentUser } = useAuth();
-  const [userRole, setUserRole] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const { userRole, loading, error } = useAuthorization();
+  const navigate = useNavigate();
 
   useEffect(() => {
-    async function getUserRole() {
-      try {
-        const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
-        if (userDoc.exists()) {
-          setUserRole(userDoc.data().role);
-        }
-        setLoading(false);
-      } catch (error) {
-        console.error('Errore nel recupero del ruolo:', error);
-        setLoading(false);
-      }
+    if (!loading && !userRole) {
+      navigate('/login');
     }
-
-    getUserRole();
-  }, [currentUser]);
+  }, [loading, userRole, navigate]);
 
   if (loading) {
     return <div>Caricamento...</div>;
   }
 
+  if (error) {
+    return <div>Errore: {error.message}</div>;
+  }
+
   const getDashboardByRole = () => {
     switch (userRole) {
+      case 'admin':
+        return <AdminDashboard />;
       case 'manager':
         return <ManagerDashboard />;
       case 'teamLeader':
@@ -47,11 +40,8 @@ function Dashboard() {
   };
 
   return (
-    <div>
-      <Navbar />
-      <div style={{ padding: '20px' }}>
-        {getDashboardByRole()}
-      </div>
+    <div className="dashboard-container">
+      {getDashboardByRole()}
     </div>
   );
 }

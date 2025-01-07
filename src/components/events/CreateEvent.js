@@ -1,31 +1,33 @@
 import { useState } from 'react';
 import { db } from '../../firebase/config';
 import { collection, addDoc } from 'firebase/firestore';
-import { useAuth } from '../../contexts/AuthContext';
+import './CreateEvent.css';
 
 function CreateEvent({ onEventCreated }) {
-  const { currentUser } = useAuth();
   const [name, setName] = useState('');
   const [date, setDate] = useState('');
   const [location, setLocation] = useState('');
-  const [price, setPrice] = useState('');
-  const [availableTickets, setAvailableTickets] = useState('');
-  const [error, setError] = useState('');
+  const [totalTickets, setTotalTickets] = useState('');
+  const [ticketPrice, setTicketPrice] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   async function handleSubmit(e) {
     e.preventDefault();
     setLoading(true);
+    setError('');
+
     try {
+      // Crea l'evento nel database
       const eventData = {
         name,
         date,
         location,
-        price: Number(price),
-        availableTickets: Number(availableTickets),
-        createdBy: currentUser.uid,
-        createdAt: new Date().toISOString(),
-        status: 'active'
+        totalTickets: parseInt(totalTickets),
+        availableTickets: parseInt(totalTickets),
+        ticketPrice: parseFloat(ticketPrice),
+        status: 'active',
+        createdAt: new Date().toISOString()
       };
 
       await addDoc(collection(db, 'events'), eventData);
@@ -34,96 +36,83 @@ function CreateEvent({ onEventCreated }) {
       setName('');
       setDate('');
       setLocation('');
-      setPrice('');
-      setAvailableTickets('');
-      setError('');
+      setTotalTickets('');
+      setTicketPrice('');
+      
+      // Notifica il componente padre
+      onEventCreated();
 
-      if (onEventCreated) {
-        onEventCreated();
-      }
     } catch (error) {
-      setError('Errore durante la creazione dell\'evento: ' + error.message);
+      console.error('Errore nella creazione dell\'evento:', error);
+      setError('Errore nella creazione dell\'evento: ' + error.message);
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div style={{ maxWidth: '400px', margin: '0 auto', padding: '20px' }}>
-      <h3>Crea Nuovo Evento</h3>
-      {error && <div style={{color: 'red', marginBottom: '10px'}}>{error}</div>}
+    <div className="create-event-container">
+      <h2>Crea Nuovo Evento</h2>
+      {error && <div className="error-message">{error}</div>}
+      
       <form onSubmit={handleSubmit}>
-        <div style={{ marginBottom: '15px' }}>
+        <div className="form-group">
           <label>Nome Evento:</label>
-          <input 
+          <input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
-            style={{ width: '100%', padding: '8px' }}
           />
         </div>
 
-        <div style={{ marginBottom: '15px' }}>
+        <div className="form-group">
           <label>Data:</label>
-          <input 
-            type="datetime-local"
+          <input
+            type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
             required
-            style={{ width: '100%', padding: '8px' }}
           />
         </div>
 
-        <div style={{ marginBottom: '15px' }}>
+        <div className="form-group">
           <label>Luogo:</label>
-          <input 
+          <input
             type="text"
             value={location}
             onChange={(e) => setLocation(e.target.value)}
             required
-            style={{ width: '100%', padding: '8px' }}
           />
         </div>
 
-        <div style={{ marginBottom: '15px' }}>
-          <label>Prezzo (€):</label>
-          <input 
+        <div className="form-group">
+          <label>Numero Totale Biglietti:</label>
+          <input
             type="number"
-            value={price}
-            onChange={(e) => setPrice(e.target.value)}
+            value={totalTickets}
+            onChange={(e) => setTotalTickets(e.target.value)}
+            required
+            min="1"
+          />
+        </div>
+
+        <div className="form-group">
+          <label>Prezzo Biglietto (€):</label>
+          <input
+            type="number"
+            value={ticketPrice}
+            onChange={(e) => setTicketPrice(e.target.value)}
             required
             min="0"
             step="0.01"
-            style={{ width: '100%', padding: '8px' }}
-          />
-        </div>
-
-        <div style={{ marginBottom: '15px' }}>
-          <label>Biglietti Disponibili:</label>
-          <input 
-            type="number"
-            value={availableTickets}
-            onChange={(e) => setAvailableTickets(e.target.value)}
-            required
-            min="1"
-            style={{ width: '100%', padding: '8px' }}
           />
         </div>
 
         <button 
-          type="submit"
+          type="submit" 
           disabled={loading}
-          style={{
-            width: '100%',
-            padding: '10px',
-            backgroundColor: '#4CAF50',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: loading ? 'not-allowed' : 'pointer',
-            opacity: loading ? 0.7 : 1
-          }}
+          className="submit-button"
         >
           {loading ? 'Creazione in corso...' : 'Crea Evento'}
         </button>

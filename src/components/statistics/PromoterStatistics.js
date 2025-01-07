@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react';
 import { db } from '../../firebase/config';
 import { collection, query, where, getDocs } from 'firebase/firestore';
+import { FaCalendar, FaTicketAlt, FaEuroSign, FaChartLine } from 'react-icons/fa';
+import './PromoterStatistics.css';
 
 function PromoterStatistics({ promoter, onClose }) {
   const [statistics, setStatistics] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [selectedEvent, setSelectedEvent] = useState(null);
 
   useEffect(() => {
     fetchStatistics();
@@ -12,6 +15,7 @@ function PromoterStatistics({ promoter, onClose }) {
 
   async function fetchStatistics() {
     try {
+      // Recupera tutte le vendite del promoter
       const salesQuery = query(
         collection(db, 'sales'),
         where('promoterId', '==', promoter.id)
@@ -22,44 +26,66 @@ function PromoterStatistics({ promoter, onClose }) {
         ...doc.data()
       }));
 
-      // Calcola statistiche
-      const totalSales = sales.length;
-      const totalRevenue = sales.reduce((acc, sale) => acc + sale.totalPrice, 0);
-      
-      // Raggruppa vendite per evento
-      const salesByEvent = sales.reduce((acc, sale) => {
+      // Raggruppa vendite per evento con dettagli temporali
+      const eventStats = sales.reduce((acc, sale) => {
         if (!acc[sale.eventId]) {
           acc[sale.eventId] = {
-            count: 0,
-            revenue: 0,
-            eventName: sale.eventName
+            eventName: sale.eventName,
+            totalSales: 0,
+            totalRevenue: 0,
+            totalTickets: 0,
+            monthlySales: {},
+            dailySales: {},
+            salesHistory: []
           };
         }
-        acc[sale.eventId].count += sale.quantity;
-        acc[sale.eventId].revenue += sale.totalPrice;
-        return acc;
-      }, {});
 
-      // Raggruppa vendite per mese
-      const salesByMonth = sales.reduce((acc, sale) => {
-        const month = new Date(sale.date).toLocaleString('it-IT', { month: 'long', year: 'numeric' });
-        if (!acc[month]) {
-          acc[month] = {
-            count: 0,
+        const saleDate = new Date(sale.date);
+        const monthKey = saleDate.toLocaleString('it-IT', { month: 'long', year: 'numeric' });
+        const dayKey = saleDate.toLocaleDateString();
+
+        // Aggiorna statistiche generali dell'evento
+        acc[sale.eventId].totalSales++;
+        acc[sale.eventId].totalRevenue += sale.totalPrice;
+        acc[sale.eventId].totalTickets += sale.quantity;
+
+        // Aggiorna vendite mensili
+        if (!acc[sale.eventId].monthlySales[monthKey]) {
+          acc[sale.eventId].monthlySales[monthKey] = {
+            tickets: 0,
             revenue: 0
           };
         }
-        acc[month].count += sale.quantity;
-        acc[month].revenue += sale.totalPrice;
+        acc[sale.eventId].monthlySales[monthKey].tickets += sale.quantity;
+        acc[sale.eventId].monthlySales[monthKey].revenue += sale.totalPrice;
+
+        // Aggiorna vendite giornaliere
+        if (!acc[sale.eventId].dailySales[dayKey]) {
+          acc[sale.eventId].dailySales[dayKey] = {
+            tickets: 0,
+            revenue: 0
+          };
+        }
+        acc[sale.eventId].dailySales[dayKey].tickets += sale.quantity;
+        acc[sale.eventId].dailySales[dayKey].revenue += sale.totalPrice;
+
+        // Aggiungi alla cronologia vendite
+        acc[sale.eventId].salesHistory.push({
+          id: sale.id,
+          date: sale.date,
+          quantity: sale.quantity,
+          totalPrice: sale.totalPrice,
+          customerEmail: sale.customerEmail
+        });
+
         return acc;
       }, {});
 
       setStatistics({
-        totalSales,
-        totalRevenue,
-        salesByEvent,
-        salesByMonth,
-        recentSales: sales.sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 5)
+        eventStats,
+        totalEvents: Object.keys(eventStats).length,
+        totalRevenue: Object.values(eventStats).reduce((acc, event) => acc + event.totalRevenue, 0),
+        totalTickets: Object.values(eventStats).reduce((acc, event) => acc + event.totalTickets, 0)
       });
 
       setLoading(false);
@@ -69,79 +95,81 @@ function PromoterStatistics({ promoter, onClose }) {
     }
   }
 
-  if (loading) return <div>Caricamento statistiche...</div>;
+  if (loading) return <div className="loading-spinner" />;
 
   return (
-    <div style={{
-      position: 'fixed',
-      top: '50%',
-      left: '50%',
-      transform: 'translate(-50%, -50%)',
-      backgroundColor: 'white',
-      padding: '20px',
-      borderRadius: '8px',
-      boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
-      maxWidth: '800px',
-      width: '90%',
-      maxHeight: '90vh',
-      overflow: 'auto'
-    }}>
-      <button
-        onClick={onClose}
-        style={{
-          position: 'absolute',
-          top: '10px',
-          right: '10px',
-          background: 'none',
-          border: 'none',
-          fontSize: '20px',
-          cursor: 'pointer'
-        }}
-      >
-        ×
-      </button>
-
-      <h3>Statistiche di {promoter.name}</h3>
-      
-      <div style={{ marginBottom: '20px' }}>
-        <h4>Riepilogo</h4>
-        <p>Vendite totali: {statistics.totalSales}</p>
-        <p>Ricavo totale: €{statistics.totalRevenue}</p>
+    <div className="statistics-modal">
+      <div className="modal-header">
+        <h3>Statistiche di {promoter.name}</h3>
+        <button className="close-button" onClick={onClose}>&times;</button>
       </div>
 
-      <div style={{ marginBottom: '20px' }}>
-        <h4>Vendite per Evento</h4>
-        {Object.entries(statistics.salesByEvent).map(([eventId, data]) => (
-          <div key={eventId} style={{ marginBottom: '10px' }}>
-            <p>
-              {data.eventName}: {data.count} biglietti (€{data.revenue})
-            </p>
+      <div className="statistics-summary">
+        <div className="summary-card">
+          <FaTicketAlt />
+          <div>
+            <h4>{statistics.totalTickets}</h4>
+            <p>Biglietti Totali</p>
           </div>
-        ))}
-      </div>
-
-      <div style={{ marginBottom: '20px' }}>
-        <h4>Vendite per Mese</h4>
-        {Object.entries(statistics.salesByMonth).map(([month, data]) => (
-          <div key={month} style={{ marginBottom: '10px' }}>
-            <p>
-              {month}: {data.count} biglietti (€{data.revenue})
-            </p>
+        </div>
+        <div className="summary-card">
+          <FaEuroSign />
+          <div>
+            <h4>€{statistics.totalRevenue.toFixed(2)}</h4>
+            <p>Ricavo Totale</p>
           </div>
-        ))}
+        </div>
+        <div className="summary-card">
+          <FaCalendar />
+          <div>
+            <h4>{statistics.totalEvents}</h4>
+            <p>Eventi Venduti</p>
+          </div>
+        </div>
       </div>
 
-      <div>
-        <h4>Ultime Vendite</h4>
-        {statistics.recentSales.map(sale => (
-          <div key={sale.id} style={{
-            padding: '10px',
-            borderBottom: '1px solid #eee'
-          }}>
-            <p>Data: {new Date(sale.date).toLocaleString()}</p>
-            <p>Evento: {sale.eventName}</p>
-            <p>Quantità: {sale.quantity}</p>
-            <p>Totale: €{sale.totalPrice}</p>
+      <div className="events-list">
+        <h4>Dettagli per Evento</h4>
+        {Object.entries(statistics.eventStats).map(([eventId, eventData]) => (
+          <div key={eventId} className="event-stats-card">
+            <div className="event-header" onClick={() => setSelectedEvent(selectedEvent === eventId ? null : eventId)}>
+              <h5>{eventData.eventName}</h5>
+              <div className="event-summary">
+                <span>{eventData.totalTickets} biglietti</span>
+                <span>€{eventData.totalRevenue.toFixed(2)}</span>
+              </div>
+            </div>
+
+            {selectedEvent === eventId && (
+              <div className="event-details">
+                <div className="monthly-stats">
+                  <h6>Vendite Mensili</h6>
+                  {Object.entries(eventData.monthlySales)
+                    .sort((a, b) => new Date(b[0]) - new Date(a[0]))
+                    .map(([month, data]) => (
+                      <div key={month} className="stat-row">
+                        <span>{month}</span>
+                        <span>{data.tickets} biglietti</span>
+                        <span>€{data.revenue.toFixed(2)}</span>
+                      </div>
+                    ))}
+                </div>
+
+                <div className="sales-history">
+                  <h6>Ultime Vendite</h6>
+                  {eventData.salesHistory
+                    .sort((a, b) => new Date(b.date) - new Date(a.date))
+                    .slice(0, 5)
+                    .map(sale => (
+                      <div key={sale.id} className="sale-row">
+                        <div>{new Date(sale.date).toLocaleDateString()}</div>
+                        <div>{sale.quantity} biglietti</div>
+                        <div>€{sale.totalPrice.toFixed(2)}</div>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
           </div>
         ))}
       </div>

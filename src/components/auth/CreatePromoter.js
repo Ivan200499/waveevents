@@ -1,91 +1,145 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { db, auth } from '../../firebase/config';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { doc, setDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { useAuth } from '../../contexts/AuthContext';
-import { db } from '../../firebase/config';
-import { doc, setDoc } from 'firebase/firestore';
-import { auth } from '../../firebase/config';
 
-function CreatePromoter({ teamLeaderId, onPromoterCreated }) {
+function CreatePromoter({ onPromoterCreated }) {
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [name, setName] = useState('');
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const { signup } = useAuth();
+  const [teamLeaders, setTeamLeaders] = useState([]);
+  const [selectedTeamLeader, setSelectedTeamLeader] = useState('');
+  const { currentUser } = useAuth();
+  const [userRole, setUserRole] = useState(null);
+
+  useEffect(() => {
+    async function checkUserRole() {
+      const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+      if (userDoc.exists()) {
+        setUserRole(userDoc.data().role);
+        // Se è un team leader, imposta automaticamente il suo ID
+        if (userDoc.data().role === 'teamLeader') {
+          setSelectedTeamLeader(currentUser.uid);
+        }
+      }
+    }
+    checkUserRole();
+
+    // Carica la lista dei team leader solo se l'utente è un manager
+    async function fetchTeamLeaders() {
+      const teamLeadersQuery = query(
+        collection(db, 'users'),
+        where('role', '==', 'teamLeader')
+      );
+      const snapshot = await getDocs(teamLeadersQuery);
+      setTeamLeaders(snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })));
+    }
+
+    if (userRole === 'manager') {
+      fetchTeamLeaders();
+    }
+  }, [currentUser, userRole]);
 
   async function handleSubmit(e) {
     e.preventDefault();
+    setLoading(true);
+    setError('');
+
     try {
-      setError('');
-      const { user } = await signup(email, password);
+      // Crea l'utente in Firebase Auth
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       
-      await setDoc(doc(db, 'users', user.uid), {
-        email,
+      // Crea il documento dell'utente in Firestore
+      await setDoc(doc(db, 'users', userCredential.user.uid), {
         name,
+        email,
         role: 'promoter',
-        teamLeaderId,
+        teamLeaderId: userRole === 'teamLeader' ? currentUser.uid : selectedTeamLeader,
         createdAt: new Date().toISOString(),
         status: 'active'
       });
 
-      // Logout automatico dopo la creazione
-      await auth.signOut();
-
+      setName('');
       setEmail('');
       setPassword('');
-      setName('');
+      setSelectedTeamLeader('');
       onPromoterCreated();
+
     } catch (error) {
-      setError('Errore durante la creazione del Promoter: ' + error.message);
+      console.error('Errore nella creazione del promoter:', error);
+      setError('Errore nella creazione del promoter: ' + error.message);
     }
+
+    setLoading(false);
   }
 
   return (
-    <div style={{ maxWidth: '400px', margin: '0 auto', padding: '20px' }}>
-      <h3>Crea Nuovo Promoter</h3>
-      {error && <div style={{color: 'red', marginBottom: '10px'}}>{error}</div>}
+    <div className="create-promoter-container">
+      <h2>Crea Nuovo Promoter</h2>
+      {error && <div className="error-message">{error}</div>}
+      
       <form onSubmit={handleSubmit}>
-        <div style={{ marginBottom: '15px' }}>
+        <div className="form-group">
           <label>Nome:</label>
-          <input 
+          <input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
-            style={{ width: '100%', padding: '8px' }}
           />
         </div>
-        <div style={{ marginBottom: '15px' }}>
+
+        <div className="form-group">
           <label>Email:</label>
-          <input 
+          <input
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            style={{ width: '100%', padding: '8px' }}
           />
         </div>
-        <div style={{ marginBottom: '15px' }}>
+
+        <div className="form-group">
           <label>Password:</label>
-          <input 
+          <input
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            style={{ width: '100%', padding: '8px' }}
           />
         </div>
+
+        {/* Mostra il select dei team leader solo se l'utente è un manager */}
+        {userRole === 'manager' && (
+          <div className="form-group">
+            <label>Team Leader:</label>
+            <select
+              value={selectedTeamLeader}
+              onChange={(e) => setSelectedTeamLeader(e.target.value)}
+              required
+            >
+              <option value="">Seleziona Team Leader</option>
+              {teamLeaders.map(leader => (
+                <option key={leader.id} value={leader.id}>
+                  {leader.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
         <button 
-          type="submit"
-          style={{
-            width: '100%',
-            padding: '10px',
-            backgroundColor: '#4CAF50',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer'
-          }}
+          type="submit" 
+          disabled={loading}
+          className="submit-button"
         >
-          Crea Promoter
+          {loading ? 'Creazione in corso...' : 'Crea Promoter'}
         </button>
       </form>
     </div>
