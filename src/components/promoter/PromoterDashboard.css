@@ -45,11 +45,17 @@
 }
 
 .stat-card {
+  position: relative;
   background: white;
   padding: 20px;
   border-radius: 12px;
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  text-align: center;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
 }
 
 .stat-card h3 {
@@ -111,6 +117,72 @@
   cursor: not-allowed;
 }
 
+.stat-content {
+  text-align: center;
+}
+
+.stats-button {
+  margin-top: 15px;
+  padding: 8px 16px;
+  background: #2196F3;
+  color: white;
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.stats-button:hover {
+  background: #1976D2;
+}
+
+.stats-icon {
+  font-size: 18px;
+}
+
+.stats-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.stats-modal-content {
+  background: white;
+  padding: 30px;
+  border-radius: 12px;
+  position: relative;
+  width: 90%;
+  max-width: 800px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.close-button {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #666;
+}
+
+.close-button:hover {
+  color: #000;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
   .dashboard-container {
@@ -155,6 +227,20 @@
     padding: 10px;
     font-size: 14px;
   }
+
+  .stats-button {
+    padding: 6px 12px;
+    font-size: 14px;
+  }
+
+  .stats-icon {
+    font-size: 16px;
+  }
+
+  .stats-modal-content {
+    width: 95%;
+    padding: 20px;
+  }
 }
 
 /* Dark mode */
@@ -165,5 +251,13 @@
 
   .stat-card h3 {
     color: #ccc;
+  }
+
+  .stats-button {
+    background: #1976D2;
+  }
+  
+  .stats-button:hover {
+    background: #1565C0;
   }
 } 

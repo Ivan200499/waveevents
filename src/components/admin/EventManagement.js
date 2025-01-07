@@ -3,6 +3,7 @@ import { db } from '../../firebase/config';
 import { collection, getDocs, addDoc, updateDoc, doc, deleteDoc } from 'firebase/firestore';
 import CreateEventModal from './CreateEventModal';
 import EditEventModal from './EditEventModal';
+import EventStatistics from '../events/EventStatistics';
 import './AdminStyles.css';
 
 function EventManagement() {
@@ -10,6 +11,7 @@ function EventManagement() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingEvent, setEditingEvent] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [selectedEventForStats, setSelectedEventForStats] = useState(null);
 
   useEffect(() => {
     fetchEvents();
@@ -83,6 +85,12 @@ function EventManagement() {
                 Modifica
               </button>
               <button 
+                className="btn-info"
+                onClick={() => setSelectedEventForStats(event)}
+              >
+                Statistiche
+              </button>
+              <button 
                 className="btn-delete"
                 onClick={() => handleDeleteEvent(event.id)}
               >
@@ -105,6 +113,13 @@ function EventManagement() {
           event={editingEvent}
           onClose={() => setEditingEvent(null)}
           onEventUpdated={fetchEvents}
+        />
+      )}
+
+      {selectedEventForStats && (
+        <EventStatistics
+          event={selectedEventForStats}
+          onClose={() => setSelectedEventForStats(null)}
         />
       )}
     </div>
