@@ -132,10 +132,10 @@ function AdminDashboard() {
                   <tbody>
                     {filteredUsers.map(user => (
                       <tr key={user.id}>
-                        <td>{user.name}</td>
-                        <td>{user.email}</td>
-                        <td>{user.role}</td>
-                        <td>
+                        <td data-label="Nome">{user.name}</td>
+                        <td data-label="Email">{user.email}</td>
+                        <td data-label="Ruolo">{user.role}</td>
+                        <td data-label="Assegnato a">
                           {user.teamLeaderId && `Team Leader: ${
                             teamLeaders.find(tl => tl.id === user.teamLeaderId)?.name || 'N/A'
                           }`}
@@ -143,14 +143,16 @@ function AdminDashboard() {
                             managers.find(m => m.id === user.managerId)?.name || 'N/A'
                           }`}
                         </td>
-                        <td>{user.status}</td>
-                        <td>
-                          <button 
-                            className="btn btn-primary"
-                            onClick={() => setEditingUser(user)}
-                          >
-                            Modifica
-                          </button>
+                        <td data-label="Stato">{user.status}</td>
+                        <td data-label="Azioni">
+                          <div className="action-buttons">
+                            <button 
+                              className="btn btn-primary"
+                              onClick={() => setEditingUser(user)}
+                            >
+                              Modifica
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}

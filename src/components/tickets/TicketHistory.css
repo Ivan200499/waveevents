@@ -1,12 +1,12 @@
 .ticket-history-container {
   padding: 20px;
-  max-width: 1200px;
-  margin: 0 auto;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 .tickets-summary {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: 20px;
   margin-bottom: 30px;
 }
@@ -14,7 +14,7 @@
 .summary-card {
   background: white;
   padding: 20px;
-  border-radius: 8px;
+  border-radius: 10px;
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
   text-align: center;
 }
@@ -82,16 +82,12 @@ th {
 }
 
 .filters-container {
-  margin: 20px 0;
-  padding: 15px;
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  margin-bottom: 20px;
 }
 
 .search-filters {
   display: flex;
-  gap: 15px;
+  gap: 10px;
   flex-wrap: wrap;
 }
 
@@ -100,9 +96,7 @@ th {
   min-width: 200px;
   padding: 10px;
   border: 1px solid #ddd;
-  border-radius: 6px;
-  font-size: 14px;
-  transition: all 0.3s ease;
+  border-radius: 5px;
 }
 
 .search-input:focus {
@@ -118,5 +112,54 @@ th {
   
   .search-input {
     width: 100%;
+  }
+} 
+
+/* Stile tabella responsive */
+.tickets-table {
+  width: 100%;
+  overflow-x: auto;
+}
+
+@media (max-width: 768px) {
+  .tickets-table table {
+    display: block;
+  }
+
+  .tickets-table thead {
+    display: none; /* Nascondi l'header della tabella su mobile */
+  }
+
+  .tickets-table tbody {
+    display: block;
+  }
+
+  .tickets-table tr {
+    display: block;
+    margin-bottom: 15px;
+    background: white;
+    padding: 15px;
+    border-radius: 10px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+
+  .tickets-table td {
+    display: flex;
+    padding: 8px 0;
+    border: none;
+    align-items: center;
+  }
+
+  .tickets-table td::before {
+    content: attr(data-label);
+    font-weight: bold;
+    width: 40%;
+    margin-right: 10px;
+  }
+
+  .status {
+    padding: 5px 10px;
+    border-radius: 15px;
+    font-size: 12px;
   }
 } 

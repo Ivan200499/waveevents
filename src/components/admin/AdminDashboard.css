@@ -1,5 +1,7 @@
 .admin-dashboard {
   padding: 20px;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 .dashboard-header {
@@ -114,16 +116,55 @@ tr:hover {
   border-bottom-color: #2196F3;
 }
 
+.users-table-container {
+  width: 100%;
+  overflow-x: auto;
+}
+
 @media (max-width: 768px) {
-  .filters {
-    flex-direction: column;
+  .users-table {
+    display: block;
   }
-  
+
+  .users-table thead {
+    display: none;
+  }
+
+  .users-table tbody {
+    display: block;
+  }
+
+  .users-table tr {
+    display: block;
+    margin-bottom: 15px;
+    background: white;
+    padding: 15px;
+    border-radius: 10px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+
+  .users-table td {
+    display: flex;
+    padding: 8px 0;
+    border: none;
+    align-items: center;
+  }
+
+  .users-table td::before {
+    content: attr(data-label);
+    font-weight: bold;
+    width: 40%;
+    margin-right: 10px;
+  }
+
   .action-buttons {
-    flex-direction: column;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
   }
-  
-  .action-buttons button {
-    width: 100%;
+
+  .action-button {
+    flex: 1;
+    min-width: 120px;
   }
 }

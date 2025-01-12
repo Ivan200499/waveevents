@@ -137,14 +137,14 @@ function TicketHistory() {
           <tbody>
             {filteredTickets.map(ticket => (
               <tr key={ticket.id}>
-                <td>{new Date(ticket.createdAt).toLocaleDateString()}</td>
-                <td>{ticket.ticketCode}</td>
-                <td>{ticket.eventName}</td>
-                <td>{ticket.customerEmail}</td>
-                <td>{ticket.quantity}</td>
-                <td>€{ticket.price?.toFixed(2) || '0.00'}</td>
-                <td>€{((ticket.price || 0) * (ticket.quantity || 0)).toFixed(2)}</td>
-                <td>
+                <td data-label="Data">{new Date(ticket.createdAt).toLocaleDateString()}</td>
+                <td data-label="Codice">{ticket.ticketCode}</td>
+                <td data-label="Evento">{ticket.eventName}</td>
+                <td data-label="Email Cliente">{ticket.customerEmail}</td>
+                <td data-label="Quantità">{ticket.quantity}</td>
+                <td data-label="Prezzo Unit.">€{ticket.price?.toFixed(2) || '0.00'}</td>
+                <td data-label="Totale">€{((ticket.price || 0) * (ticket.quantity || 0)).toFixed(2)}</td>
+                <td data-label="Stato">
                   <span className={`status ${ticket.status}`}>
                     {ticket.validatedAt ? 'Validato' : ticket.status}
                   </span>
