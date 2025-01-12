@@ -51,23 +51,10 @@
     margin-bottom: 20px;
   }
   
-  .input-with-icon {
-    position: relative;
-    display: flex;
-    align-items: center;
-  }
-  
-  .input-icon {
-    position: absolute;
-    left: 12px;
-    color: #666;
-    z-index: 1;
-  }
-  
   /* Stile degli input */
   input {
     width: 100%;
-    padding: 12px 12px 12px 40px;
+    padding: 12px;
     border: 2px solid #e0e0e0;
     border-radius: 10px;
     font-size: 16px;
@@ -124,80 +111,18 @@
     }
   }
   
-  /* Responsive per dispositivi mobili */
+  /* Responsive */
   @media (max-width: 480px) {
-    .login-container {
-      padding: 15px;
-    }
-  
     .login-box {
-      padding: 25px 20px;
-      border-radius: 15px;
-    }
-  
-    .login-logo {
-      width: 100px;
+      padding: 30px 20px;
     }
   
     .login-header h2 {
       font-size: 24px;
     }
   
-    .login-header p {
-      font-size: 13px;
-    }
-  
     input {
-      font-size: 15px;
-      padding: 10px 10px 10px 35px;
-    }
-  
-    .input-icon {
-      font-size: 14px;
-      left: 10px;
-    }
-  
-    .login-button {
-      padding: 12px;
-      font-size: 15px;
-    }
-  
-    /* Previeni lo zoom su input focus in iOS */
-    @media screen and (-webkit-min-device-pixel-ratio: 0) { 
-      input {
-        font-size: 16px;
-      }
-    }
-  }
-  
-  /* Per schermi molto piccoli */
-  @media (max-width: 320px) {
-    .login-box {
-      padding: 20px 15px;
-    }
-  
-    .login-logo {
-      width: 80px;
-    }
-  
-    .login-header h2 {
-      font-size: 22px;
-    }
-  
-    input {
-      padding: 8px 8px 8px 32px;
-    }
-  }
-  
-  /* Per prevenire problemi con la tastiera mobile */
-  @media screen and (max-height: 600px) {
-    .login-container {
-      align-items: flex-start;
-      padding-top: 20px;
-    }
-  
-    .login-box {
-      margin-bottom: 20px;
+      padding: 10px; /* Rimosso lo spazio per le icone */
     }
   }
   
