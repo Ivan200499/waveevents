@@ -3,6 +3,8 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../../firebase/config';
 import { doc, getDoc } from 'firebase/firestore';
+import { FaUser, FaLock, FaEnvelope } from 'react-icons/fa';
+import './Login.css';
 
 function Login() {
   const [email, setEmail] = useState('');
@@ -36,8 +38,7 @@ function Login() {
           navigate('/promoter');
           break;
         default:
-          setError('Ruolo non valido');
-          break;
+          navigate('/');
       }
     } catch (error) {
       setError('Credenziali non valide');
@@ -46,31 +47,49 @@ function Login() {
 
   return (
     <div className="login-container">
-      <h2>Accesso al Sistema</h2>
-      {error && <div className="error-message">{error}</div>}
-      <form onSubmit={handleSubmit}>
-        <div className="form-group">
-          <label>Email:</label>
-          <input 
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
+      <div className="login-box">
+        <div className="login-header">
+          <img src="/logo.PNG" alt="Logo" className="login-logo" />
+          <h2>Accedi</h2>
+          <p>Benvenuto nel sistema di gestione biglietti</p>
         </div>
-        <div className="form-group">
-          <label>Password:</label>
-          <input 
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
+
+        {error && <div className="error-message">{error}</div>}
+        
+        <form onSubmit={handleSubmit} className="login-form">
+          <div className="form-group">
+            <div className="input-with-icon">
+              <FaUser className="input-icon" />
+              <input 
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+          </div>
+
+          <div className="form-group">
+            <div className="input-with-icon">
+              <FaLock className="input-icon" />
+              <input 
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+            </div>
+          </div>
+
+          <button type="submit" className="login-button">
+            Accedi
+          </button>
+        </form>
+
+        <div className="login-footer">
+          <p>© 2024 Ticket Management System</p>
         </div>
-        <button type="submit" className="login-button">
-          Accedi
-        </button>
-      </form>
+      </div>
     </div>
   );
 }

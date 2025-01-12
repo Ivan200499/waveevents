@@ -151,7 +151,6 @@ function AdminDashboard() {
                           >
                             Modifica
                           </button>
-                          <button className="reset-password-button">Reset Password</button>
                         </td>
                       </tr>
                     ))}

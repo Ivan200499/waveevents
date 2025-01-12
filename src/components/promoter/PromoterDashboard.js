@@ -5,6 +5,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import Header from '../common/Header';
 import TicketHistory from '../tickets/TicketHistory';
 import SellTicketModal from '../tickets/SellTicketModal';
+import { FaTicketAlt, FaEuroSign } from 'react-icons/fa';
 
 function PromoterDashboard() {
   const { currentUser } = useAuth();
@@ -12,7 +13,7 @@ function PromoterDashboard() {
     totalTickets: 0,
     totalRevenue: 0
   });
-  const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard' o 'sell'
+  const [activeTab, setActiveTab] = useState('dashboard');
   const [events, setEvents] = useState([]);
   const [selectedEvent, setSelectedEvent] = useState(null);
 
@@ -62,13 +63,13 @@ function PromoterDashboard() {
     <div className="dashboard-container">
       <Header />
       <div className="tabs-container">
-        <button 
+        <button
           className={`tab-button ${activeTab === 'dashboard' ? 'active' : ''}`}
           onClick={() => setActiveTab('dashboard')}
         >
           Dashboard
         </button>
-        <button 
+        <button
           className={`tab-button ${activeTab === 'sell' ? 'active' : ''}`}
           onClick={() => setActiveTab('sell')}
         >
@@ -78,20 +79,32 @@ function PromoterDashboard() {
 
       {activeTab === 'dashboard' ? (
         <div className="dashboard-content">
-          <div className="stats-container">
-            <div className="stat-card">
-              <h3>Totale Biglietti Venduti</h3>
-              <p>{stats.totalTickets}</p>
+          <div className="summary-cards">
+            <div className="card summary-card">
+              <div className="summary-icon">
+                <FaTicketAlt />
+              </div>
+              <div className="summary-content">
+                <h3>{stats.totalTickets}</h3>
+                <p>Biglietti Venduti</p>
+              </div>
             </div>
-            <div className="stat-card">
-              <h3>Incasso Totale</h3>
-              <p>€{stats.totalRevenue.toFixed(2)}</p>
+
+            <div className="card summary-card">
+              <div className="summary-icon">
+                <FaEuroSign />
+              </div>
+              <div className="summary-content">
+                <h3>€{stats.totalRevenue.toFixed(2)}</h3>
+                <p>Incasso Totale</p>
+              </div>
             </div>
           </div>
+
           <TicketHistory />
         </div>
       ) : (
-        <div className="sell-tickets-content">
+        <div className="sell-tickets-container">
           <h2>Seleziona un Evento</h2>
           <div className="events-grid">
             {events.map(event => (

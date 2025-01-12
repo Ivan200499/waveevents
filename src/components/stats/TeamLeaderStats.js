@@ -1,94 +1,99 @@
 import { useState, useEffect } from 'react';
 import { db } from '../../firebase/config';
 import { collection, query, where, getDocs } from 'firebase/firestore';
-import PromoterStats from './PromoterStats';
 import './Stats.css';
 
-function TeamLeaderStats({ teamLeaderId }) {
+function TeamLeaderStats({ teamLeaderId, onClose }) {
   const [promoters, setPromoters] = useState([]);
-  const [teamStats, setTeamStats] = useState({
-    totalPromoters: 0,
-    totalTeamSales: 0,
-    totalTeamCommissions: 0
-  });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchTeamStats();
+    fetchPromoterStats();
   }, [teamLeaderId]);
 
-  async function fetchTeamStats() {
+  async function fetchPromoterStats() {
     try {
-      // Recupera tutti i promoter del team
+      // Recupera tutti i promoter assegnati a questo team leader
       const promotersQuery = query(
         collection(db, 'users'),
         where('teamLeaderId', '==', teamLeaderId),
         where('role', '==', 'promoter')
       );
-      const promotersSnapshot = await getDocs(promotersQuery);
       
-      const promotersData = promotersSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
+      const promotersSnapshot = await getDocs(promotersQuery);
+      const promotersData = [];
 
-      setPromoters(promotersData);
-
-      // Calcola le statistiche del team
-      let totalTeamSales = 0;
-      let totalTeamCommissions = 0;
-
-      for (const promoter of promotersData) {
-        const ticketsQuery = query(
-          collection(db, 'tickets'),
-          where('sellerId', '==', promoter.id)
-        );
-        const ticketsSnapshot = await getDocs(ticketsQuery);
+      for (const doc of promotersSnapshot.docs) {
+        const promoter = { id: doc.id, ...doc.data() };
         
-        ticketsSnapshot.forEach(doc => {
-          const ticket = doc.data();
-          totalTeamSales += ticket.price;
-          totalTeamCommissions += ticket.commission;
+        // Recupera le vendite per questo promoter
+        const salesQuery = query(
+          collection(db, 'tickets'),
+          where('sellerId', '==', doc.id)
+        );
+        
+        const salesSnapshot = await getDocs(salesQuery);
+        const sales = salesSnapshot.docs.map(sale => ({
+          id: sale.id,
+          ...sale.data()
+        }));
+
+        // Calcola le statistiche
+        const totalTickets = sales.reduce((acc, sale) => acc + (sale.quantity || 0), 0);
+        const totalRevenue = sales.reduce((acc, sale) => acc + ((sale.price || 0) * (sale.quantity || 0)), 0);
+
+        // Prendi solo le ultime 5 vendite, ordinate per data
+        const recentSales = sales
+          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+          .slice(0, 5);
+
+        promotersData.push({
+          ...promoter,
+          totalTickets,
+          totalRevenue,
+          recentSales
         });
       }
 
-      setTeamStats({
-        totalPromoters: promotersData.length,
-        totalTeamSales,
-        totalTeamCommissions
-      });
+      setPromoters(promotersData);
       setLoading(false);
     } catch (error) {
-      console.error('Error fetching team stats:', error);
+      console.error('Errore nel recupero delle statistiche:', error);
       setLoading(false);
     }
   }
 
-  if (loading) return <div>Caricamento statistiche del team...</div>;
+  if (loading) return <div>Caricamento statistiche...</div>;
 
   return (
-    <div className="team-stats-container">
-      <div className="team-summary">
-        <div className="stat-card">
-          <h3>Totale Promoter</h3>
-          <p className="stat-value">{teamStats.totalPromoters}</p>
-        </div>
-        <div className="stat-card">
-          <h3>Vendite Totali Team</h3>
-          <p className="stat-value">€{teamStats.totalTeamSales.toFixed(2)}</p>
-        </div>
-        <div className="stat-card">
-          <h3>Commissioni Totali Team</h3>
-          <p className="stat-value">€{teamStats.totalTeamCommissions.toFixed(2)}</p>
-        </div>
-      </div>
-
-      <div className="promoters-stats">
-        <h3>Statistiche Promoter</h3>
+    <div className="team-leader-stats">
+      <button className="close-button" onClick={onClose}>×</button>
+      <div className="stats-container">
         {promoters.map(promoter => (
-          <div key={promoter.id} className="promoter-stats-card">
-            <h4>{promoter.name}</h4>
-            <PromoterStats promoterId={promoter.id} />
+          <div key={promoter.id} className="leader-stats-card">
+            <h3>{promoter.name}</h3>
+            
+            <div className="stats-summary">
+              <div className="stat-box">
+                <span className="stat-value">{promoter.totalTickets}</span>
+                <span className="stat-label">biglietti</span>
+              </div>
+              <div className="stat-box">
+                <span className="stat-value">€{promoter.totalRevenue.toFixed(2)}</span>
+                <span className="stat-label">incasso</span>
+              </div>
+            </div>
+
+            <div className="recent-sales">
+              <h4>Ultime vendite</h4>
+              {promoter.recentSales.map(sale => (
+                <div key={sale.id} className="sale-row">
+                  <span>{new Date(sale.createdAt).toLocaleDateString()}</span>
+                  <span>{sale.quantity} biglietti</span>
+                  <span>€{((sale.price || 0) * (sale.quantity || 0)).toFixed(2)}</span>
+                </div>
+              ))}
+            </div>
           </div>
         ))}
       </div>

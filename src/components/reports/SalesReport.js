@@ -54,14 +54,11 @@ function SalesReport() {
   }
 
   return (
-    <div style={{ padding: '20px' }}>
-      <h2>Report Vendite</h2>
-      
+    <div style={{ padding: '20px' }}>      
       <div style={{ display: 'grid', gap: '20px', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))' }}>
         <div style={{ padding: '20px', border: '1px solid #ddd', borderRadius: '8px' }}>
           <h3>Riepilogo</h3>
           <p>Totale Biglietti Venduti: {salesData.totalSales}</p>
-          <p>Ricavo Totale: €{salesData.totalRevenue}</p>
         </div>
 
         <div style={{ padding: '20px', border: '1px solid #ddd', borderRadius: '8px' }}>

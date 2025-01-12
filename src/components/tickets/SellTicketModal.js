@@ -53,8 +53,7 @@ function SellTicketModal({ event, onClose, onSold }) {
       // Aggiorna i biglietti disponibili
       const eventRef = doc(db, 'events', event.id);
       await updateDoc(eventRef, {
-        availableTickets: increment(-quantity),
-        soldTickets: increment(quantity)
+        availableTickets: increment(-quantity)
       });
 
       // Invia email con il biglietto

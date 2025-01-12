@@ -1,0 +1,203 @@
+/* Container principale */
+.login-container {
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: linear-gradient(135deg, #1e88e5, #1565c0);
+    padding: 20px;
+  }
+  
+  /* Box di login */
+  .login-box {
+    background: white;
+    border-radius: 20px;
+    padding: 40px;
+    width: 100%;
+    max-width: 400px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    animation: slideUp 0.5s ease-out;
+  }
+  
+  /* Header */
+  .login-header {
+    text-align: center;
+    margin-bottom: 30px;
+  }
+  
+  .login-logo {
+    width: 120px;
+    height: auto;
+    margin-bottom: 20px;
+  }
+  
+  .login-header h2 {
+    color: #1565c0;
+    margin-bottom: 10px;
+    font-size: 28px;
+  }
+  
+  .login-header p {
+    color: #666;
+    font-size: 14px;
+  }
+  
+  /* Form */
+  .login-form {
+    margin-bottom: 30px;
+  }
+  
+  .form-group {
+    margin-bottom: 20px;
+  }
+  
+  .input-with-icon {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+  
+  .input-icon {
+    position: absolute;
+    left: 12px;
+    color: #666;
+    z-index: 1;
+  }
+  
+  /* Stile degli input */
+  input {
+    width: 100%;
+    padding: 12px 12px 12px 40px;
+    border: 2px solid #e0e0e0;
+    border-radius: 10px;
+    font-size: 16px;
+    transition: all 0.3s ease;
+    background: white;
+  }
+  
+  input:focus {
+    border-color: #1976d2;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.1);
+  }
+  
+  /* Bottone di login */
+  .login-button {
+    width: 100%;
+    padding: 14px;
+    background: linear-gradient(135deg, #1e88e5, #1565c0);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  
+  .login-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+  
+  .login-button:active {
+    transform: translateY(0);
+  }
+  
+  /* Footer */
+  .login-footer {
+    text-align: center;
+    color: #666;
+    font-size: 12px;
+    margin-top: 20px;
+  }
+  
+  /* Animazioni */
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  /* Responsive per dispositivi mobili */
+  @media (max-width: 480px) {
+    .login-container {
+      padding: 15px;
+    }
+  
+    .login-box {
+      padding: 25px 20px;
+      border-radius: 15px;
+    }
+  
+    .login-logo {
+      width: 100px;
+    }
+  
+    .login-header h2 {
+      font-size: 24px;
+    }
+  
+    .login-header p {
+      font-size: 13px;
+    }
+  
+    input {
+      font-size: 15px;
+      padding: 10px 10px 10px 35px;
+    }
+  
+    .input-icon {
+      font-size: 14px;
+      left: 10px;
+    }
+  
+    .login-button {
+      padding: 12px;
+      font-size: 15px;
+    }
+  
+    /* Previeni lo zoom su input focus in iOS */
+    @media screen and (-webkit-min-device-pixel-ratio: 0) { 
+      input {
+        font-size: 16px;
+      }
+    }
+  }
+  
+  /* Per schermi molto piccoli */
+  @media (max-width: 320px) {
+    .login-box {
+      padding: 20px 15px;
+    }
+  
+    .login-logo {
+      width: 80px;
+    }
+  
+    .login-header h2 {
+      font-size: 22px;
+    }
+  
+    input {
+      padding: 8px 8px 8px 32px;
+    }
+  }
+  
+  /* Per prevenire problemi con la tastiera mobile */
+  @media screen and (max-height: 600px) {
+    .login-container {
+      align-items: flex-start;
+      padding-top: 20px;
+    }
+  
+    .login-box {
+      margin-bottom: 20px;
+    }
+  }
+  

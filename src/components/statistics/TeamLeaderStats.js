@@ -1,56 +1,85 @@
 import { useState, useEffect } from 'react';
 import { db } from '../../firebase/config';
 import { collection, query, where, getDocs } from 'firebase/firestore';
-import './Statistics.css';
+import './TeamLeaderStatistics.css';
 
 function TeamLeaderStats({ teamLeader, onClose }) {
-  const [events, setEvents] = useState([]);
-  const [selectedEvent, setSelectedEvent] = useState(null);
-  const [promoterStats, setPromoterStats] = useState([]);
+  const [stats, setStats] = useState({
+    totalTickets: 0,
+    totalRevenue: 0,
+    recentSales: [],
+    eventStats: [],
+    promoters: []
+  });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchTeamLeaderStats();
-  }, [teamLeader.uid]);
+  }, [teamLeader.id]);
 
   async function fetchTeamLeaderStats() {
     try {
-      // Ottieni tutti i promoter del team leader
+      // Recupera tutti i promoter di questo team leader
       const promotersQuery = query(
         collection(db, 'users'),
-        where('teamLeaderId', '==', teamLeader.uid)
+        where('teamLeaderId', '==', teamLeader.id),
+        where('role', '==', 'promoter')
       );
+      
       const promotersSnapshot = await getDocs(promotersQuery);
-      const promoterIds = promotersSnapshot.docs.map(doc => doc.data().uid);
-
-      // Ottieni tutti gli eventi
-      const eventsSnapshot = await getDocs(collection(db, 'events'));
-      const eventsData = eventsSnapshot.docs.map(doc => ({
+      const promoters = promotersSnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
-      setEvents(eventsData);
 
-      // Ottieni tutte le vendite dei promoter del team
-      const salesStats = {};
-      for (const eventId of eventsData.map(e => e.id)) {
-        const ticketsQuery = query(
+      // Recupera tutte le vendite dei promoter di questo team
+      const promoterIds = promoters.map(p => p.id);
+      const salesQuery = query(
           collection(db, 'tickets'),
-          where('eventId', '==', eventId),
           where('sellerId', 'in', promoterIds)
         );
-        const ticketsSnapshot = await getDocs(ticketsQuery);
-        
-        salesStats[eventId] = ticketsSnapshot.docs.reduce((acc, doc) => {
-          const ticket = doc.data();
-          return {
-            totalTickets: acc.totalTickets + ticket.quantity,
-            totalRevenue: acc.totalRevenue + ticket.totalPrice
-          };
-        }, { totalTickets: 0, totalRevenue: 0 });
-      }
+      
+      const salesSnapshot = await getDocs(salesQuery);
+      const sales = salesSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
 
-      setPromoterStats(salesStats);
+      // Calcola statistiche generali
+      const totalTickets = sales.reduce((acc, sale) => acc + (sale.quantity || 0), 0);
+      const totalRevenue = sales.reduce((acc, sale) => acc + ((sale.price || 0) * (sale.quantity || 0)), 0);
+
+      // Calcola statistiche per evento
+      const eventStatsMap = sales.reduce((acc, sale) => {
+        const eventId = sale.eventId;
+        if (!acc[eventId]) {
+          acc[eventId] = {
+            eventId,
+            eventName: sale.eventName,
+            totalTickets: 0,
+            totalRevenue: 0,
+            sales: []
+          };
+        }
+        acc[eventId].totalTickets += sale.quantity || 0;
+        acc[eventId].totalRevenue += (sale.price || 0) * (sale.quantity || 0);
+        acc[eventId].sales.push(sale);
+        return acc;
+      }, {});
+
+      // Converti la mappa in array e ordina per ricavo
+      const eventStats = Object.values(eventStatsMap)
+        .sort((a, b) => b.totalRevenue - a.totalRevenue);
+
+      setStats({
+        totalTickets,
+        totalRevenue,
+        recentSales: sales
+          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+          .slice(0, 5),
+        eventStats,
+        promoters
+      });
       setLoading(false);
     } catch (error) {
       console.error('Errore nel recupero delle statistiche:', error);
@@ -58,68 +87,53 @@ function TeamLeaderStats({ teamLeader, onClose }) {
     }
   }
 
+  if (loading) return <div>Caricamento statistiche...</div>;
+
   return (
-    <div className="modal-overlay">
-      <div className="modal-content statistics-modal">
-        <div className="modal-header">
-          <h2>Statistiche Team Leader: {teamLeader.name}</h2>
-          <button className="close-button" onClick={onClose}>&times;</button>
+    <div className="stats-modal-overlay">
+      <div className="stats-modal-content">
+        <button className="close-button" onClick={onClose}>×</button>
+        <div className="team-leader-stats">
+          <h3>{teamLeader.name}</h3>
+          
+          <div className="stats-summary">
+            <div className="stat-box">
+              <span className="stat-label">Biglietti Venduti</span>
+              <span className="stat-value">{stats.totalTickets}</span>
         </div>
-
-        {loading ? (
-          <div className="loading">Caricamento statistiche...</div>
-        ) : (
-          <div className="statistics-content">
-            <div className="team-summary">
-              <p><strong>Email:</strong> {teamLeader.email}</p>
-              <p><strong>Team:</strong> {teamLeader.teamName}</p>
+            <div className="stat-box">
+              <span className="stat-label">Incasso Totale</span>
+              <span className="stat-value">€{stats.totalRevenue.toFixed(2)}</span>
+            </div>
             </div>
 
-            <h3>Vendite per Evento</h3>
-            <div className="events-stats-table">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Evento</th>
-                    <th>Data</th>
-                    <th>Biglietti Venduti</th>
-                    <th>Incasso Totale</th>
-                    <th>Azioni</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {events.map(event => {
-                    const stats = promoterStats[event.id] || { totalTickets: 0, totalRevenue: 0 };
-                    return (
-                      <tr key={event.id}>
-                        <td>{event.name}</td>
-                        <td>{new Date(event.date).toLocaleDateString()}</td>
-                        <td>{stats.totalTickets}</td>
-                        <td>€{stats.totalRevenue.toFixed(2)}</td>
-                        <td>
-                          <button 
-                            className="btn-details"
-                            onClick={() => setSelectedEvent(event)}
-                          >
-                            Dettagli Promoter
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+          <div className="events-stats">
+            <h4>Vendite per Evento</h4>
+            {stats.eventStats.map(event => (
+              <div key={event.eventId} className="event-stat-card">
+                <div className="event-stat-header">
+                  <h5>{event.eventName}</h5>
+                  <div className="event-totals">
+                    <span>{event.totalTickets} biglietti</span>
+                    <span>€{event.totalRevenue.toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
             </div>
 
-            {selectedEvent && (
-              <PromoterEventStats 
-                event={selectedEvent}
-                teamLeaderId={teamLeader.uid}
-                onClose={() => setSelectedEvent(null)}
-              />
-            )}
+          <div className="recent-sales">
+            <h4>Ultime vendite</h4>
+            {stats.recentSales.map(sale => (
+              <div key={sale.id} className="sale-row">
+                <span>{new Date(sale.createdAt).toLocaleDateString()}</span>
+                <span>{sale.eventName}</span>
+                <span>{sale.quantity} biglietti</span>
+                <span>€{((sale.price || 0) * (sale.quantity || 0)).toFixed(2)}</span>
+              </div>
+            ))}
           </div>
-        )}
+        </div>
       </div>
     </div>
   );

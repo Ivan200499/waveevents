@@ -4,21 +4,21 @@ import { collection, query, where, getDocs } from 'firebase/firestore';
 import { FaCalendar, FaTicketAlt, FaEuroSign, FaChartLine } from 'react-icons/fa';
 import './PromoterStatistics.css';
 
-function PromoterStatistics({ promoter, onClose }) {
+function PromoterStatistics({ promoterId, onClose }) {
   const [statistics, setStatistics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedEvent, setSelectedEvent] = useState(null);
 
   useEffect(() => {
     fetchStatistics();
-  }, [promoter.id]);
+  }, [promoterId]);
 
   async function fetchStatistics() {
     try {
       // Recupera tutte le vendite del promoter
       const salesQuery = query(
         collection(db, 'sales'),
-        where('promoterId', '==', promoter.id)
+        where('promoterId', '==', promoterId)
       );
       const salesSnapshot = await getDocs(salesQuery);
       const sales = salesSnapshot.docs.map(doc => ({
@@ -98,10 +98,10 @@ function PromoterStatistics({ promoter, onClose }) {
   if (loading) return <div className="loading-spinner" />;
 
   return (
-    <div className="statistics-modal">
+    <div className="promoter-stats">
+      <button className="close-button" onClick={onClose}>×</button>
       <div className="modal-header">
-        <h3>Statistiche di {promoter.name}</h3>
-        <button className="close-button" onClick={onClose}>&times;</button>
+        <h3>Statistiche di {promoterId}</h3>
       </div>
 
       <div className="statistics-summary">

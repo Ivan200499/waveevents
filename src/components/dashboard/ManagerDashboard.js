@@ -8,6 +8,8 @@ import EditEvent from '../events/EditEvent';
 import CreatePromoter from '../auth/CreatePromoter';
 import { FaUserTie, FaUsers, FaUser, FaChartBar, FaCalendar, FaMapMarkerAlt, FaEuroSign, FaEdit, FaTrash, FaPlus, FaUserPlus, FaCalendarAlt, FaExclamationTriangle } from 'react-icons/fa';
 import './ManagerDashboard.css';
+import { useAuth } from '../../contexts/AuthContext';
+import ManagerStats from '../stats/ManagerStats';
 
 function TeamLeaderCard({ leader, onViewStats, onDelete }) {
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
@@ -30,9 +32,6 @@ function TeamLeaderCard({ leader, onViewStats, onDelete }) {
             <h4>{leader.name}</h4>
             <span className="email">{leader.email}</span>
           </div>
-        </div>
-        <div className="stats-badge">
-          {leader.promoters.length} Promoter
         </div>
       </div>
 
@@ -138,6 +137,7 @@ function EventCard({ event, onEdit, onDelete }) {
 }
 
 function ManagerDashboard() {
+  const { currentUser } = useAuth();
   const [teamLeaders, setTeamLeaders] = useState([]);
   const [events, setEvents] = useState([]);
   const [showCreateEvent, setShowCreateEvent] = useState(false);
@@ -148,6 +148,7 @@ function ManagerDashboard() {
   const [showCreatePromoter, setShowCreatePromoter] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [leaderToDelete, setLeaderToDelete] = useState(null);
+  const [showStats, setShowStats] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -155,48 +156,32 @@ function ManagerDashboard() {
 
   async function fetchData() {
     try {
-      // Recupera solo i team leader non eliminati
+      // Recupera i team leader
       const teamLeadersQuery = query(
         collection(db, 'users'),
-        where('role', '==', 'teamLeader'),
-        where('status', '!=', 'deleted')
+        where('managerId', '==', currentUser.uid),
+        where('role', '==', 'teamLeader')
       );
       const teamLeadersSnapshot = await getDocs(teamLeadersQuery);
-      const teamLeadersData = teamLeadersSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        promoters: []
-      }));
-
-      // Per ogni team leader, recupera i suoi promoter
-      for (let teamLeader of teamLeadersData) {
+      const teamLeadersData = await Promise.all(teamLeadersSnapshot.docs.map(async doc => {
+        const leaderId = doc.id;
+        
+        // Conta correttamente i promoter per questo team leader
         const promotersQuery = query(
           collection(db, 'users'),
-          where('teamLeaderId', '==', teamLeader.id),
+          where('teamLeaderId', '==', leaderId),
           where('role', '==', 'promoter')
         );
         const promotersSnapshot = await getDocs(promotersQuery);
-        teamLeader.promoters = promotersSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-      }
+        
+        return {
+          id: leaderId,
+          ...doc.data(),
+          promotersCount: promotersSnapshot.size // Questo è il numero corretto di promoter
+        };
+      }));
 
       setTeamLeaders(teamLeadersData);
-
-      // Recupera eventi (modifichiamo questa parte)
-      const eventsQuery = query(
-        collection(db, 'events'),
-        where('status', '!=', 'deleted')  // Mostra solo eventi non eliminati
-      );
-      const eventsSnapshot = await getDocs(eventsQuery);
-      const eventsData = eventsSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      console.log('Eventi recuperati:', eventsData); // Debug
-      setEvents(eventsData);
-
       setLoading(false);
     } catch (error) {
       console.error('Errore nel recupero dei dati:', error);
@@ -273,6 +258,38 @@ function ManagerDashboard() {
     }
   };
 
+  async function fetchTeamLeaders() {
+    try {
+      const leadersQuery = query(
+        collection(db, 'users'),
+        where('managerId', '==', currentUser.uid),
+        where('role', '==', 'teamLeader')
+      );
+      const snapshot = await getDocs(leadersQuery);
+      const leadersData = await Promise.all(snapshot.docs.map(async doc => {
+        const leaderId = doc.id;
+        // Conta i promoter per questo team leader
+        const promotersQuery = query(
+          collection(db, 'users'),
+          where('teamLeaderId', '==', leaderId),
+          where('role', '==', 'promoter')
+        );
+        const promotersSnapshot = await getDocs(promotersQuery);
+        
+        return {
+          id: leaderId,
+          ...doc.data(),
+          promotersCount: promotersSnapshot.size // Numero effettivo di promoter
+        };
+      }));
+      setTeamLeaders(leadersData);
+      setLoading(false);
+    } catch (error) {
+      console.error('Errore nel recupero dei team leader:', error);
+      setLoading(false);
+    }
+  }
+
   if (loading) return <div>Caricamento...</div>;
 
   return (
@@ -337,12 +354,17 @@ function ManagerDashboard() {
         <h3><FaUsers /> Team Leaders</h3>
         <div className="grid">
           {teamLeaders.map(leader => (
+            <div 
+              key={leader.id} 
+              className="team-leader-card"
+              onClick={() => setShowStats(true)}
+            >
             <TeamLeaderCard
-              key={leader.id}
               leader={leader}
               onViewStats={() => setSelectedTeam(leader.id)}
               onDelete={handleDeleteLeader}
             />
+            </div>
           ))}
         </div>
       </section>
@@ -424,6 +446,14 @@ function ManagerDashboard() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Modale delle statistiche */}
+      {showStats && (
+        <ManagerStats 
+          managerId={currentUser.uid}
+          onClose={() => setShowStats(false)}
+        />
       )}
     </div>
   );

@@ -6,6 +6,7 @@ import { FaUser, FaTicketAlt, FaEuroSign, FaQrcode } from 'react-icons/fa';
 import Header from '../common/Header';
 import TicketValidator from '../tickets/TicketValidator';
 import './ManagerDashboard.css';
+import TeamLeaderStats from '../statistics/TeamLeaderStats';
 
 function ManagerDashboard() {
   const { currentUser } = useAuth();
@@ -94,10 +95,8 @@ function ManagerDashboard() {
     }
   }
 
-  const handleTeamLeaderClick = async (teamLeader) => {
-    setSelectedTeamLeader(teamLeader);
-    const stats = await fetchTeamLeaderStats(teamLeader.id);
-    setTeamLeaderStats(stats);
+  const handleTeamLeaderClick = (leader) => {
+    setSelectedTeamLeader(leader);
   };
 
   useEffect(() => {
@@ -143,7 +142,10 @@ function ManagerDashboard() {
                 <div 
                   key={leader.id}
                   className="leader-card"
-                  onClick={() => handleTeamLeaderClick(leader)}
+                  onClick={() => {
+                    console.log("Card cliccata:", leader);
+                    handleTeamLeaderClick(leader);
+                  }}
                 >
                   <div className="leader-icon">
                     <FaUser size={24} />
@@ -160,66 +162,11 @@ function ManagerDashboard() {
               ))}
             </div>
 
-            {selectedTeamLeader && teamLeaderStats && (
-              <div className="stats-modal" onClick={() => setSelectedTeamLeader(null)}>
-                <div className="stats-content" onClick={e => e.stopPropagation()}>
-                  <button className="close-button" onClick={() => setSelectedTeamLeader(null)}>×</button>
-                  <h3>Team di {selectedTeamLeader.name}</h3>
-                  
-                  <div className="filters">
-                    <input
-                      type="text"
-                      placeholder="Cerca evento..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="search-input"
-                    />
-                    <input
-                      type="date"
-                      value={dateFilter}
-                      onChange={(e) => setDateFilter(e.target.value)}
-                      className="date-filter"
-                    />
-                  </div>
-
-                  <div className="stats-grid">
-                    {filteredStats?.map(({ promoter, events }) => (
-                      <div key={promoter.id} className="event-stat-card">
-                        <div className="promoter-header">
-                          <div className="promoter-icon">
-                            <FaUser />
-                          </div>
-                          <div className="promoter-info">
-                            <h4>{promoter.name}</h4>
-                            <p>{promoter.email}</p>
-                          </div>
-                        </div>
-                        
-                        {events.map(event => (
-                          <div key={event.eventId} className="event-stat">
-                            <div className="event-header">
-                              <h5>{event.eventName}</h5>
-                              <span className="event-date">
-                                {new Date(event.date).toLocaleDateString()}
-                              </span>
-                            </div>
-                            <div className="stat-row">
-                              <div className="stat-item">
-                                <FaTicketAlt />
-                                <span>{event.totalTickets} biglietti</span>
-                              </div>
-                              <div className="stat-item">
-                                <FaEuroSign />
-                                <span>€{event.totalRevenue.toFixed(2)}</span>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
+            {selectedTeamLeader && (
+              <TeamLeaderStats 
+                teamLeader={selectedTeamLeader}
+                onClose={() => setSelectedTeamLeader(null)}
+              />
             )}
           </div>
         ) : (
