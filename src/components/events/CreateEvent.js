@@ -1,16 +1,43 @@
 import { useState } from 'react';
 import { db } from '../../firebase/config';
 import { collection, addDoc } from 'firebase/firestore';
+import { uploadImage } from '../../services/ImageService';
 import './CreateEvent.css';
 
 function CreateEvent({ onEventCreated }) {
-  const [name, setName] = useState('');
-  const [date, setDate] = useState('');
-  const [location, setLocation] = useState('');
-  const [totalTickets, setTotalTickets] = useState('');
-  const [ticketPrice, setTicketPrice] = useState('');
+  console.log("SONO IL FILE GIUSTO - CreateEvent.js");
+  
+  const [formData, setFormData] = useState({
+    name: '',
+    date: '',
+    location: '',
+    totalTickets: '',
+    ticketPrice: '',
+  });
+  const [image, setImage] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 5000000) { // 5MB limit
+        setError('L\'immagine non può superare i 5MB');
+        return;
+      }
+      setImage(file);
+      setImagePreview(URL.createObjectURL(file));
+    }
+  };
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -18,32 +45,36 @@ function CreateEvent({ onEventCreated }) {
     setError('');
 
     try {
-      // Crea l'evento nel database
+      let imageUrl = null;
+      if (image) {
+        imageUrl = await uploadImage(image);
+      }
+
       const eventData = {
-        name,
-        date,
-        location,
-        totalTickets: parseInt(totalTickets),
-        availableTickets: parseInt(totalTickets),
-        ticketPrice: parseFloat(ticketPrice),
+        ...formData,
+        totalTickets: parseInt(formData.totalTickets),
+        availableTickets: parseInt(formData.totalTickets),
+        ticketPrice: parseFloat(formData.ticketPrice),
+        imageUrl,
         status: 'active',
         createdAt: new Date().toISOString()
       };
 
       await addDoc(collection(db, 'events'), eventData);
-
-      // Reset form
-      setName('');
-      setDate('');
-      setLocation('');
-      setTotalTickets('');
-      setTicketPrice('');
       
-      // Notifica il componente padre
+      // Reset form
+      setFormData({
+        name: '',
+        date: '',
+        location: '',
+        totalTickets: '',
+        ticketPrice: '',
+      });
+      setImage(null);
+      setImagePreview(null);
+      
       onEventCreated();
-
     } catch (error) {
-      console.error('Errore nella creazione dell\'evento:', error);
       setError('Errore nella creazione dell\'evento: ' + error.message);
     } finally {
       setLoading(false);
@@ -57,11 +88,46 @@ function CreateEvent({ onEventCreated }) {
       
       <form onSubmit={handleSubmit}>
         <div className="form-group">
+          <label>Locandina Evento:</label>
+          <div className="image-upload-container">
+            {imagePreview ? (
+              <div className="image-preview">
+                <img src={imagePreview} alt="Preview" />
+                <button 
+                  type="button" 
+                  className="remove-image"
+                  onClick={() => {
+                    setImage(null);
+                    setImagePreview(null);
+                  }}
+                >
+                  ×
+                </button>
+              </div>
+            ) : (
+              <div className="upload-placeholder">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  id="event-image"
+                  className="hidden-input"
+                />
+                <label htmlFor="event-image" className="upload-label">
+                  Carica Locandina
+                </label>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="form-group">
           <label>Nome Evento:</label>
           <input
             type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
+            name="name"
+            value={formData.name}
+            onChange={handleChange}
             required
           />
         </div>
@@ -70,8 +136,9 @@ function CreateEvent({ onEventCreated }) {
           <label>Data:</label>
           <input
             type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
+            name="date"
+            value={formData.date}
+            onChange={handleChange}
             required
           />
         </div>
@@ -80,8 +147,9 @@ function CreateEvent({ onEventCreated }) {
           <label>Luogo:</label>
           <input
             type="text"
-            value={location}
-            onChange={(e) => setLocation(e.target.value)}
+            name="location"
+            value={formData.location}
+            onChange={handleChange}
             required
           />
         </div>
@@ -90,8 +158,9 @@ function CreateEvent({ onEventCreated }) {
           <label>Numero Totale Biglietti:</label>
           <input
             type="number"
-            value={totalTickets}
-            onChange={(e) => setTotalTickets(e.target.value)}
+            name="totalTickets"
+            value={formData.totalTickets}
+            onChange={handleChange}
             required
             min="1"
           />
@@ -101,8 +170,9 @@ function CreateEvent({ onEventCreated }) {
           <label>Prezzo Biglietto (€):</label>
           <input
             type="number"
-            value={ticketPrice}
-            onChange={(e) => setTicketPrice(e.target.value)}
+            name="ticketPrice"
+            value={formData.ticketPrice}
+            onChange={handleChange}
             required
             min="0"
             step="0.01"

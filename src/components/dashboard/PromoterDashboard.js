@@ -6,6 +6,8 @@ import { FaCalendarAlt, FaChartLine, FaTicketAlt, FaHistory, FaEuroSign, FaUsers
 import './PromoterDashboard.css';
 import SellTicketModal from '../tickets/SellTicketModal';
 
+console.log("SONO IL PROMOTER DASHBOARD IN /dashboard");
+
 function SalesSummaryCard({ salesData }) {
   return (
     <div className="summary-cards">

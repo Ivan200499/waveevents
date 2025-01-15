@@ -80,19 +80,30 @@
 
 .event-card {
   background: white;
-  padding: 20px;
   border-radius: 8px;
+  overflow: hidden;
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  transition: transform 0.2s;
 }
 
-.event-card h3 {
-  margin: 0 0 15px 0;
-  color: #333;
+.event-card:hover {
+  transform: translateY(-5px);
 }
 
-.event-card p {
-  margin: 5px 0;
-  color: #666;
+.event-image {
+  width: 100%;
+  height: 200px;
+  overflow: hidden;
+}
+
+.event-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.event-content {
+  padding: 20px;
 }
 
 .sell-button {

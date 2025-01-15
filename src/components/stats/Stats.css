@@ -106,13 +106,13 @@
   right: 15px;
   background: none;
   border: none;
-  font-size: 24px;
+    font-size: 24px;
   color: #666;
   cursor: pointer;
   padding: 5px;
   line-height: 1;
   transition: color 0.3s ease;
-}
+  }
 
 .close-button:hover {
   color: #f44336;

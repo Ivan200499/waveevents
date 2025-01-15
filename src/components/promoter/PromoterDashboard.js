@@ -7,6 +7,8 @@ import TicketHistory from '../tickets/TicketHistory';
 import SellTicketModal from '../tickets/SellTicketModal';
 import { FaTicketAlt, FaEuroSign } from 'react-icons/fa';
 
+console.log("SONO IL PROMOTER DASHBOARD IN /promoter");
+
 function PromoterDashboard() {
   const { currentUser } = useAuth();
   const [stats, setStats] = useState({
@@ -16,6 +18,7 @@ function PromoterDashboard() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [events, setEvents] = useState([]);
   const [selectedEvent, setSelectedEvent] = useState(null);
+  const [showSellModal, setShowSellModal] = useState(false);
 
   useEffect(() => {
     fetchStats();
@@ -109,18 +112,28 @@ function PromoterDashboard() {
           <div className="events-grid">
             {events.map(event => (
               <div key={event.id} className="event-card">
-                <h3>{event.name}</h3>
-                <p>Data: {new Date(event.date).toLocaleDateString()}</p>
-                <p>Luogo: {event.location}</p>
-                <p>Prezzo: €{event.price}</p>
-                <p>Biglietti disponibili: {event.availableTickets}</p>
-                <button 
-                  className="sell-button"
-                  onClick={() => setSelectedEvent(event)}
-                  disabled={event.availableTickets <= 0}
-                >
-                  {event.availableTickets > 0 ? 'Vendi Biglietti' : 'Esaurito'}
-                </button>
+                {event.imageUrl && (
+                  <div className="event-image">
+                    <img src={event.imageUrl} alt={event.name} />
+                  </div>
+                )}
+                <div className="event-content">
+                  <h3>{event.name}</h3>
+                  <p>Data: {new Date(event.date).toLocaleDateString()}</p>
+                  <p>Luogo: {event.location}</p>
+                  <p>Prezzo: €{event.ticketPrice}</p>
+                  <p>Biglietti disponibili: {event.availableTickets}</p>
+                  <button 
+                    className="sell-button"
+                    onClick={() => {
+                      setSelectedEvent(event);
+                      setShowSellModal(true);
+                    }}
+                    disabled={event.availableTickets <= 0}
+                  >
+                    {event.availableTickets > 0 ? 'Vendi Biglietti' : 'Esaurito'}
+                  </button>
+                </div>
               </div>
             ))}
           </div>
