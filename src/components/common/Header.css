@@ -57,11 +57,22 @@
 }
 
 @media (max-width: 768px) {
+  .header-content {
+    flex-direction: column;
+    gap: 10px;
+    text-align: center;
+  }
+
   .user-menu {
+    flex-direction: column;
     gap: 10px;
   }
 
-  .user-email {
-    font-size: 14px;
+  .user-info {
+    text-align: center;
+  }
+
+  .logout-btn {
+    width: 100%;
   }
 } 

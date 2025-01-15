@@ -106,4 +106,28 @@
   background: rgba(244, 67, 54, 0.1);
   color: #d32f2f;
   border-radius: 4px;
+}
+
+@media (max-width: 768px) {
+  .ticket-container {
+    padding: 15px;
+  }
+
+  .ticket-details {
+    flex-direction: column;
+  }
+
+  .qr-section {
+    width: 100%;
+    margin: 20px 0;
+  }
+
+  .ticket-actions {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .ticket-actions button {
+    width: 100%;
+  }
 } 

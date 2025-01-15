@@ -74,6 +74,20 @@
   .stats-container {
     grid-template-columns: 1fr;
   }
+
+  .stats-modal-content {
+    width: 95%;
+    padding: 15px;
+    margin: 10px;
+  }
+
+  .stats-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .stat-box {
+    padding: 12px;
+  }
 }
 
 .stats-modal-overlay {

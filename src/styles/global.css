@@ -293,4 +293,48 @@ button.btn-outline:hover {
   flex: 1;
   padding: 20px;
   background-color: var(--background-light);
+}
+
+/* Aggiungi/aggiorna queste media queries */
+@media (max-width: 768px) {
+  :root {
+    --container-padding: 10px;
+  }
+
+  .container {
+    padding: var(--container-padding);
+  }
+
+  .grid {
+    grid-template-columns: 1fr !important;
+    gap: 15px;
+  }
+
+  .card {
+    margin: 10px 0;
+    padding: 15px;
+  }
+
+  /* Migliora la leggibilità dei testi su mobile */
+  body {
+    font-size: 16px;
+    line-height: 1.4;
+  }
+
+  /* Rendi i bottoni più facili da premere su mobile */
+  button, 
+  .btn,
+  input[type="submit"] {
+    min-height: 44px;
+    padding: 12px 20px;
+  }
+
+  /* Migliora spaziatura form su mobile */
+  input, 
+  select, 
+  textarea {
+    font-size: 16px; /* Previene lo zoom automatico su iOS */
+    padding: 12px;
+    margin: 8px 0;
+  }
 } 
