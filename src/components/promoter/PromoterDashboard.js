@@ -1,24 +1,25 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { db } from '../../firebase/config';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { useAuth } from '../../contexts/AuthContext';
 import Header from '../common/Header';
 import TicketHistory from '../tickets/TicketHistory';
 import SellTicketModal from '../tickets/SellTicketModal';
-import { FaTicketAlt, FaEuroSign } from 'react-icons/fa';
-
-console.log("SONO IL PROMOTER DASHBOARD IN /promoter");
+import { FaTicketAlt, FaEuroSign, FaCalendarAlt, FaMapMarkerAlt, FaClock, FaCheck } from 'react-icons/fa';
+import './PromoterDashboard.css';
 
 function PromoterDashboard() {
   const { currentUser } = useAuth();
   const [stats, setStats] = useState({
     totalTickets: 0,
-    totalRevenue: 0
+    totalRevenue: 0,
+    validatedTickets: 0
   });
   const [activeTab, setActiveTab] = useState('dashboard');
   const [events, setEvents] = useState([]);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [showSellModal, setShowSellModal] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchStats();
@@ -38,13 +39,16 @@ function PromoterDashboard() {
         const ticket = doc.data();
         return {
           totalTickets: acc.totalTickets + (ticket.quantity || 0),
-          totalRevenue: acc.totalRevenue + ((ticket.price || 0) * (ticket.quantity || 0))
+          totalRevenue: acc.totalRevenue + ((ticket.price || 0) * (ticket.quantity || 0)),
+          validatedTickets: acc.validatedTickets + (ticket.status === 'used' ? (ticket.quantity || 0) : 0)
         };
-      }, { totalTickets: 0, totalRevenue: 0 });
+      }, { totalTickets: 0, totalRevenue: 0, validatedTickets: 0 });
       
       setStats(statistics);
+      setLoading(false);
     } catch (error) {
       console.error('Errore nel recupero delle statistiche:', error);
+      setLoading(false);
     }
   }
 
@@ -62,9 +66,23 @@ function PromoterDashboard() {
     }
   }
 
+  if (loading) {
+    return (
+      <div className="loading-container">
+        <div className="loading-spinner"></div>
+        <p>Caricamento dashboard...</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="dashboard-container">
+    <div className="promoter-dashboard">
       <Header />
+      <div className="dashboard-header">
+        <h1 className="header-title">Dashboard Promoter</h1>
+        <p className="header-subtitle">Gestisci i tuoi eventi e monitora le vendite</p>
+      </div>
+
       <div className="tabs-container">
         <button
           className={`tab-button ${activeTab === 'dashboard' ? 'active' : ''}`}
@@ -82,24 +100,40 @@ function PromoterDashboard() {
 
       {activeTab === 'dashboard' ? (
         <div className="dashboard-content">
-          <div className="summary-cards">
-            <div className="card summary-card">
-              <div className="summary-icon">
-                <FaTicketAlt />
-              </div>
-              <div className="summary-content">
-                <h3>{stats.totalTickets}</h3>
-                <p>Biglietti Venduti</p>
+          <div className="stats-overview">
+            <div className="stat-card">
+              <div className="stat-header">
+                <div className="stat-icon">
+                  <FaTicketAlt />
+                </div>
+                <div className="stat-info">
+                  <h3>Biglietti Venduti</h3>
+                  <div className="value">{stats.totalTickets}</div>
+                </div>
               </div>
             </div>
 
-            <div className="card summary-card">
-              <div className="summary-icon">
-                <FaEuroSign />
+            <div className="stat-card">
+              <div className="stat-header">
+                <div className="stat-icon">
+                  <FaEuroSign />
+                </div>
+                <div className="stat-info">
+                  <h3>Ricavo Totale</h3>
+                  <div className="value">€{stats.totalRevenue.toFixed(2)}</div>
+                </div>
               </div>
-              <div className="summary-content">
-                <h3>€{stats.totalRevenue.toFixed(2)}</h3>
-                <p>Incasso Totale</p>
+            </div>
+
+            <div className="stat-card">
+              <div className="stat-header">
+                <div className="stat-icon">
+                  <FaCheck />
+                </div>
+                <div className="stat-info">
+                  <h3>Biglietti Validati</h3>
+                  <div className="value">{stats.validatedTickets}</div>
+                </div>
               </div>
             </div>
           </div>
@@ -119,10 +153,24 @@ function PromoterDashboard() {
                 )}
                 <div className="event-content">
                   <h3>{event.name}</h3>
-                  <p>Data: {new Date(event.date).toLocaleDateString()}</p>
-                  <p>Luogo: {event.location}</p>
-                  <p>Prezzo: €{event.ticketPrice}</p>
-                  <p>Biglietti disponibili: {event.availableTickets}</p>
+                  <p>
+                    <FaCalendarAlt />
+                    {new Date(event.date).toLocaleDateString()}
+                  </p>
+                  <p>
+                    <FaMapMarkerAlt />
+                    {event.location}
+                  </p>
+                  <p>
+                    <FaClock />
+                    {event.time}
+                  </p>
+                  <div className="event-price">€{event.ticketPrice}</div>
+                  <div className={`tickets-available ${event.availableTickets === 0 ? 'tickets-unavailable' : ''}`}>
+                    {event.availableTickets > 0 
+                      ? `${event.availableTickets} biglietti disponibili`
+                      : 'Esaurito'}
+                  </div>
                   <button 
                     className="sell-button"
                     onClick={() => {
@@ -131,6 +179,7 @@ function PromoterDashboard() {
                     }}
                     disabled={event.availableTickets <= 0}
                   >
+                    <FaTicketAlt />
                     {event.availableTickets > 0 ? 'Vendi Biglietti' : 'Esaurito'}
                   </button>
                 </div>
