@@ -63,16 +63,58 @@ function ManagerDashboard() {
       
       // Se non in cache, carica da Firebase
       const usersRef = collection(db, 'users');
-      const q = query(usersRef, where('managerId', '==', currentUser.uid), where('role', '==', 'teamleader'));
+      
+      // Recupera tutti gli utenti associati a questo manager
+      const q = query(usersRef, where('managerId', '==', currentUser.uid));
       const querySnapshot = await getDocs(q);
       
       const teamLeadersList = [];
+      
       querySnapshot.forEach((doc) => {
-        teamLeadersList.push({
-          id: doc.id,
-          ...doc.data()
-        });
+        const userData = doc.data();
+        
+        // Verifica se l'utente è un team leader indipendentemente da maiuscole/minuscole
+        const userRole = userData.role ? userData.role.toLowerCase() : '';
+        if (userRole === 'teamleader' || userRole === 'teamleader' || userRole === 'team leader' || userRole === 'team-leader') {
+          teamLeadersList.push({
+            id: doc.id,
+            ...userData
+          });
+        }
       });
+      
+      console.log(`Trovati ${teamLeadersList.length} team leader`);
+      
+      // Per ogni team leader, calcola il numero di promoter
+      for (const leader of teamLeadersList) {
+        try {
+          // Cerca tutti i promoter associati a questo team leader
+          const promotersQuery = query(
+            collection(db, 'users'),
+            where('teamLeaderId', '==', leader.id)
+          );
+          
+          const promotersSnapshot = await getDocs(promotersQuery);
+          
+          // Conta solo gli utenti con ruolo promoter (in qualsiasi formato)
+          let promoterCount = 0;
+          promotersSnapshot.forEach(doc => {
+            const userData = doc.data();
+            const userRole = userData.role ? userData.role.toLowerCase() : '';
+            if (userRole === 'promoter' || userRole === 'pr' || userRole === 'pubbliche relazioni') {
+              promoterCount++;
+            }
+          });
+          
+          // Aggiorna il conteggio dei promoter
+          leader.promotersCount = promoterCount;
+          console.log(`Team leader ${leader.id} ha ${leader.promotersCount} promoter`);
+        } catch (err) {
+          console.error(`Errore nel conteggio promoter per team leader ${leader.id}:`, err);
+          // In caso di errore, imposta un valore di default
+          leader.promotersCount = 0;
+        }
+      }
       
       // Salva in cache e aggiorna lo stato
       setMemoryCache(cacheKey, teamLeadersList, CACHE_DURATION.USERS);
@@ -171,17 +213,31 @@ function ManagerDashboard() {
       
       // Se non in cache, carica da Firebase
       const eventsRef = collection(db, 'events');
-      const q = query(eventsRef, where('managerId', '==', currentUser.uid));
+      
+      // Recupera tutti gli eventi senza filtrare
+      const q = query(eventsRef);
       const querySnapshot = await getDocs(q);
       
       const eventsList = [];
       
       querySnapshot.forEach((doc) => {
-        eventsList.push({
+        const eventData = {
           id: doc.id,
           ...doc.data()
-        });
+        };
+        
+        // Aggiungi l'evento alla lista (non filtriamo per manager per vederli tutti)
+        eventsList.push(eventData);
       });
+      
+      console.log(`Trovati ${eventsList.length} eventi`);
+      
+      if (eventsList.length === 0) {
+        console.error('Nessun evento trovato nel database');
+      } else {
+        // Logga alcuni dettagli del primo evento per debug
+        console.log('Esempio evento:', JSON.stringify(eventsList[0], null, 2));
+      }
       
       // Salva in cache e aggiorna lo stato
       setMemoryCache(cacheKey, eventsList, CACHE_DURATION.EVENTS);
@@ -347,44 +403,62 @@ function ManagerDashboard() {
       {activeTab === 'sell' && (
         <div className="sell-tickets-container">
           <h2>Seleziona un Evento</h2>
-          <div className="events-grid">
-            {events.map(event => (
-              <div key={event.id} className="event-card">
-                {event.imageUrl && (
-                  <div className="event-image">
-                    <img src={event.imageUrl} alt={event.name} />
-                  </div>
-                )}
-                <div className="event-content">
-                  <h3>{event.name}</h3>
-                  <p>
-                    <FaCalendarAlt />
-                    {new Date(event.date).toLocaleDateString()}
-                  </p>
-                  <p>
-                    <FaMapMarkerAlt />
-                    {event.location}
-                  </p>
-                  <div className="event-price">€{event.ticketPrice}</div>
-                  <div className={`tickets-available ${event.availableTickets === 0 ? 'tickets-unavailable' : ''}`}>
-                    {event.availableTickets === 0 && 'Esaurito'}
-                  </div>
-                  {event.description && (
-                    <div className="event-description">
-                      <p>{event.description}</p>
+          
+          {events.length === 0 ? (
+            <div className="no-events-message">
+              <p>Nessun evento disponibile. Aggiungi eventi dalla dashboard di amministrazione.</p>
+            </div>
+          ) : (
+            <div className="events-grid">
+              {events.map(event => {
+                // Gestisce diversi possibili nomi dei campi degli eventi
+                const eventName = event.name || event.nome || event.eventName || 'Evento';
+                const eventDate = event.date || event.data || event.eventDate || new Date();
+                const eventLocation = event.location || event.luogo || event.posto || 'Localizzazione non specificata';
+                const eventPrice = event.ticketPrice || event.price || event.prezzo || 0;
+                const eventAvailableTickets = event.availableTickets || event.bigliettiDisponibili || 0;
+                const eventDescription = event.description || event.descrizione || '';
+                const eventImage = event.imageUrl || event.immagine || '';
+                
+                return (
+                  <div key={event.id} className="event-card">
+                    {eventImage && (
+                      <div className="event-image">
+                        <img src={eventImage} alt={eventName} />
+                      </div>
+                    )}
+                    <div className="event-content">
+                      <h3>{eventName}</h3>
+                      <p>
+                        <FaCalendarAlt />
+                        {new Date(eventDate).toLocaleDateString()}
+                      </p>
+                      <p>
+                        <FaMapMarkerAlt />
+                        {eventLocation}
+                      </p>
+                      <div className="event-price">€{typeof eventPrice === 'number' ? eventPrice.toFixed(2) : eventPrice}</div>
+                      <div className={`tickets-available ${eventAvailableTickets === 0 ? 'tickets-unavailable' : ''}`}>
+                        {eventAvailableTickets === 0 && 'Esaurito'}
+                      </div>
+                      {eventDescription && (
+                        <div className="event-description">
+                          <p>{eventDescription}</p>
+                        </div>
+                      )}
+                      <button 
+                        onClick={() => handleSellTicket(event)}
+                        className="sell-button"
+                        disabled={eventAvailableTickets === 0}
+                      >
+                        Vendi Ticket
+                      </button>
                     </div>
-                  )}
-                  <button 
-                    onClick={() => handleSellTicket(event)}
-                    className="sell-button"
-                    disabled={event.availableTickets === 0}
-                  >
-                    Vendi Ticket
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
@@ -409,35 +483,53 @@ function ManagerDashboard() {
             <FaSearch className="search-icon" />
           </div>
           
-          <div className="leaders-grid">
-            {teamLeaders
-              .filter(leader => 
-                leader.name.toLowerCase().includes(leaderSearchTerm.toLowerCase()) ||
-                leader.email.toLowerCase().includes(leaderSearchTerm.toLowerCase())
-              )
-              .map(leader => (
-                <div 
-                  key={leader.id}
-                  className="leader-card"
-                  onClick={() => {
-                    console.log("Card cliccata:", leader);
-                    handleTeamLeaderClick(leader);
-                  }}
-                >
-                  <div className="leader-icon">
-                    <FaUser size={24} />
-                  </div>
-                  <h3>{leader.name}</h3>
-                  <p>{leader.email}</p>
-                  <div className="leader-stats">
-                    <div className="stat">
-                      <FaUser />
-                      <span>{leader.promotersCount || 0} Promoter</span>
+          {teamLeaders.length === 0 ? (
+            <div className="no-leaders-message">
+              <p>Nessun team leader trovato. Aggiungi team leader dalla dashboard di amministrazione.</p>
+            </div>
+          ) : (
+            <div className="leaders-grid">
+              {teamLeaders
+                .filter(leader => {
+                  const leaderName = leader.name || leader.nome || leader.fullName || '';
+                  const leaderEmail = leader.email || leader.emailAddress || '';
+                  const searchTermLower = leaderSearchTerm.toLowerCase();
+                  
+                  return (
+                    leaderName.toLowerCase().includes(searchTermLower) ||
+                    leaderEmail.toLowerCase().includes(searchTermLower)
+                  );
+                })
+                .map(leader => {
+                  const leaderName = leader.name || leader.nome || leader.fullName || 'Team Leader';
+                  const leaderEmail = leader.email || leader.emailAddress || 'Email non disponibile';
+                  const promotersCount = leader.promotersCount || leader.numPromoters || 0;
+                  
+                  return (
+                    <div 
+                      key={leader.id}
+                      className="leader-card"
+                      onClick={() => {
+                        console.log("Card cliccata:", leader);
+                        handleTeamLeaderClick(leader);
+                      }}
+                    >
+                      <div className="leader-icon">
+                        <FaUser size={24} />
+                      </div>
+                      <h3>{leaderName}</h3>
+                      <p>{leaderEmail}</p>
+                      <div className="leader-stats">
+                        <div className="stat">
+                          <FaUser />
+                          <span>{promotersCount} Promoter</span>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
-              ))}
-          </div>
+                  );
+                })}
+            </div>
+          )}
 
           {selectedTeamLeader && (
             <TeamLeaderStats 

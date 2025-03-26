@@ -19,24 +19,23 @@
 }
 
 * {
+  box-sizing: border-box;
   margin: 0;
   padding: 0;
-  box-sizing: border-box;
   -webkit-tap-highlight-color: transparent;
 }
 
 html, body {
-  margin: 0;
-  padding: 0;
   height: 100%;
-  width: 100%;
   overflow-x: hidden;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-  line-height: 1.5;
-  color: var(--text-color);
-  background-color: var(--background-color);
+  position: relative;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
+    Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background-color: #f5f5f5;
+  color: #333;
+  width: 100%;
 }
 
 .app {
@@ -98,6 +97,7 @@ input, select, textarea, button {
   font-size: 16px;
   transition: all 0.2s ease;
   max-width: 100%;
+  font-family: inherit;
 }
 
 input:focus, select:focus, textarea:focus {
@@ -347,138 +347,152 @@ button:active {
   }
 }
 
-/* Regole globali per l'ottimizzazione mobile */
-* {
-  box-sizing: border-box;
-  -webkit-tap-highlight-color: transparent;
+/* Aggiunge supporto per safe area su iPhones con notch */
+@supports (padding: max(0px)) {
+  body, 
+  .safe-area-padding {
+    padding-left: max(12px, env(safe-area-inset-left));
+    padding-right: max(12px, env(safe-area-inset-right));
+    padding-top: max(0px, env(safe-area-inset-top));
+    padding-bottom: max(0px, env(safe-area-inset-bottom));
+  }
+  
+  .safe-area-bottom {
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
+  }
 }
 
-html, body {
-  margin: 0;
-  padding: 0;
-  height: 100%;
-  width: 100%;
-  overflow-x: hidden;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+/* Responsive text base sizes */
+@media screen and (max-width: 320px) {
+  html {
+    font-size: 14px;
+  }
 }
 
-.app {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
+@media screen and (min-width: 321px) and (max-width: 768px) {
+  html {
+    font-size: 16px;
+  }
 }
 
-/* Ottimizzare gli input per mobile */
-input, select, textarea, button {
-  font-size: 16px;
+@media screen and (min-width: 769px) {
+  html {
+    font-size: 18px;
+  }
+}
+
+/* Immagini responsive */
+img {
   max-width: 100%;
+  height: auto;
 }
 
-button {
-  cursor: pointer;
-  border: none;
-  padding: 10px 15px;
-  border-radius: 4px;
-  transition: background-color 0.2s, transform 0.1s;
-}
-
-button:active {
-  transform: scale(0.98);
-}
-
-/* Stili per i card degli eventi */
-.event-card {
-  border-radius: 8px;
+/* Fix per evitare bounce su iOS */
+.no-bounce {
+  position: fixed;
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  transition: transform 0.2s, box-shadow 0.2s;
-  background-color: white;
+  width: 100%;
+  height: 100%;
 }
 
-.event-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
+/* Migliora aspetto tattile su dispositivi mobili */
+button, 
+a, 
+[role="button"], 
+.touchable {
+  touch-action: manipulation; /* Prevents double-tap to zoom */
+  cursor: pointer;
+  transition: opacity 0.2s ease;
 }
 
-/* Migliorare la leggibilità dei testi */
-h1, h2, h3, h4, h5, h6 {
-  line-height: 1.3;
+button:active, 
+a:active, 
+[role="button"]:active,
+.touchable:active {
+  opacity: 0.7;
 }
 
-p {
-  line-height: 1.5;
+/* Miglioramenti per l'accessibilità su focus */
+:focus {
+  outline: 2px solid #4a90e2;
+  outline-offset: 2px;
 }
 
-/* Ottimizzazioni per schermi piccoli */
-@media (max-width: 768px) {
-  .grid, .events-grid, .leaders-grid, .promoters-grid {
-    grid-template-columns: 1fr;
-    gap: 15px;
-    padding: 10px;
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Nascondi elementi visivamente ma mantieni accessibilità */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
+/* Container responsive */
+.container {
+  width: 100%;
+  max-width: 1200px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 15px;
+  padding-right: 15px;
+}
+
+/* Grid responsive semplice */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+}
+
+/* Classi per nascondere/mostrare elementi in base a dimensione schermo */
+.hide-on-mobile {
+  display: none;
+}
+
+.show-on-mobile {
+  display: block;
+}
+
+@media (min-width: 768px) {
+  .hide-on-mobile {
+    display: block;
   }
   
-  .tabs-container {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    padding: 0 5px;
-  }
-  
-  .tab-button {
-    white-space: nowrap;
-    padding: 10px;
-  }
-  
-  /* Ridurre padding e margini su mobile */
-  .dashboard-content,
-  .dashboard-section,
-  .dashboard-header {
-    padding: 15px 10px;
-  }
-  
-  /* Adattare font size su mobile */
-  h1 {
-    font-size: 1.6rem;
-  }
-  
-  h2 {
-    font-size: 1.4rem;
-  }
-  
-  h3 {
-    font-size: 1.2rem;
-  }
-  
-  /* Migliora pulsanti su mobile */
-  button, .btn, .btn-primary, .btn-secondary {
-    padding: 12px 15px;
-    min-height: 44px;
-  }
-  
-  /* Fixa altezza minima per input touch */
-  input, select, textarea {
-    min-height: 44px;
-    padding: 8px 12px;
+  .show-on-mobile {
+    display: none;
   }
 }
 
-/* Ottimizzazioni per schermi molto piccoli */
-@media (max-width: 480px) {
-  .dashboard-header {
-    text-align: center;
+/* Supporto per dark mode */
+@media (prefers-color-scheme: dark) {
+  body {
+    background-color: #121212;
+    color: #f5f5f5;
   }
   
-  .stat-card, .event-card, .leader-card, .promoter-card {
-    width: 100%;
+  .dark-mode-text {
+    color: #f5f5f5;
   }
   
-  .modal-content {
-    width: 95%;
-    padding: 15px;
+  .dark-mode-bg {
+    background-color: #232323;
   }
-  
-  /* Riduce dimensioni icone su schermi molto piccoli */
-  .icon, .detail-icon {
-    font-size: 0.9rem;
+}
+
+/* Riduzione movimento per utenti che lo preferiscono */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
 

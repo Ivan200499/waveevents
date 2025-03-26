@@ -1,7 +1,7 @@
 {
-  "short_name": "Ticket System",
+  "short_name": "Tickets App",
   "name": "Ticket Management System",
-  "description": "Sistema di gestione biglietti per eventi e PR",
+  "description": "Sistema di gestione biglietti per eventi",
   "icons": [
     {
       "src": "favicon.ico",
@@ -21,38 +21,44 @@
       "purpose": "any maskable"
     }
   ],
-  "start_url": "/",
+  "start_url": ".",
   "display": "standalone",
   "orientation": "portrait",
   "theme_color": "#1a1a1a",
-  "background_color": "#f5f7fa",
-  "prefer_related_applications": false,
-  "categories": ["business", "productivity", "events"],
+  "background_color": "#1a1a1a",
+  "categories": ["utilities", "productivity", "events", "tickets"],
   "screenshots": [
     {
-      "src": "screenshot1.jpg",
+      "src": "screenshot1.png",
       "sizes": "1280x720",
-      "type": "image/jpeg"
+      "type": "image/png",
+      "platform": "wide",
+      "label": "Lista Biglietti"
     },
     {
-      "src": "screenshot2.jpg",
-      "sizes": "1280x720",
-      "type": "image/jpeg"
+      "src": "screenshot2.png",
+      "sizes": "750x1334",
+      "type": "image/png",
+      "platform": "narrow",
+      "label": "Dettaglio Biglietto su Mobile"
     }
   ],
-  "scope": "/",
   "shortcuts": [
     {
-      "name": "Scansiona Ticket",
-      "short_name": "Scansiona",
-      "description": "Scansiona un biglietto tramite QR code",
-      "url": "/validate"
+      "name": "Visualizza Biglietti",
+      "short_name": "Biglietti",
+      "description": "Visualizza tutti i tuoi biglietti",
+      "url": "/tickets",
+      "icons": [{ "src": "shortcuts/tickets.png", "sizes": "96x96" }]
     },
     {
-      "name": "Vendi Ticket",
-      "short_name": "Vendi",
-      "description": "Vendi nuovi biglietti",
-      "url": "/sell"
+      "name": "Scansiona Codice QR",
+      "short_name": "Scansiona",
+      "description": "Scansiona un codice QR per verificare un biglietto",
+      "url": "/validate",
+      "icons": [{ "src": "shortcuts/qr.png", "sizes": "96x96" }]
     }
-  ]
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false
 }
