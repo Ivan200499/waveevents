@@ -5,15 +5,14 @@ import { useAuth } from '../../contexts/AuthContext';
 import Header from '../common/Header';
 import TicketHistory from '../tickets/TicketHistory';
 import SellTicketModal from '../tickets/SellTicketModal';
-import { FaTicketAlt, FaEuroSign, FaCalendarAlt, FaMapMarkerAlt, FaClock, FaCheck } from 'react-icons/fa';
+import { FaTicketAlt, FaEuroSign, FaCalendarAlt, FaMapMarkerAlt, FaClock } from 'react-icons/fa';
 import './PromoterDashboard.css';
 
 function PromoterDashboard() {
   const { currentUser } = useAuth();
   const [stats, setStats] = useState({
     totalTickets: 0,
-    totalRevenue: 0,
-    validatedTickets: 0
+    totalRevenue: 0
   });
   const [activeTab, setActiveTab] = useState('dashboard');
   const [events, setEvents] = useState([]);
@@ -39,10 +38,9 @@ function PromoterDashboard() {
         const ticket = doc.data();
         return {
           totalTickets: acc.totalTickets + (ticket.quantity || 0),
-          totalRevenue: acc.totalRevenue + ((ticket.price || 0) * (ticket.quantity || 0)),
-          validatedTickets: acc.validatedTickets + (ticket.status === 'used' ? (ticket.quantity || 0) : 0)
+          totalRevenue: acc.totalRevenue + ((ticket.price || 0) * (ticket.quantity || 0))
         };
-      }, { totalTickets: 0, totalRevenue: 0, validatedTickets: 0 });
+      }, { totalTickets: 0, totalRevenue: 0 });
       
       setStats(statistics);
       setLoading(false);
@@ -124,18 +122,6 @@ function PromoterDashboard() {
                 </div>
               </div>
             </div>
-
-            <div className="stat-card">
-              <div className="stat-header">
-                <div className="stat-icon">
-                  <FaCheck />
-                </div>
-                <div className="stat-info">
-                  <h3>Biglietti Validati</h3>
-                  <div className="value">{stats.validatedTickets}</div>
-                </div>
-              </div>
-            </div>
           </div>
 
           <TicketHistory />
@@ -153,34 +139,74 @@ function PromoterDashboard() {
                 )}
                 <div className="event-content">
                   <h3>{event.name}</h3>
-                  <p>
-                    <FaCalendarAlt />
-                    {new Date(event.date).toLocaleDateString()}
-                  </p>
-                  <p>
-                    <FaMapMarkerAlt />
-                    {event.location}
-                  </p>
-                  <p>
-                    <FaClock />
-                    {event.time}
-                  </p>
-                  <div className="event-price">€{event.ticketPrice}</div>
+                  <div className="event-details">
+                    <p className="event-detail">
+                      <FaCalendarAlt className="icon" />
+                      {event.date ? new Date(event.date).toLocaleDateString('it-IT', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric'
+                      }) : 'Data non disponibile'}
+                    </p>
+                    {event.time && (
+                      <p className="event-detail">
+                        <FaClock className="icon" />
+                        {event.time}
+                      </p>
+                    )}
+                    <p className="event-detail">
+                      <FaMapMarkerAlt className="icon" />
+                      {event.location || 'Località non specificata'}
+                    </p>
+                    {event.ticketTypes && event.ticketTypes.length > 0 ? (
+                      <div className="ticket-types">
+                        {event.ticketTypes.map((type, index) => (
+                          <p key={index} className="event-detail">
+                            <FaTicketAlt className="icon" />
+                            {type.name}: €{type.price}
+                          </p>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="event-detail">
+                        <FaEuroSign className="icon" />
+                        {event.ticketPrice ? `€${event.ticketPrice}` : 'Prezzo non disponibile'}
+                      </p>
+                    )}
+                  </div>
+                  
                   <div className={`tickets-available ${event.availableTickets === 0 ? 'tickets-unavailable' : ''}`}>
                     {event.availableTickets > 0 
-                      ? `${event.availableTickets} biglietti disponibili`
-                      : 'Esaurito'}
+                      ? (
+                        <div className="tickets-info">
+                          <FaTicketAlt className="ticket-icon" />
+                          <span>Disponibili: {event.availableTickets}</span>
+                        </div>
+                      )
+                      : (
+                        <div className="tickets-info">
+                          <FaTicketAlt className="ticket-icon" />
+                          <span>Evento al completo</span>
+                        </div>
+                      )
+                    }
                   </div>
+                  
+                  {event.description && (
+                    <div className="event-description">
+                      <p>{event.description}</p>
+                    </div>
+                  )}
+                  
                   <button 
                     className="sell-button"
                     onClick={() => {
                       setSelectedEvent(event);
                       setShowSellModal(true);
                     }}
-                    disabled={event.availableTickets <= 0}
+                    disabled={event.availableTickets === 0}
                   >
-                    <FaTicketAlt />
-                    {event.availableTickets > 0 ? 'Vendi Biglietti' : 'Esaurito'}
+                    Vendi Ticket
                   </button>
                 </div>
               </div>

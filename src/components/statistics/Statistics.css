@@ -20,7 +20,7 @@
 }
 
 .btn-details {
-  background: #2196F3;
+  background-color: var(--primary-color);
   color: white;
   border: none;
   padding: 6px 12px;
@@ -30,7 +30,7 @@
 }
 
 .btn-details:hover {
-  background: #1976D2;
+  background-color: #3449a3;
 }
 
 @media (prefers-color-scheme: dark) {

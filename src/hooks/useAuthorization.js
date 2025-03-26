@@ -19,7 +19,8 @@ export function useAuthorization() {
       try {
         const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
         if (userDoc.exists()) {
-          setUserRole(userDoc.data().role);
+          const userData = userDoc.data();
+          setUserRole(userData.role);
         }
       } catch (err) {
         setError(err);
@@ -31,17 +32,6 @@ export function useAuthorization() {
     fetchUserRole();
   }, [currentUser]);
 
-  const checkPermission = (requiredRole) => {
-    const roleHierarchy = {
-      admin: 4,
-      manager: 3,
-      teamLeader: 2,
-      promoter: 1
-    };
-
-    return roleHierarchy[userRole] >= roleHierarchy[requiredRole];
-  };
-
   const permissions = {
     canCreateEvents: userRole === 'admin',
     canCreateUsers: userRole === 'admin',
@@ -49,9 +39,9 @@ export function useAuthorization() {
     canViewAllUsers: userRole === 'admin',
     canViewTeamStats: ['admin', 'manager'].includes(userRole),
     canViewPromoterStats: ['admin', 'manager', 'teamLeader'].includes(userRole),
-    canSellTickets: ['admin', 'promoter'].includes(userRole),
-    canValidateTickets: ['admin', 'manager'].includes(userRole)
+    canSellTickets: ['admin', 'manager', 'teamLeader', 'promoter'].includes(userRole),
+    canValidateTickets: ['admin', 'manager', 'validator'].includes(userRole)
   };
 
-  return { userRole, loading, error, checkPermission, permissions };
+  return { userRole, loading, error, permissions };
 } 

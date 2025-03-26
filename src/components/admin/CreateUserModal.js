@@ -18,9 +18,11 @@ function CreateUserModal({ onClose, onUserCreated, userType, teamLeaders, manage
     setError('');
 
     try {
+      // Creazione dell'utente
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
+      // Preparazione dei dati utente
       const userData = {
         uid: user.uid,
         email,
@@ -30,6 +32,7 @@ function CreateUserModal({ onClose, onUserCreated, userType, teamLeaders, manage
         createdAt: new Date().toISOString()
       };
 
+      // Gestione delle assegnazioni in base al ruolo
       if (userType === 'teamLeader' && assignTo) {
         userData.managerId = assignTo;
       }
@@ -38,15 +41,15 @@ function CreateUserModal({ onClose, onUserCreated, userType, teamLeaders, manage
         userData.teamLeaderId = assignTo;
       }
 
+      // Per i validatori non serve assegnazione
+      if (userType === 'validator') {
+        userData.canValidateTickets = true;
+      }
+
+      // Salvataggio dei dati utente nel database
       await setDoc(doc(db, 'users', user.uid), userData);
 
-      // Logout dell'utente appena creato per mantenere la sessione admin
-      await auth.signOut();
-      
-      // Reautenticazione dell'admin
-      // Assumendo che tu abbia salvato le credenziali admin da qualche parte
-      await signInWithEmailAndPassword(auth, adminEmail, adminPassword);
-
+      // Chiusura del modale e aggiornamento della lista utenti
       onUserCreated();
       onClose();
     } catch (error) {
@@ -122,6 +125,13 @@ function CreateUserModal({ onClose, onUserCreated, userType, teamLeaders, manage
                   <option key={m.id} value={m.id}>{m.name}</option>
                 ))}
               </select>
+            </div>
+          )}
+
+          {userType === 'validator' && (
+            <div className="info-message">
+              <p>Questo utente avrà solo la capacità di validare i biglietti.</p>
+              <p>Non sarà assegnato a nessun manager o team leader.</p>
             </div>
           )}
 

@@ -1,50 +1,87 @@
 import emailjs from '@emailjs/browser';
-import QRCode from 'qrcode';
 
-const EMAILJS_SERVICE_ID = "service_sy3o38j";
-const EMAILJS_TEMPLATE_ID = "template_hp3771g";
-const EMAILJS_PUBLIC_KEY = "I-QS6yxI9dhNJuUZO";
+const SERVICE_ID = 'service_sy3o38j';
+const TEMPLATE_ID = 'template_hp3771g';
+const PUBLIC_KEY = 'I-QS6yxI9dhNJuUZO';
 
 // Inizializza EmailJS
-emailjs.init(EMAILJS_PUBLIC_KEY);
+emailjs.init(PUBLIC_KEY);
 
-export const sendTicketEmail = async (ticketData, customerEmail) => {
+export const sendTicketEmail = async (email, ticketData) => {
   try {
-    // Genera il QR code come URL data
-    const qrData = JSON.stringify({
+    console.log('Inizio invio email a:', email);
+    console.log('Dati biglietto ricevuti:', ticketData);
+
+    // Validazione email
+    if (!email || typeof email !== 'string' || !email.includes('@')) {
+      console.error('Indirizzo email non valido:', email);
+      return false;
+    }
+
+    // Genera il QR code
+    const qrData = encodeURIComponent(JSON.stringify({
       ticketCode: ticketData.ticketCode,
       eventId: ticketData.eventId,
       eventName: ticketData.eventName,
       quantity: ticketData.quantity,
-      customerEmail: customerEmail
-    });
+      customerEmail: email
+    }));
+    const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${qrData}`;
+    console.log('QR Code URL generato:', qrCodeUrl);
 
-    const qrCodeUrl = await QRCode.toDataURL(qrData);
+    // Formatta la data
+    const formatDate = (dateString) => {
+      try {
+        const date = new Date(dateString);
+        return date.toLocaleDateString('it-IT', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric'
+        });
+      } catch (error) {
+        console.error('Errore nella formattazione della data:', error);
+        return 'Data non disponibile';
+      }
+    };
 
     const templateParams = {
-      to_email: customerEmail,
+      to_name: ticketData.customerName,
+      customer_email: email,
       event_name: ticketData.eventName,
-      ticket_code: ticketData.ticketCode,
-      event_date: new Date(ticketData.eventDate).toLocaleDateString(),
-      event_location: ticketData.eventLocation,
+      event_description: ticketData.eventDescription || 'Nessuna descrizione disponibile',
+      event_date: formatDate(ticketData.eventDate),
+      event_location: ticketData.eventLocation || 'N/A',
+      ticket_type: ticketData.ticketType,
+      unit_price: ticketData.price.toFixed(2),
       quantity: ticketData.quantity,
+      ticket_code: ticketData.ticketCode,
+      total_price: ticketData.totalPrice.toFixed(2),
       qr_code: qrCodeUrl
     };
 
+    console.log('Parametri template preparati:', templateParams);
+
     const response = await emailjs.send(
-      EMAILJS_SERVICE_ID,
-      EMAILJS_TEMPLATE_ID,
-      templateParams
+      SERVICE_ID,
+      TEMPLATE_ID,
+      templateParams,
+      PUBLIC_KEY
     );
 
-    if (response.status === 200) {
-      console.log('Email inviata con successo');
-      return true;
-    } else {
-      throw new Error('Errore nell\'invio dell\'email');
+    console.log('Risposta EmailJS completa:', response);
+
+    if (response.status !== 200) {
+      console.error('Errore nell\'invio dell\'email:', response);
+      return false;
     }
+
+    console.log('Email inviata con successo');
+    return true;
   } catch (error) {
-    console.error('Errore nell\'invio dell\'email:', error);
-    throw error;
+    console.error('Errore dettagliato nell\'invio dell\'email:', error);
+    if (error.text) {
+      console.error('Testo dell\'errore:', error.text);
+    }
+    return false;
   }
 }; 

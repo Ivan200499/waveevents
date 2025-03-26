@@ -1,16 +1,19 @@
 :root {
-  --primary-color: #2196F3;
-  --primary-dark: #1976D2;
-  --secondary-color: #FF9800;
-  --success-color: #4CAF50;
-  --danger-color: #f44336;
-  --warning-color: #FFC107;
-  --text-primary: #333333;
-  --text-secondary: #666666;
-  --background-light: #f5f5f5;
+  --primary-color: #6366f1;
+  --primary-dark: #4f46e5;
+  --secondary-color: #06b6d4;
+  --accent-color: #fbbf24;
+  --text-color: #1f2937;
+  --text-light: #6b7280;
+  --background-light: #f9fafb;
   --background-white: #ffffff;
-  --border-color: #dddddd;
-  --shadow: 0 2px 4px rgba(0,0,0,0.1);
+  --border-color: #e5e7eb;
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --error-color: #ef4444;
+  --success-color: #22c55e;
+  --warning-color: #f59e0b;
 }
 
 /* Reset e stili base */
@@ -21,9 +24,9 @@
 }
 
 body {
-  font-family: 'Roboto', sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
   background-color: var(--background-light);
-  color: var(--text-primary);
+  color: var(--text-color);
   line-height: 1.6;
 }
 
@@ -34,68 +37,79 @@ body {
   padding: 20px;
 }
 
-/* Card comune */
+/* Card moderna con hover effect */
 .card {
   background: var(--background-white);
-  border-radius: 8px;
-  box-shadow: var(--shadow);
-  padding: 20px;
-  margin-bottom: 20px;
+  border-radius: 12px;
+  box-shadow: var(--shadow-sm);
+  padding: 24px;
+  margin-bottom: 24px;
+  transition: all 0.3s ease;
+  border: 1px solid var(--border-color);
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
 }
 
 /* Stili base per tutti i pulsanti */
 button {
-  padding: 8px 16px;
+  padding: 10px 20px;
   border: none;
-  border-radius: 4px;
+  border-radius: 8px;
   cursor: pointer;
-  font-size: 14px;
   font-weight: 500;
-  transition: all 0.3s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   background-color: var(--primary-color);
   color: white;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  min-height: 36px;
+  min-height: 40px;
+  position: relative;
+  overflow: hidden;
 }
 
-button:hover {
-  background-color: var(--primary-dark);
-  transform: translateY(-1px);
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+button::after {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  background: linear-gradient(rgba(255,255,255,0.2), transparent);
+  opacity: 0;
+  transition: opacity 0.3s;
 }
 
-button:disabled {
-  background-color: #cccccc;
-  cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
+button:hover::after {
+  opacity: 1;
 }
 
 button:active {
-  transform: translateY(1px);
+  transform: scale(0.98);
 }
 
 /* Stile specifico per il pulsante logout */
 button.logout-btn,
 .navbar-logout {
-  background-color: var(--danger-color);
+  background-color: var(--secondary-color);
 }
 
 button.logout-btn:hover,
 .navbar-logout:hover {
-  background-color: #d32f2f;
+  background-color: #2d8587;
 }
 
 /* Varianti di pulsanti */
 button.btn-secondary {
-  background-color: #757575;
+  background-color: var(--secondary-color);
 }
 
 button.btn-secondary:hover {
-  background-color: #616161;
+  background-color: #2d8587;
 }
 
 button.btn-success {
@@ -103,16 +117,16 @@ button.btn-success {
 }
 
 button.btn-success:hover {
-  background-color: #388e3c;
+  background-color: #218838;
 }
 
 button.btn-warning {
-  background-color: var(--warning-color);
-  color: #333;
+  background-color: var(--accent-color);
+  color: var(--text-color);
 }
 
 button.btn-warning:hover {
-  background-color: #ffa000;
+  background-color: #e6e600;
 }
 
 /* Stili per pulsanti con icone */
@@ -146,30 +160,32 @@ button.btn-outline:hover {
   color: white;
 }
 
-/* Form elements */
+/* Form elements moderni */
 .form-group {
-  margin-bottom: 20px;
+  margin-bottom: 1rem;
 }
 
 .form-group label {
   display: block;
-  margin-bottom: 8px;
-  color: var(--text-secondary);
-  font-weight: 500;
+  margin-bottom: 0.5rem;
+  color: var(--text-color);
 }
 
 .form-control {
   width: 100%;
-  padding: 10px;
+  padding: 0.75rem 1rem;
   border: 1px solid var(--border-color);
-  border-radius: 4px;
-  font-size: 14px;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  background-color: var(--background-light);
 }
 
 .form-control:focus {
-  outline: none;
   border-color: var(--primary-color);
-  box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.1);
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+  background-color: var(--background-white);
 }
 
 /* Tabelle */
@@ -179,13 +195,14 @@ button.btn-outline:hover {
 
 .table {
   width: 100%;
-  border-collapse: collapse;
-  margin-bottom: 20px;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin: 1.5rem 0;
 }
 
 .table th,
 .table td {
-  padding: 12px;
+  padding: 1rem;
   text-align: left;
   border-bottom: 1px solid var(--border-color);
 }
@@ -193,11 +210,15 @@ button.btn-outline:hover {
 .table th {
   background-color: var(--background-light);
   font-weight: 600;
-  color: var(--text-secondary);
+  color: var(--text-light);
 }
 
-.table tr:hover {
-  background-color: rgba(33, 150, 243, 0.05);
+.table tbody tr {
+  transition: all 0.3s ease;
+}
+
+.table tbody tr:hover {
+  background-color: rgba(99, 102, 241, 0.05);
 }
 
 /* Dashboard layout */
@@ -231,7 +252,7 @@ button.btn-outline:hover {
   cursor: pointer;
   font-size: 14px;
   font-weight: 500;
-  color: var(--text-secondary);
+  color: var(--text-color);
   border-bottom: 2px solid transparent;
 }
 
@@ -240,27 +261,31 @@ button.btn-outline:hover {
   border-bottom-color: var(--primary-color);
 }
 
-/* Status badges */
+/* Badge moderno */
 .badge {
-  padding: 4px 8px;
-  border-radius: 12px;
-  font-size: 12px;
+  padding: 0.35rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
   font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.3s ease;
 }
 
 .badge-success {
-  background-color: rgba(76, 175, 80, 0.1);
+  background-color: rgba(34, 197, 94, 0.1);
   color: var(--success-color);
 }
 
 .badge-warning {
-  background-color: rgba(255, 193, 7, 0.1);
+  background-color: rgba(245, 158, 11, 0.1);
   color: var(--warning-color);
 }
 
-.badge-danger {
-  background-color: rgba(244, 67, 54, 0.1);
-  color: var(--danger-color);
+.badge-error {
+  background-color: rgba(239, 68, 68, 0.1);
+  color: var(--error-color);
 }
 
 /* Responsive */
@@ -274,11 +299,19 @@ button.btn-outline:hover {
   }
 
   .table-container {
-    margin: 0 -10px;
+    margin: 0 -20px;
+    padding: 0 20px;
+    overflow-x: auto;
   }
 
   .card {
-    margin: 10px;
+    margin: 12px 0;
+    padding: 20px;
+  }
+
+  button {
+    width: 100%;
+    margin-bottom: 0.5rem;
   }
 }
 
@@ -337,4 +370,102 @@ button.btn-outline:hover {
     padding: 12px;
     margin: 8px 0;
   }
+}
+
+/* Dark mode overrides */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --light-bg: #2d2d2d;
+    --border-color: #444;
+  }
+
+  body {
+    background-color: #1a1a1a;
+    color: #ffffff;
+  }
+
+  .table th {
+    background-color: #2d2d2d;
+  }
+
+  .form-control {
+    background-color: #2d2d2d;
+    color: #ffffff;
+  }
+}
+
+/* Animazioni per elementi che appaiono */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideIn {
+  from { transform: translateX(-20px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+.fade-in {
+  animation: fadeIn 0.5s ease forwards;
+}
+
+.slide-in {
+  animation: slideIn 0.5s ease forwards;
+}
+
+/* Loading spinner moderno */
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--border-color);
+  border-radius: 50%;
+  border-top-color: var(--primary-color);
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Modal moderno con animazione */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  opacity: 0;
+  animation: modalFadeIn 0.3s ease forwards;
+}
+
+.modal-content {
+  background: white;
+  padding: 24px;
+  border-radius: 16px;
+  max-width: 500px;
+  width: 90%;
+  transform: scale(0.9);
+  animation: modalScaleIn 0.3s ease forwards;
+  box-shadow: var(--shadow-lg);
+}
+
+@keyframes modalFadeIn {
+  to { opacity: 1; }
+}
+
+@keyframes modalScaleIn {
+  to { transform: scale(1); }
+}
+
+/* Grid layout moderno */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 24px;
+  margin: 24px 0;
 } 

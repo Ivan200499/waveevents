@@ -193,20 +193,31 @@
   margin: 12px 0;
 }
 
+.tickets-info {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.tickets-info .ticket-icon {
+  font-size: 1rem;
+}
+
 .tickets-available {
-  display: inline-block;
-  padding: 4px 12px;
-  border-radius: 9999px;
-  font-size: 0.75rem;
+  margin: 15px 0;
+  padding: 10px;
+  background-color: #e3f2fd;
+  border-radius: 8px;
+  color: #1976d2;
+  text-align: center;
   font-weight: 500;
-  background: rgba(34, 197, 94, 0.1);
-  color: var(--success-color);
-  margin-bottom: 12px;
+  transition: all 0.3s ease;
 }
 
 .tickets-unavailable {
-  background: rgba(239, 68, 68, 0.1);
-  color: var(--error-color);
+  background-color: #fafafa;
+  color: #757575;
 }
 
 .sell-button {
@@ -376,4 +387,71 @@
     border-color: #374151;
     border-top-color: var(--primary-color);
   }
+}
+
+.event-description {
+  margin: 12px 0;
+  padding: 12px;
+  background-color: var(--background-light);
+  border-radius: 8px;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--text-color);
+}
+
+.event-description p {
+  margin: 0;
+  color: var(--text-color);
+  display: block;
+}
+
+.event-details {
+  padding: 10px 0;
+}
+
+.event-detail {
+  display: flex;
+  align-items: center;
+  margin: 8px 0;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.event-detail .icon {
+  margin-right: 8px;
+  color: #007bff;
+  font-size: 1rem;
+}
+
+.ticket-types {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #eee;
+}
+
+.event-content h3 {
+  margin-bottom: 15px;
+  color: #333;
+  font-size: 1.2rem;
+}
+
+.tickets-available {
+  margin: 15px 0;
+  padding: 8px;
+  background-color: #e8f5e9;
+  border-radius: 4px;
+  color: #2e7d32;
+  text-align: center;
+}
+
+.tickets-unavailable {
+  background-color: #ffebee;
+  color: #c62828;
+}
+
+.event-description {
+  margin-top: 10px;
+  font-size: 0.9rem;
+  color: #666;
+  line-height: 1.4;
 } 

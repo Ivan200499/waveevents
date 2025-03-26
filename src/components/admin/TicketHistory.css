@@ -1,0 +1,581 @@
+.ticket-history {
+  width: 100%;
+  padding: 20px;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.ticket-history h2 {
+  font-size: 24px;
+  margin-bottom: 20px;
+  color: #2c3e50;
+  border-bottom: 2px solid #3498db;
+  padding-bottom: 10px;
+}
+
+.filters-container {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin-bottom: 20px;
+  padding: 15px;
+  background-color: #f8f9fa;
+  border-radius: 6px;
+}
+
+.search-container {
+  display: flex;
+  gap: 10px;
+}
+
+.search-input {
+  flex: 1;
+  padding: 10px 15px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.search-button {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 15px;
+  background-color: #3498db;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.search-button:hover {
+  background-color: #2980b9;
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.filter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filter label {
+  font-weight: 500;
+  color: #555;
+}
+
+.filter-select {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background-color: white;
+  min-width: 150px;
+}
+
+.tickets-table-container {
+  width: 100%;
+  overflow-x: auto;
+  margin-bottom: 20px;
+}
+
+.tickets-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.tickets-table th {
+  text-align: left;
+  padding: 12px 15px;
+  background-color: #3498db;
+  color: white;
+  font-weight: 500;
+  position: sticky;
+  top: 0;
+}
+
+.tickets-table td {
+  padding: 12px 15px;
+  border-bottom: 1px solid #eee;
+  vertical-align: middle;
+}
+
+.tickets-table tr:hover {
+  background-color: #f5f8fa;
+}
+
+.status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.status-icon {
+  font-size: 16px;
+}
+
+.status-icon.active {
+  color: #27ae60;
+}
+
+.status-icon.used {
+  color: #e74c3c;
+}
+
+.status-icon.cancelled {
+  color: #7f8c8d;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+.btn-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 14px;
+}
+
+.btn-action.info {
+  background-color: #3498db;
+  color: white;
+}
+
+.btn-action.info:hover {
+  background-color: #2980b9;
+}
+
+.btn-action.cancel {
+  background-color: #e74c3c;
+  color: white;
+}
+
+.btn-action.cancel:hover {
+  background-color: #c0392b;
+}
+
+.btn-action.restore {
+  background-color: #27ae60;
+  color: white;
+}
+
+.btn-action.restore:hover {
+  background-color: #219653;
+}
+
+.btn-action.whatsapp {
+  background-color: #25D366;
+  color: white;
+}
+
+.btn-action.whatsapp:hover {
+  background-color: #128C7E;
+}
+
+.btn-action:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Stili per gli status nella tabella */
+tr.status-active {
+  background-color: rgba(39, 174, 96, 0.05);
+}
+
+tr.status-used {
+  background-color: rgba(231, 76, 60, 0.05);
+}
+
+tr.status-cancelled {
+  background-color: rgba(127, 140, 141, 0.05);
+}
+
+/* Modal dei dettagli */
+.details-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.details-content {
+  background-color: white;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 800px;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 25px;
+  position: relative;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+
+.close-button {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #555;
+}
+
+.ticket-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 25px;
+  margin-top: 20px;
+}
+
+.detail-group {
+  flex: 1 1 45%;
+  min-width: 250px;
+}
+
+.detail-group h4 {
+  font-size: 18px;
+  color: #3498db;
+  margin-bottom: 15px;
+  padding-bottom: 5px;
+  border-bottom: 1px solid #eee;
+}
+
+.detail-row {
+  display: flex;
+  margin-bottom: 12px;
+}
+
+.detail-label {
+  font-weight: 500;
+  color: #555;
+  min-width: 130px;
+}
+
+.detail-value {
+  color: #333;
+}
+
+.detail-value.status-active {
+  color: #27ae60;
+  font-weight: 500;
+}
+
+.detail-value.status-used {
+  color: #e74c3c;
+  font-weight: 500;
+}
+
+.detail-value.status-cancelled {
+  color: #7f8c8d;
+  font-weight: 500;
+}
+
+.details-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 15px;
+  margin-top: 30px;
+  padding-top: 20px;
+  border-top: 1px solid #eee;
+}
+
+.btn-close,
+.btn-cancel,
+.btn-restore {
+  padding: 10px 20px;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.btn-close {
+  background-color: #ecf0f1;
+  color: #555;
+}
+
+.btn-close:hover {
+  background-color: #dde4e6;
+}
+
+.btn-cancel {
+  background-color: #e74c3c;
+  color: white;
+}
+
+.btn-cancel:hover {
+  background-color: #c0392b;
+}
+
+.btn-restore {
+  background-color: #27ae60;
+  color: white;
+}
+
+.btn-restore:hover {
+  background-color: #219653;
+}
+
+.btn-close:disabled,
+.btn-cancel:disabled,
+.btn-restore:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Loading, error e success */
+.loading {
+  text-align: center;
+  padding: 20px;
+  color: #3498db;
+  font-weight: 500;
+}
+
+.error-message {
+  background-color: #fdeded;
+  color: #ef5350;
+  padding: 15px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+  border-left: 4px solid #ef5350;
+}
+
+.success-message {
+  background-color: #edf7ed;
+  color: #27ae60;
+  padding: 15px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+  border-left: 4px solid #27ae60;
+}
+
+.no-tickets {
+  text-align: center;
+  padding: 30px;
+  color: #7f8c8d;
+  font-weight: 500;
+  background-color: #f8f9fa;
+  border-radius: 6px;
+}
+
+/* Pagination */
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 15px;
+  padding: 20px 0;
+}
+
+.pagination-btn {
+  padding: 8px 15px;
+  background-color: #3498db;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.pagination-btn:hover {
+  background-color: #2980b9;
+}
+
+.pagination-btn:disabled {
+  background-color: #bdc3c7;
+  cursor: not-allowed;
+}
+
+.page-info {
+  font-size: 14px;
+  color: #555;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .ticket-history {
+    padding: 10px;
+  }
+
+  .tickets-table-container {
+    margin: 0 -10px;
+  }
+
+  .tickets-table {
+    font-size: 13px;
+  }
+
+  .tickets-table th,
+  .tickets-table td {
+    padding: 8px;
+  }
+
+  .actions {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .btn-action {
+    width: 28px;
+    height: 28px;
+    font-size: 12px;
+  }
+
+  .details-content {
+    width: 95%;
+    padding: 15px;
+    margin: 10px;
+  }
+
+  .detail-group {
+    flex: 1 1 100%;
+  }
+
+  .details-actions {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .btn-whatsapp,
+  .btn-cancel,
+  .btn-restore,
+  .btn-close {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .qr-code-container {
+    margin: 10px 0;
+  }
+
+  .qr-image {
+    max-width: 150px;
+  }
+
+  .filters-container {
+    padding: 10px;
+  }
+
+  .search-container {
+    margin-bottom: 10px;
+  }
+
+  .filter {
+    width: 100%;
+  }
+
+  .filter-select {
+    width: 100%;
+  }
+}
+
+.qr-code-container {
+  flex-direction: column;
+  align-items: flex-start;
+  margin: 15px 0;
+}
+
+.qr-code {
+  margin-top: 10px;
+  padding: 10px;
+  background-color: white;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.qr-image {
+  max-width: 200px;
+  height: auto;
+  display: block;
+}
+
+.btn-whatsapp {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 20px;
+  background-color: #25D366;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s;
+  width: auto;
+  min-width: 200px;
+}
+
+.btn-whatsapp:hover {
+  background-color: #128C7E;
+  transform: translateY(-1px);
+}
+
+.btn-whatsapp svg {
+  font-size: 18px;
+}
+
+/* Stili per il pulsante WhatsApp nella tabella */
+.btn-action.whatsapp {
+  background-color: #25D366;
+  color: white;
+  position: relative;
+}
+
+.btn-action.whatsapp:hover {
+  background-color: #128C7E;
+  transform: scale(1.1);
+}
+
+.btn-action.whatsapp::after {
+  content: 'WhatsApp';
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #333;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.2s;
+}
+
+.btn-action.whatsapp:hover::after {
+  opacity: 1;
+  visibility: visible;
+  bottom: 120%;
+}
+
+@media (max-width: 768px) {
+  .btn-action.whatsapp::after {
+    display: none;
+  }
+} 

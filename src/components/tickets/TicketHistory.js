@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { db } from '../../firebase/config';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { useAuth } from '../../contexts/AuthContext';
@@ -7,153 +7,180 @@ import './TicketHistory.css';
 function TicketHistory() {
   const { currentUser } = useAuth();
   const [tickets, setTickets] = useState([]);
-  const [filteredTickets, setFilteredTickets] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [searchEmail, setSearchEmail] = useState('');
-  const [searchEvent, setSearchEvent] = useState('');
-  const [stats, setStats] = useState({
-    totalTickets: 0,
-    validatedTickets: 0,
-    totalRevenue: 0
-  });
+  const [error, setError] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterBy, setFilterBy] = useState('all');
 
   useEffect(() => {
-    fetchTickets();
+    if (currentUser?.uid) {
+      fetchTickets();
+    }
   }, [currentUser]);
 
-  // Effetto per filtrare i biglietti quando cambiano i criteri di ricerca
-  useEffect(() => {
-    filterTickets();
-  }, [tickets, searchEmail, searchEvent]);
-
-    async function fetchTickets() {
-      try {
-        const ticketsQuery = query(
-          collection(db, 'tickets'),
-          where('sellerId', '==', currentUser.uid)
-        );
-
-      const snapshot = await getDocs(ticketsQuery);
-      const ticketsData = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-
-      setTickets(ticketsData);
-      calculateStats(ticketsData);
+  const fetchTickets = async () => {
+    if (!currentUser?.uid) {
+      setError('Utente non autenticato');
       setLoading(false);
-    } catch (error) {
-      setError('Errore nel caricamento dei biglietti');
-      setLoading(false);
-    }
-  }
-
-  function filterTickets() {
-    let filtered = [...tickets];
-
-    if (searchEmail) {
-      filtered = filtered.filter(ticket => 
-        ticket.customerEmail.toLowerCase().includes(searchEmail.toLowerCase())
-      );
+      return;
     }
 
-    if (searchEvent) {
-      filtered = filtered.filter(ticket =>
-        ticket.eventName.toLowerCase().includes(searchEvent.toLowerCase())
-      );
-    }
+    try {
+      setLoading(true);
+      setError(null);
 
-    setFilteredTickets(filtered);
-  }
+      const ticketsRef = collection(db, 'tickets');
+      // Semplifichiamo la query per evitare problemi con l'indice
+      const q = query(ticketsRef, where('sellerId', '==', currentUser.uid));
 
-  function calculateStats(ticketsData) {
-    const stats = ticketsData.reduce((acc, ticket) => ({
-          totalTickets: acc.totalTickets + (ticket.quantity || 0),
-      validatedTickets: acc.validatedTickets + (ticket.status === 'validated' ? ticket.quantity : 0),
-          totalRevenue: acc.totalRevenue + ((ticket.price || 0) * (ticket.quantity || 0))
-        }), {
-          totalTickets: 0,
-          validatedTickets: 0,
-          totalRevenue: 0
+      const querySnapshot = await getDocs(q);
+      
+      if (!querySnapshot.empty) {
+        const ticketsData = querySnapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            ...data,
+            // Gestione sicura delle date
+            saleDate: data.saleDate ? data.saleDate.toDate() : new Date(),
+            eventDate: data.eventDate ? new Date(data.eventDate) : new Date()
+          };
         });
 
-    setStats(stats);
-  }
+        // Ordinamento lato client
+        ticketsData.sort((a, b) => b.saleDate - a.saleDate);
+        
+        setTickets(ticketsData);
+      } else {
+        setTickets([]);
+      }
+    } catch (error) {
+      console.error('Errore nel recupero dei biglietti:', error);
+      if (error.code === 'failed-precondition') {
+        setError('Errore di configurazione del database. Contattare l\'amministratore.');
+      } else {
+        setError('Errore nel recupero dei biglietti. Riprova più tardi.');
+      }
+      setTickets([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  if (loading) return <div>Caricamento...</div>;
-  if (error) return <div className="error-message">{error}</div>;
+  const handleSearch = (e) => {
+    setSearchTerm(e.target.value.toLowerCase());
+  };
+
+  const handleFilterChange = (e) => {
+    setFilterBy(e.target.value);
+  };
+
+  const filteredTickets = tickets.filter(ticket => {
+    if (!searchTerm) return true;
+
+    const searchValue = searchTerm.toLowerCase();
+    switch (filterBy) {
+      case 'email':
+        return ticket.customerEmail?.toLowerCase().includes(searchValue);
+      case 'name':
+        return ticket.customerName?.toLowerCase().includes(searchValue);
+      case 'event':
+        return ticket.eventName?.toLowerCase().includes(searchValue);
+      case 'code':
+        return ticket.ticketCode?.toLowerCase().includes(searchValue);
+      default:
+        return (
+          ticket.customerEmail?.toLowerCase().includes(searchValue) ||
+          ticket.customerName?.toLowerCase().includes(searchValue) ||
+          ticket.eventName?.toLowerCase().includes(searchValue) ||
+          ticket.ticketCode?.toLowerCase().includes(searchValue)
+        );
+    }
+  });
+
+  if (loading) return <div className="loading">Caricamento storico vendite...</div>;
+  if (error) return <div className="error">{error}</div>;
 
   return (
-    <div className="ticket-history-container">
-      <div className="tickets-summary">
-        <div className="summary-card">
-          <h3>Totale Biglietti</h3>
-          <p>{stats.totalTickets}</p>
-        </div>
-        <div className="summary-card">
-          <h3>Biglietti Validati</h3>
-          <p>{stats.validatedTickets}</p>
-        </div>
-        <div className="summary-card">
-          <h3>Incasso Totale</h3>
-          <p>€{stats.totalRevenue.toFixed(2)}</p>
+    <div className="ticket-history">
+      <h2>Storico Vendite</h2>
+      
+      <div className="filters-section">
+        <div className="search-box">
+          <input
+            type="text"
+            placeholder="Cerca vendite..."
+            value={searchTerm}
+            onChange={handleSearch}
+            className="search-input"
+          />
+          <select
+            value={filterBy}
+            onChange={handleFilterChange}
+            className="filter-select"
+          >
+            <option value="all">Tutti i campi</option>
+            <option value="email">Email cliente</option>
+            <option value="name">Nome cliente</option>
+            <option value="event">Nome evento</option>
+            <option value="code">Codice biglietto</option>
+          </select>
         </div>
       </div>
 
-      <div className="filters-container">
-        <div className="search-filters">
-          <input
-            type="text"
-            placeholder="Cerca per email cliente..."
-            value={searchEmail}
-            onChange={(e) => setSearchEmail(e.target.value)}
-            className="search-input"
-          />
-          <input
-            type="text"
-            placeholder="Cerca per nome evento..."
-            value={searchEvent}
-            onChange={(e) => setSearchEvent(e.target.value)}
-            className="search-input"
-          />
-        </div>
+      <div className="tickets-grid">
+        {filteredTickets.map(ticket => (
+          <div key={ticket.id} className="ticket-card">
+            <div className="ticket-header">
+              <h3>{ticket.eventName}</h3>
+              <span className="ticket-code">Codice: {ticket.ticketCode}</span>
+            </div>
+            
+            <div className="ticket-details">
+              <div className="detail-row">
+                <span className="label">Data vendita:</span>
+                <span className="value">{ticket.saleDate.toLocaleDateString()}</span>
+              </div>
+              
+              <div className="detail-row">
+                <span className="label">Data evento:</span>
+                <span className="value">{ticket.eventDate.toLocaleDateString()}</span>
+              </div>
+
+              <div className="detail-row">
+                <span className="label">Cliente:</span>
+                <span className="value">{ticket.customerName}</span>
+              </div>
+
+              <div className="detail-row">
+                <span className="label">Email cliente:</span>
+                <span className="value">{ticket.customerEmail}</span>
+              </div>
+
+              <div className="detail-row">
+                <span className="label">Quantità:</span>
+                <span className="value">{ticket.quantity}</span>
+              </div>
+
+              <div className="detail-row">
+                <span className="label">Prezzo unitario:</span>
+                <span className="value">€{ticket.price?.toFixed(2) || '0.00'}</span>
+              </div>
+
+              <div className="detail-row total">
+                <span className="label">Totale:</span>
+                <span className="value">€{ticket.totalPrice?.toFixed(2) || '0.00'}</span>
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
 
-      <div className="tickets-table">
-        <table>
-          <thead>
-            <tr>
-              <th>Data</th>
-              <th>Codice</th>
-              <th>Evento</th>
-              <th>Email Cliente</th>
-              <th>Quantità</th>
-              <th>Prezzo Unit.</th>
-              <th>Totale</th>
-              <th>Stato</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredTickets.map(ticket => (
-              <tr key={ticket.id}>
-                <td data-label="Data">{new Date(ticket.createdAt).toLocaleDateString()}</td>
-                <td data-label="Codice">{ticket.ticketCode}</td>
-                <td data-label="Evento">{ticket.eventName}</td>
-                <td data-label="Email Cliente">{ticket.customerEmail}</td>
-                <td data-label="Quantità">{ticket.quantity}</td>
-                <td data-label="Prezzo Unit.">€{ticket.price?.toFixed(2) || '0.00'}</td>
-                <td data-label="Totale">€{((ticket.price || 0) * (ticket.quantity || 0)).toFixed(2)}</td>
-                <td data-label="Stato">
-                  <span className={`status ${ticket.status}`}>
-                    {ticket.validatedAt ? 'Validato' : ticket.status}
-                  </span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      {filteredTickets.length === 0 && (
+        <div className="no-results">
+          Nessuna vendita trovata con i filtri selezionati
+        </div>
+      )}
     </div>
   );
 }

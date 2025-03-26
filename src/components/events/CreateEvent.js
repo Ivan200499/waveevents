@@ -3,16 +3,21 @@ import { db } from '../../firebase/config';
 import { collection, addDoc } from 'firebase/firestore';
 import { uploadImage } from '../../services/ImageService';
 import './CreateEvent.css';
+import { FaCalendarAlt, FaMapMarkerAlt, FaEuroSign, FaTicketAlt } from 'react-icons/fa';
 
 function CreateEvent({ onEventCreated }) {
   console.log("SONO IL FILE GIUSTO - CreateEvent.js");
   
   const [formData, setFormData] = useState({
     name: '',
-    date: '',
     location: '',
     totalTickets: '',
     ticketPrice: '',
+    description: '',
+    isRecurring: false,
+    startDate: '',
+    endDate: '',
+    dates: []
   });
   const [image, setImage] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
@@ -32,10 +37,27 @@ function CreateEvent({ onEventCreated }) {
   };
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value, type, checked } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: type === 'checkbox' ? checked : value
+    }));
+  };
+
+  const generateDates = () => {
+    if (!formData.isRecurring || !formData.startDate || !formData.endDate) return;
+    
+    const start = new Date(formData.startDate);
+    const end = new Date(formData.endDate);
+    const dates = [];
+    
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+      dates.push(new Date(d).toISOString());
+    }
+    
+    setFormData(prev => ({
+      ...prev,
+      dates
     }));
   };
 
@@ -57,7 +79,10 @@ function CreateEvent({ onEventCreated }) {
         ticketPrice: parseFloat(formData.ticketPrice),
         imageUrl,
         status: 'active',
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        isRecurring: formData.isRecurring,
+        dates: formData.isRecurring ? formData.dates : [formData.startDate],
+        soldTickets: 0
       };
 
       await addDoc(collection(db, 'events'), eventData);
@@ -65,10 +90,14 @@ function CreateEvent({ onEventCreated }) {
       // Reset form
       setFormData({
         name: '',
-        date: '',
         location: '',
         totalTickets: '',
         ticketPrice: '',
+        description: '',
+        isRecurring: false,
+        startDate: '',
+        endDate: '',
+        dates: []
       });
       setImage(null);
       setImagePreview(null);
@@ -133,15 +162,70 @@ function CreateEvent({ onEventCreated }) {
         </div>
 
         <div className="form-group">
-          <label>Data:</label>
-          <input
-            type="date"
-            name="date"
-            value={formData.date}
-            onChange={handleChange}
-            required
-          />
+          <label>Evento Ricorrente:</label>
+          <div className="checkbox-container">
+            <input
+              type="checkbox"
+              name="isRecurring"
+              checked={formData.isRecurring}
+              onChange={handleChange}
+            />
+            <span>Questo evento si svolge in più date</span>
+          </div>
         </div>
+
+        {formData.isRecurring ? (
+          <>
+            <div className="form-group">
+              <label>Data Inizio:</label>
+              <input
+                type="date"
+                name="startDate"
+                value={formData.startDate}
+                onChange={handleChange}
+                required
+              />
+            </div>
+
+            <div className="form-group">
+              <label>Data Fine:</label>
+              <input
+                type="date"
+                name="endDate"
+                value={formData.endDate}
+                onChange={(e) => {
+                  handleChange(e);
+                  generateDates();
+                }}
+                required
+              />
+            </div>
+
+            {formData.dates.length > 0 && (
+              <div className="dates-preview">
+                <h3>Date Generate:</h3>
+                <div className="dates-list">
+                  {formData.dates.map((date, index) => (
+                    <div key={index} className="date-item">
+                      {new Date(date).toLocaleDateString()}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="form-group">
+            <label>Data Evento:</label>
+            <input
+              type="date"
+              name="startDate"
+              value={formData.startDate}
+              onChange={handleChange}
+              required
+            />
+          </div>
+        )}
 
         <div className="form-group">
           <label>Luogo:</label>
@@ -176,6 +260,17 @@ function CreateEvent({ onEventCreated }) {
             required
             min="0"
             step="0.01"
+          />
+        </div>
+
+        <div className="form-group">
+          <label>Descrizione Evento:</label>
+          <textarea
+            name="description"
+            value={formData.description}
+            onChange={handleChange}
+            rows="4"
+            placeholder="Inserisci una descrizione dettagliata dell'evento..."
           />
         </div>
 

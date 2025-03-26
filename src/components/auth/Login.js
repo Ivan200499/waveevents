@@ -37,6 +37,9 @@ function Login() {
         case 'promoter':
           navigate('/promoter');
           break;
+        case 'validator':
+          navigate('/validate-ticket');
+          break;
         default:
           navigate('/');
       }

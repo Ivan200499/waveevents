@@ -6,13 +6,21 @@ import CreateTeamLeader from '../auth/CreateTeamLeader';
 import TeamStatistics from '../statistics/TeamStatistics';
 import EditEvent from '../events/EditEvent';
 import CreatePromoter from '../auth/CreatePromoter';
-import { FaUserTie, FaUsers, FaUser, FaChartBar, FaCalendar, FaMapMarkerAlt, FaEuroSign, FaEdit, FaTrash, FaPlus, FaUserPlus, FaCalendarAlt, FaExclamationTriangle } from 'react-icons/fa';
+import { FaUserTie, FaUsers, FaUser, FaChartBar, FaCalendar, FaMapMarkerAlt, FaEuroSign, FaEdit, FaTrash, FaPlus, FaUserPlus, FaCalendarAlt, FaExclamationTriangle, FaTicketAlt } from 'react-icons/fa';
 import './ManagerDashboard.css';
 import { useAuth } from '../../contexts/AuthContext';
 import ManagerStats from '../stats/ManagerStats';
 
 function TeamLeaderCard({ leader, onViewStats, onDelete }) {
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
+  const [stats, setStats] = useState(null);
+  const [showStats, setShowStats] = useState(false);
+
+  const handleStatsClick = async () => {
+    const leaderStats = await fetchTeamLeaderStats(leader.id);
+    setStats(leaderStats);
+    setShowStats(true);
+  };
 
   const handleDeleteClick = () => {
     setShowConfirmDelete(true);
@@ -29,17 +37,62 @@ function TeamLeaderCard({ leader, onViewStats, onDelete }) {
         <div className="header-content">
           <FaUserTie className="leader-icon" />
           <div>
-            <h4>{leader.name}</h4>
+            <h4>{leader.name || 'N/A'}</h4>
             <span className="email">{leader.email}</span>
           </div>
         </div>
       </div>
 
+      {showStats && stats && (
+        <div className="stats-modal">
+          <div className="stats-content">
+            <h2>Statistiche Team di {leader.name}</h2>
+            <div className="team-summary">
+              <div className="summary-stat">
+                <FaTicketAlt />
+                <h3>Totale Biglietti: {stats.totalTeamTickets}</h3>
+              </div>
+              <div className="summary-stat">
+                <FaEuroSign />
+                <h3>Incasso Totale: €{stats.totalTeamRevenue.toFixed(2)}</h3>
+              </div>
+            </div>
+
+            <div className="promoters-stats">
+              <h3>Statistiche Promoter</h3>
+              {stats.promoters.map(promoter => (
+                <div key={promoter.id} className="promoter-card">
+                  <h4>{promoter.name || promoter.email}</h4>
+                  <div className="promoter-totals">
+                    <p>Biglietti Venduti: {promoter.totalTickets}</p>
+                    <p>Incasso: €{promoter.totalRevenue.toFixed(2)}</p>
+                  </div>
+                  
+                  {promoter.eventStats.length > 0 && (
+                    <div className="event-breakdown">
+                      <h5>Dettaglio Eventi:</h5>
+                      {promoter.eventStats.map(event => (
+                        <div key={event.eventId} className="event-stat">
+                          <p>{event.eventName}</p>
+                          <p>Biglietti: {event.tickets}</p>
+                          <p>Incasso: €{event.revenue.toFixed(2)}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+            
+            <button className="close-button" onClick={() => setShowStats(false)}>
+              Chiudi
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="card-actions">
-        <button 
-          className="btn btn-primary"
-          onClick={() => onViewStats(leader.id)}
-        >
+        <button className="btn-stats" onClick={handleStatsClick}>
           <FaChartBar /> Statistiche
         </button>
         <button 
@@ -134,6 +187,73 @@ function EventCard({ event, onEdit, onDelete }) {
       </div>
     </div>
   );
+}
+
+async function fetchTeamLeaderStats(teamLeaderId) {
+  try {
+    // Recupera tutti i promoter del team leader
+    const promotersQuery = query(
+      collection(db, 'users'),
+      where('teamLeaderId', '==', teamLeaderId),
+      where('role', '==', 'promoter')
+    );
+    const promotersSnapshot = await getDocs(promotersQuery);
+    const promoters = promotersSnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+
+    // Per ogni promoter, recupera le statistiche di vendita
+    const promoterStats = await Promise.all(
+      promoters.map(async (promoter) => {
+        const ticketsQuery = query(
+          collection(db, 'tickets'),
+          where('sellerId', '==', promoter.id)
+        );
+        const ticketsSnapshot = await getDocs(ticketsQuery);
+        
+        let totalTickets = 0;
+        let totalRevenue = 0;
+        const eventStats = {};
+
+        ticketsSnapshot.docs.forEach(doc => {
+          const ticket = doc.data();
+          totalTickets += ticket.quantity || 0;
+          totalRevenue += ticket.price * (ticket.quantity || 0);
+
+          // Raggruppa le statistiche per evento
+          if (!eventStats[ticket.eventId]) {
+            eventStats[ticket.eventId] = {
+              eventName: ticket.eventName,
+              tickets: 0,
+              revenue: 0
+            };
+          }
+          eventStats[ticket.eventId].tickets += ticket.quantity || 0;
+          eventStats[ticket.eventId].revenue += ticket.price * (ticket.quantity || 0);
+        });
+
+        return {
+          ...promoter,
+          totalTickets,
+          totalRevenue,
+          eventStats: Object.entries(eventStats).map(([eventId, stats]) => ({
+            eventId,
+            ...stats
+          }))
+        };
+      })
+    );
+
+    return {
+      promoters: promoterStats,
+      totalTeamTickets: promoterStats.reduce((sum, p) => sum + p.totalTickets, 0),
+      totalTeamRevenue: promoterStats.reduce((sum, p) => sum + p.totalRevenue, 0)
+    };
+  } catch (error) {
+    console.error('Errore nel recupero delle statistiche:', error);
+    return null;
+  }
 }
 
 function ManagerDashboard() {
@@ -357,7 +477,7 @@ function ManagerDashboard() {
             <div 
               key={leader.id} 
               className="team-leader-card"
-              onClick={() => setShowStats(true)}
+              onClick={() => setSelectedTeam(leader.id)}
             >
             <TeamLeaderCard
               leader={leader}

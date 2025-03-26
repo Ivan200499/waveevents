@@ -1,11 +1,17 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { db } from '../../firebase/config';
-import { collection, query, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 import CreateUserModal from './CreateUserModal';
 import EventManagement from './EventManagement';
 import EditUserModal from './EditUserModal';
 import './AdminDashboard.css';
 import Header from '../common/Header';
+import { FaDownload, FaUsers, FaTicketAlt, FaEuroSign, FaHistory } from 'react-icons/fa';
+import { generateGlobalStatisticsPDF } from '../../services/ReportService';
+import AssignmentModal from './AssignmentModal';
+import ThemeToggle from '../shared/ThemeToggle';
+import { generateOptimizedReport } from '../../services/OptimizedReportService';
+import TicketHistory from './TicketHistory';
 
 function AdminDashboard() {
   const [users, setUsers] = useState([]);
@@ -18,22 +24,34 @@ function AdminDashboard() {
   const [managers, setManagers] = useState([]);
   const [activeTab, setActiveTab] = useState('users');
   const [editingUser, setEditingUser] = useState(null);
+  const [showAssignModal, setShowAssignModal] = useState(false);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    totalTickets: 0,
+    totalRevenue: 0
+  });
+  const [downloadingReport, setDownloadingReport] = useState(false);
+  const [downloadError, setDownloadError] = useState(null);
+  const [showEditModal, setShowEditModal] = useState(false);
 
   useEffect(() => {
     fetchUsers();
+    fetchStats();
   }, []);
 
   async function fetchUsers() {
     try {
-      const usersSnapshot = await getDocs(collection(db, 'users'));
-      const usersData = usersSnapshot.docs.map(doc => ({
+      const usersRef = collection(db, 'users');
+      const snapshot = await getDocs(usersRef);
+      const usersData = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
+
       setUsers(usersData);
-      
-      setTeamLeaders(usersData.filter(user => user.role === 'teamLeader'));
       setManagers(usersData.filter(user => user.role === 'manager'));
+      setTeamLeaders(usersData.filter(user => user.role === 'teamLeader'));
       setLoading(false);
     } catch (error) {
       console.error('Error fetching users:', error);
@@ -41,9 +59,54 @@ function AdminDashboard() {
     }
   }
 
+  async function fetchStats() {
+    try {
+      // Recupera statistiche utenti
+      const usersRef = collection(db, 'users');
+      const usersSnapshot = await getDocs(usersRef);
+      
+      // Recupera statistiche biglietti
+      const ticketsRef = collection(db, 'tickets');
+      const ticketsSnapshot = await getDocs(ticketsRef);
+      
+      let totalTickets = 0;
+      let totalRevenue = 0;
+      
+      ticketsSnapshot.docs.forEach(doc => {
+        const ticket = doc.data();
+        totalTickets += ticket.quantity || 0;
+        totalRevenue += ticket.totalPrice || 0;
+      });
+
+      setStats({
+        totalUsers: usersSnapshot.size,
+        totalTickets,
+        totalRevenue
+      });
+    } catch (error) {
+      console.error('Error fetching stats:', error);
+    }
+  }
+
   const handleCreateUser = (userType) => {
     setCreateUserType(userType);
     setShowCreateModal(true);
+  };
+
+  const handleDownloadReport = async () => {
+    try {
+      setDownloadingReport(true);
+      setDownloadError(null);
+      console.log('Avvio generazione report ottimizzato...');
+      await generateOptimizedReport();
+      console.log('Report ottimizzato generato con successo');
+      alert('Report ottimizzato generato con successo!');
+    } catch (error) {
+      console.error('Errore nel download del report:', error);
+      setDownloadError(`Errore nella generazione del report: ${error.message}`);
+    } finally {
+      setDownloadingReport(false);
+    }
   };
 
   const filteredUsers = users.filter(user => {
@@ -56,12 +119,30 @@ function AdminDashboard() {
   });
 
   if (loading) {
-    return <div>Caricamento...</div>;
+    return <div className="loading-container">Caricamento dashboard...</div>;
   }
 
   return (
-    <div className="dashboard-container">
+    <div className="admin-dashboard">
       <Header />
+      <div className="dashboard-header">
+        <h1>Dashboard Amministratore</h1>
+        <div className="header-actions">
+          <button 
+            className={`btn-download ${downloadingReport ? 'loading' : ''}`}
+            onClick={handleDownloadReport}
+            disabled={downloadingReport}
+          >
+            <FaDownload /> {downloadingReport ? 'Generazione in corso...' : 'Scarica Statistiche'}
+          </button>
+          {downloadError && (
+            <div className="error-message">
+              {downloadError}
+            </div>
+          )}
+        </div>
+      </div>
+
       <div className="dashboard-content">
         <div className="admin-dashboard">
           <div className="admin-tabs">
@@ -76,6 +157,12 @@ function AdminDashboard() {
               onClick={() => setActiveTab('events')}
             >
               Gestione Eventi
+            </button>
+            <button 
+              className={`tab-button ${activeTab === 'tickets' ? 'active' : ''}`}
+              onClick={() => setActiveTab('tickets')}
+            >
+              <FaHistory /> Storico Biglietti
             </button>
           </div>
 
@@ -92,6 +179,9 @@ function AdminDashboard() {
                   </button>
                   <button onClick={() => handleCreateUser('promoter')}>
                     Nuovo Promoter
+                  </button>
+                  <button onClick={() => handleCreateUser('validator')}>
+                    Nuovo Validatore
                   </button>
                 </div>
               </div>
@@ -114,6 +204,7 @@ function AdminDashboard() {
                   <option value="manager">Manager</option>
                   <option value="teamLeader">Team Leader</option>
                   <option value="promoter">Promoter</option>
+                  <option value="validator">Validatore</option>
                 </select>
               </div>
 
@@ -148,9 +239,12 @@ function AdminDashboard() {
                           <div className="action-buttons">
                             <button 
                               className="btn btn-primary"
-                              onClick={() => setEditingUser(user)}
+                              onClick={() => {
+                                setSelectedUser(user);
+                                setShowEditModal(true);
+                              }}
                             >
-                              Modifica
+                              Gestisci
                             </button>
                           </div>
                         </td>
@@ -160,9 +254,11 @@ function AdminDashboard() {
                 </table>
               </div>
             </>
-          ) : (
+          ) : activeTab === 'events' ? (
             <EventManagement />
-          )}
+          ) : activeTab === 'tickets' ? (
+            <TicketHistory />
+          ) : null}
 
           {showCreateModal && (
             <CreateUserModal
@@ -174,17 +270,54 @@ function AdminDashboard() {
             />
           )}
 
-          {editingUser && (
+          {showEditModal && selectedUser && (
             <EditUserModal
-              user={editingUser}
+              user={selectedUser}
               managers={managers}
               teamLeaders={teamLeaders}
-              onClose={() => setEditingUser(null)}
+              onClose={() => {
+                setShowEditModal(false);
+                setSelectedUser(null);
+              }}
               onUpdate={fetchUsers}
             />
           )}
+
+          <div className="stats-overview">
+            <div className="stat-card">
+              <div className="stat-icon">
+                <FaUsers />
+              </div>
+              <div className="stat-info">
+                <h3>Utenti Totali</h3>
+                <div className="stat-value">{stats.totalUsers}</div>
+              </div>
+            </div>
+
+            <div className="stat-card">
+              <div className="stat-icon">
+                <FaTicketAlt />
+              </div>
+              <div className="stat-info">
+                <h3>Biglietti Venduti</h3>
+                <div className="stat-value">{stats.totalTickets}</div>
+              </div>
+            </div>
+
+            <div className="stat-card">
+              <div className="stat-icon">
+                <FaEuroSign />
+              </div>
+              <div className="stat-info">
+                <h3>Ricavo Totale</h3>
+                <div className="stat-value">€{stats.totalRevenue.toFixed(2)}</div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
+
+      <ThemeToggle />
     </div>
   );
 }

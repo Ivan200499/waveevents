@@ -1,3 +1,5 @@
+import { FaCalendarAlt } from 'react-icons/fa';
+
 function EventList({ events, onEdit, onDelete }) {
   return (
     <div className="events-grid">
@@ -11,10 +13,27 @@ function EventList({ events, onEdit, onDelete }) {
           )}
           <div className="event-content">
             <h3>{event.name}</h3>
-            <p>Data: {new Date(event.date).toLocaleDateString()}</p>
+            {event.isRecurring ? (
+              <div className="event-dates">
+                <h4><FaCalendarAlt /> Date disponibili:</h4>
+                <div className="dates-list">
+                  {event.dates.map((date, index) => (
+                    <div key={index} className="date-item">
+                      {new Date(date.date).toLocaleDateString()} - {date.availableTickets} biglietti
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <p><FaCalendarAlt /> Data: {new Date(event.date).toLocaleDateString()}</p>
+            )}
             <p>Luogo: {event.location}</p>
             <p>Prezzo: €{event.price}</p>
-            <p>Biglietti disponibili: {event.availableTickets}</p>
+            {event.description && (
+              <div className="event-description">
+                <p>{event.description}</p>
+              </div>
+            )}
             <div className="event-actions">
               <button onClick={() => onEdit(event)} className="edit-button">
                 Modifica
@@ -28,4 +47,6 @@ function EventList({ events, onEdit, onDelete }) {
       ))}
     </div>
   );
-} 
+}
+
+export default EventList; 

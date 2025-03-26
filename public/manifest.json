@@ -1,6 +1,7 @@
 {
-  "short_name": "React App",
-  "name": "Create React App Sample",
+  "short_name": "Ticket System",
+  "name": "Ticket Management System",
+  "description": "Sistema di gestione biglietti per eventi e PR",
   "icons": [
     {
       "src": "favicon.ico",
@@ -10,16 +11,48 @@
     {
       "src": "logo192.png",
       "type": "image/png",
-      "sizes": "192x192"
+      "sizes": "192x192",
+      "purpose": "any maskable"
     },
     {
       "src": "logo512.png",
       "type": "image/png",
-      "sizes": "512x512"
+      "sizes": "512x512",
+      "purpose": "any maskable"
     }
   ],
-  "start_url": ".",
+  "start_url": "/",
   "display": "standalone",
-  "theme_color": "#000000",
-  "background_color": "#ffffff"
+  "orientation": "portrait",
+  "theme_color": "#1a1a1a",
+  "background_color": "#f5f7fa",
+  "prefer_related_applications": false,
+  "categories": ["business", "productivity", "events"],
+  "screenshots": [
+    {
+      "src": "screenshot1.jpg",
+      "sizes": "1280x720",
+      "type": "image/jpeg"
+    },
+    {
+      "src": "screenshot2.jpg",
+      "sizes": "1280x720",
+      "type": "image/jpeg"
+    }
+  ],
+  "scope": "/",
+  "shortcuts": [
+    {
+      "name": "Scansiona Ticket",
+      "short_name": "Scansiona",
+      "description": "Scansiona un biglietto tramite QR code",
+      "url": "/validate"
+    },
+    {
+      "name": "Vendi Ticket",
+      "short_name": "Vendi",
+      "description": "Vendi nuovi biglietti",
+      "url": "/sell"
+    }
+  ]
 }

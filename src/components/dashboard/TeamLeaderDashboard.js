@@ -1,49 +1,33 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { db } from '../../firebase/config';
 import { collection, query, where, getDocs, updateDoc, doc } from 'firebase/firestore';
 import { useAuth } from '../../contexts/AuthContext';
 import CreatePromoter from '../auth/CreatePromoter';
 import { notifyPromoter } from '../../services/NotificationService';
 import PromoterStatistics from '../statistics/PromoterStatistics';
-import { FaUserPlus, FaUsers, FaUser, FaChartBar, FaCalendarAlt, FaToggleOn, FaToggleOff, FaUserMinus } from 'react-icons/fa';
+import { FaUserPlus, FaUsers, FaUser, FaChartBar, FaCalendarAlt, FaToggleOn, FaToggleOff, FaUserMinus, FaTicketAlt, FaEuroSign } from 'react-icons/fa';
+import Header from '../common/Header';
 import './TeamLeaderDashboard.css';
 
-function PromoterCard({ promoter, onStatusChange, onRemove, onViewStats }) {
+function PromoterCard({ promoter, onStatusChange, onRemove }) {
   return (
-    <div className="card promoter-card">
-      <div className="card-header">
-        <div className="header-content">
-          <FaUser className="promoter-icon" />
-          <div>
-            <h4>{promoter.name}</h4>
-            <span className="email">{promoter.email}</span>
+    <div className="promoter-card">
+      <div className="promoter-icon">
+        <FaUser size={24} />
+      </div>
+      <div className="promoter-info">
+        <h3>{promoter.name}</h3>
+        <p>{promoter.email}</p>
+        <div className="promoter-stats">
+          <div className="stat">
+            <FaTicketAlt />
+            <span>Biglietti: {promoter.totalTickets || 0}</span>
+          </div>
+          <div className="stat">
+            <FaEuroSign />
+            <span>Incasso: €{(promoter.totalRevenue || 0).toFixed(2)}</span>
           </div>
         </div>
-        <div className={`status-badge ${promoter.status === 'active' ? 'status-active' : 'status-inactive'}`}>
-          {promoter.status === 'active' ? 'Attivo' : 'Inattivo'}
-        </div>
-      </div>
-
-      <div className="card-actions">
-        <button
-          className={`btn ${promoter.status === 'active' ? 'btn-warning' : 'btn-success'}`}
-          onClick={() => onStatusChange(promoter.id, promoter.status === 'active' ? 'inactive' : 'active')}
-        >
-          {promoter.status === 'active' ? <FaToggleOff /> : <FaToggleOn />}
-          {promoter.status === 'active' ? 'Disattiva' : 'Attiva'}
-        </button>
-        <button
-          className="btn btn-danger"
-          onClick={() => onRemove(promoter.id)}
-        >
-          <FaUserMinus /> Rimuovi
-        </button>
-        <button
-          className="btn btn-primary"
-          onClick={() => onViewStats(promoter)}
-        >
-          <FaChartBar /> Statistiche
-        </button>
       </div>
     </div>
   );
@@ -91,6 +75,47 @@ function EventCard({ event }) {
   );
 }
 
+async function fetchPromoterStats(promoterId) {
+  const ticketsQuery = query(
+    collection(db, 'tickets'),
+    where('sellerId', '==', promoterId)
+  );
+  const ticketsSnapshot = await getDocs(ticketsQuery);
+  
+  let totalTickets = 0;
+  let totalRevenue = 0;
+  const eventStats = {};
+
+  ticketsSnapshot.forEach(doc => {
+    const ticket = doc.data();
+    totalTickets += ticket.quantity || 0;
+    totalRevenue += ticket.totalPrice || 0;
+
+    if (!eventStats[ticket.eventId]) {
+      eventStats[ticket.eventId] = {
+        eventId: ticket.eventId,
+        eventName: ticket.eventName,
+        totalTickets: 0,
+        totalRevenue: 0,
+        sales: []
+      };
+    }
+
+    eventStats[ticket.eventId].totalTickets += ticket.quantity || 0;
+    eventStats[ticket.eventId].totalRevenue += ticket.totalPrice || 0;
+    eventStats[ticket.eventId].sales.push({
+      date: ticket.createdAt,
+      quantity: ticket.quantity,
+      revenue: ticket.totalPrice
+    });
+  });
+
+  return {
+    totals: { totalTickets, totalRevenue },
+    eventStats: Object.values(eventStats)
+  };
+}
+
 function TeamLeaderDashboard() {
   const { currentUser } = useAuth();
   const [promoters, setPromoters] = useState([]);
@@ -100,6 +125,15 @@ function TeamLeaderDashboard() {
   const [showCreatePromoter, setShowCreatePromoter] = useState(false);
   const [selectedPromoter, setSelectedPromoter] = useState(null);
   const [showAddExisting, setShowAddExisting] = useState(false);
+  const [promoterStats, setPromoterStats] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [dateFilter, setDateFilter] = useState('');
+
+  const handlePromoterClick = async (promoter) => {
+    setSelectedPromoter(promoter);
+    const stats = await fetchPromoterStats(promoter.id);
+    setPromoterStats(stats);
+  };
 
   useEffect(() => {
     fetchData();
@@ -107,17 +141,27 @@ function TeamLeaderDashboard() {
 
   async function fetchData() {
     try {
-      // Recupera promoter del team
       const promotersQuery = query(
         collection(db, 'users'),
         where('teamLeaderId', '==', currentUser.uid),
         where('role', '==', 'promoter')
       );
       const promotersSnapshot = await getDocs(promotersQuery);
-      const promotersData = promotersSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
+      
+      const promotersData = await Promise.all(promotersSnapshot.docs.map(async (doc) => {
+        const promoter = {
+          id: doc.id,
+          ...doc.data()
+        };
+
+        const stats = await fetchPromoterStats(promoter.id);
+        return {
+          ...promoter,
+          totalTickets: stats.totals.totalTickets,
+          totalRevenue: stats.totals.totalRevenue
+        };
       }));
+
       setPromoters(promotersData);
 
       // Recupera promoter disponibili (senza team)
@@ -143,7 +187,7 @@ function TeamLeaderDashboard() {
 
       setLoading(false);
     } catch (error) {
-      console.error('Errore nel recupero dei dati:', error);
+      console.error('Error fetching data:', error);
       setLoading(false);
     }
   }
@@ -202,89 +246,100 @@ function TeamLeaderDashboard() {
     }
   }
 
-  if (loading) return <div>Caricamento...</div>;
+  if (loading) {
+    return (
+      <div className="dashboard-container">
+        <div className="loading-spinner"></div>
+      </div>
+    );
+  }
 
   return (
-    <div className="dashboard-container">
-      <div className="dashboard-header">
-        <h2>Dashboard Team Leader</h2>
-        <div className="action-buttons">
-          <button
-            className="btn btn-primary"
-            onClick={() => setShowCreatePromoter(!showCreatePromoter)}
-          >
-            <FaUserPlus /> {showCreatePromoter ? 'Nascondi' : 'Nuovo Promoter'}
-          </button>
-          <button
-            className="btn btn-secondary"
-            onClick={() => setShowAddExisting(!showAddExisting)}
-          >
-            <FaUsers /> {showAddExisting ? 'Nascondi' : 'Aggiungi Esistente'}
-          </button>
-        </div>
-      </div>
-
-      {showCreatePromoter && (
-        <div className="create-form-container">
-          <CreatePromoter 
-            teamLeaderId={currentUser.uid}
-            onPromoterCreated={() => {
-              fetchData();
-              setShowCreatePromoter(false);
-            }} 
-          />
-        </div>
-      )}
-
-      {showAddExisting && (
-        <section className="dashboard-section">
-          <h3><FaUsers /> Promoter Disponibili</h3>
-          <div className="grid">
-            {availablePromoters.map(promoter => (
-              <AvailablePromoterCard
-                key={promoter.id}
-                promoter={promoter}
-                onAdd={handleAddPromoterToTeam}
-              />
-            ))}
-          </div>
-        </section>
-      )}
-
-      <section className="dashboard-section">
-        <h3><FaUsers /> I Miei Promoter</h3>
-        <div className="grid">
+    <div className="dashboard-container fade-in">
+      <Header />
+      <div className="team-leader-dashboard">
+        <h2>I Miei Promoter</h2>
+        
+        <div className="leaders-grid">
           {promoters.map(promoter => (
-            <PromoterCard
+            <div 
               key={promoter.id}
-              promoter={promoter}
-              onStatusChange={handlePromoterStatusChange}
-              onRemove={handleRemovePromoterFromTeam}
-              onViewStats={setSelectedPromoter}
-            />
+              className="leader-card"
+              onClick={() => handlePromoterClick(promoter)}
+            >
+              <div className="leader-icon">
+                <FaUser size={24} />
+              </div>
+              <h3>{promoter.name}</h3>
+              <p>{promoter.email}</p>
+              <div className="leader-stats">
+                <div className="stat">
+                  <FaTicketAlt />
+                  <span>{promoter.totalTickets || 0} Biglietti</span>
+                </div>
+                <div className="stat">
+                  <FaEuroSign />
+                  <span>€ {(promoter.totalRevenue || 0).toFixed(2)}</span>
+                </div>
+              </div>
+            </div>
           ))}
         </div>
-      </section>
 
-      <section className="dashboard-section">
-        <h3><FaCalendarAlt /> Eventi Disponibili</h3>
-        <div className="grid">
-          {events.map(event => (
-            <EventCard key={event.id} event={event} />
-          ))}
-        </div>
-      </section>
-
-      {selectedPromoter && (
-        <div className="modal">
-          <div className="modal-content">
-            <PromoterStatistics 
-              promoter={selectedPromoter}
-              onClose={() => setSelectedPromoter(null)}
-            />
+        {selectedPromoter && promoterStats && (
+          <div className="modal">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h3>{selectedPromoter.name} - Statistiche Dettagliate</h3>
+                <button className="close-button" onClick={() => setSelectedPromoter(null)}>×</button>
+              </div>
+              <div className="stats-summary">
+                <div className="summary-stat">
+                  <FaTicketAlt className="stat-icon" />
+                  <div className="stat-info">
+                    <h3>Biglietti Totali</h3>
+                    <p className="stat-value">{promoterStats.totals.totalTickets}</p>
+                  </div>
+                </div>
+                <div className="summary-stat">
+                  <FaEuroSign className="stat-icon" />
+                  <div className="stat-info">
+                    <h3>Incasso Totale</h3>
+                    <p className="stat-value">€{promoterStats.totals.totalRevenue.toFixed(2)}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="stats-grid">
+                {promoterStats.eventStats.map(stat => (
+                  <div key={stat.eventId} className="event-stat-card fade-in">
+                    <h4>{stat.eventName}</h4>
+                    <div className="stat-row">
+                      <div className="stat-item">
+                        <FaTicketAlt />
+                        <span>{stat.totalTickets} biglietti</span>
+                      </div>
+                      <div className="stat-item">
+                        <FaEuroSign />
+                        <span>€{stat.totalRevenue.toFixed(2)}</span>
+                      </div>
+                    </div>
+                    <div className="sales-history">
+                      <h5>Ultime vendite</h5>
+                      {stat.sales.slice(-5).map((sale, index) => (
+                        <div key={index} className="sale-row slide-in">
+                          <span>{new Date(sale.date).toLocaleDateString()}</span>
+                          <span>{sale.quantity} biglietti</span>
+                          <span>€{sale.revenue.toFixed(2)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
