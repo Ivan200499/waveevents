@@ -9,7 +9,19 @@ import responsiveUtils from '../utils/responsiveUtils';
  * @returns {Object} Informazioni sul dispositivo
  */
 const useDeviceDetect = () => {
-  const [deviceInfo, setDeviceInfo] = useState(() => responsiveUtils.getDeviceInfo());
+  // Instead of using getDeviceInfo, we'll directly create our device info object
+  const getInitialDeviceInfo = () => {
+    const width = responsiveUtils.screenWidth();
+    const height = responsiveUtils.screenHeight();
+    return {
+      width,
+      height,
+      isIPhoneSE1: responsiveUtils.isIPhoneSE1(),
+      isMobile: responsiveUtils.isMobile()
+    };
+  };
+
+  const [deviceInfo, setDeviceInfo] = useState(getInitialDeviceInfo);
   const [orientation, setOrientation] = useState(
     () => deviceInfo.height > deviceInfo.width ? 'portrait' : 'landscape'
   );
@@ -19,7 +31,13 @@ const useDeviceDetect = () => {
     const handleDimensionChange = ({ width, height }) => {
       const newOrientation = height > width ? 'portrait' : 'landscape';
       
-      setDeviceInfo(responsiveUtils.getDeviceInfo());
+      setDeviceInfo({
+        width,
+        height,
+        isIPhoneSE1: responsiveUtils.isIPhoneSE1(),
+        isMobile: responsiveUtils.isMobile()
+      });
+      
       setOrientation(newOrientation);
       
       // Aggiorna le meta viewport per dispositivi mobili
@@ -43,22 +61,44 @@ const useDeviceDetect = () => {
         } else {
           metaViewport.content = 'width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover, user-scalable=yes';
         }
+
+        // Aggiunta mobile-web-app-capable meta tag
+        let mobileWebApp = document.querySelector('meta[name="mobile-web-app-capable"]');
+        if (!mobileWebApp) {
+          mobileWebApp = document.createElement('meta');
+          mobileWebApp.name = 'mobile-web-app-capable';
+          mobileWebApp.content = 'yes';
+          document.head.appendChild(mobileWebApp);
+        }
+
+        // Per compatibilità con iOS, manteniamo anche apple-mobile-web-app-capable
+        let appleWebApp = document.querySelector('meta[name="apple-mobile-web-app-capable"]');
+        if (!appleWebApp) {
+          appleWebApp = document.createElement('meta');
+          appleWebApp.name = 'apple-mobile-web-app-capable';
+          appleWebApp.content = 'yes';
+          document.head.appendChild(appleWebApp);
+        }
       }
     };
 
     // Imposta il meta tag iniziale
     updateViewportMeta(deviceInfo.width);
 
-    // Aggiungi il listener per i cambiamenti di dimensione
-    const unsubscribeDimensions = responsiveUtils.addDimensionListener(({ width, height }) => {
+    // Use window resize listener instead of addDimensionListener
+    const handleResize = () => {
+      const width = window.innerWidth;
+      const height = window.innerHeight;
       handleDimensionChange({ width, height });
-    });
+    };
+
+    window.addEventListener('resize', handleResize);
+    window.addEventListener('orientationchange', handleResize);
 
     // Cleanup al dismount
     return () => {
-      if (unsubscribeDimensions && typeof unsubscribeDimensions.remove === 'function') {
-        unsubscribeDimensions.remove();
-      }
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('orientationchange', handleResize);
     };
   }, []);
 

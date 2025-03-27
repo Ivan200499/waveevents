@@ -119,6 +119,37 @@ const addResizeListener = (callback, throttleTime = 200) => {
   };
 };
 
+// Add the missing addDimensionListener function
+const addDimensionListener = (callback, throttleTime = 200) => {
+  if (typeof window === 'undefined') return { remove: () => {} };
+  
+  const wrappedCallback = () => {
+    callback({
+      width: screenWidth(),
+      height: screenHeight()
+    });
+  };
+  
+  const removeListener = addResizeListener(wrappedCallback, throttleTime);
+  
+  // Return an object with a remove method for compatibility
+  return {
+    remove: removeListener
+  };
+};
+
+// Helper function to get device info
+const getDeviceInfo = () => {
+  const width = screenWidth();
+  const height = screenHeight();
+  return {
+    width,
+    height,
+    isIPhoneSE1: isIPhoneSE1(),
+    isMobile: isMobile()
+  };
+};
+
 // Shorthand per le dimensioni comuni
 const dimensions = {
   fullWidth: '100%',
@@ -138,6 +169,8 @@ export {
   isPortrait,
   isMobile,
   addResizeListener,
+  addDimensionListener,
+  getDeviceInfo,
   dimensions,
   screenWidth,
   screenHeight
@@ -152,6 +185,8 @@ export default {
   isPortrait,
   isMobile,
   addResizeListener,
+  addDimensionListener,
+  getDeviceInfo,
   dimensions,
   screenWidth,
   screenHeight

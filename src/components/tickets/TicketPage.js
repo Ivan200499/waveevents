@@ -13,6 +13,33 @@ import { wp, hp, scaleSize } from '../../utils/responsiveUtils';
 // Logo dell'app in base64 (placeholder - sostituire con il logo reale)
 const APP_LOGO = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTI4IiBoZWlnaHQ9IjEyOCIgdmlld0JveD0iMCAwIDEyOCAxMjgiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiByeD0iMjQiIGZpbGw9IiM0QTkwRTIiLz4KPHBhdGggZD0iTTM2IDQxQzM2IDM4LjIzODYgMzguMjM4NiAzNiA0MSAzNkg4N0M4OS43NjE0IDM2IDkyIDM4LjIzODYgOTIgNDFWODdDOTIgODkuNzYxNCA4OS43NjE0IDkyIDg3IDkySDQxQzM4LjIzODYgOTIgMzYgODkuNzYxNCAzNiA4N1Y0MVoiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iNCIvPgo8cGF0aCBkPSJNOTIgNTJIMTA0QzEwNi43NjEgNTIgMTA5IDU0LjIzODYgMTA5IDU3VjcyQzEwOSA3NC43NjE0IDEwNi43NjEgNzcgMTA0IDc3SDkyVjUyWiIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSI0Ii8+CjxwYXRoIGQ9Ik0zNiA1MkgyNEMyMS4yMzg2IDUyIDE5IDU0LjIzODYgMTkgNTdWNzJDMTkgNzQuNzYxNCAyMS4yMzg2IDc3IDI0IDc3SDM2VjUyWiIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSI0Ii8+CjxjaXJjbGUgY3g9IjY0IiBjeT0iNjQiIHI9IjE2IiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjQiLz4KPC9zdmc+Cg==";
 
+// Funzione di fallback per rilevamento dispositivo
+const useDeviceFallback = () => {
+  const [dimensions, setDimensions] = useState({
+    width: window.innerWidth,
+    height: window.innerHeight
+  });
+
+  useEffect(() => {
+    const handleResize = () => {
+      setDimensions({
+        width: window.innerWidth,
+        height: window.innerHeight
+      });
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  return {
+    ...dimensions,
+    isMobile: dimensions.width < 768,
+    isIPhoneSE1: dimensions.width <= 320 && dimensions.height <= 568,
+    orientation: dimensions.height > dimensions.width ? 'portrait' : 'landscape'
+  };
+};
+
 // Componente per la visualizzazione elegante del biglietto
 function TicketPage() {
   const { ticketCode } = useParams();
@@ -23,8 +50,14 @@ function TicketPage() {
   const [isZoomed, setIsZoomed] = useState(false);
   const ticketContainerRef = useRef(null);
 
-  // Utilizziamo il nostro nuovo hook invece di gestire il rilevamento dispositivo internamente
-  const device = useDevice();
+  // Utilizziamo il nostro hook con gestione errori
+  let device;
+  try {
+    device = useDevice();
+  } catch (e) {
+    console.warn('Device context non disponibile, uso fallback:', e);
+    device = useDeviceFallback();
+  }
   
   // Configurazione reattiva in base al tipo di dispositivo
   const getDeviceConfiguration = () => {
@@ -168,6 +201,15 @@ function TicketPage() {
       document.head.appendChild(metaOgDesc);
     }
     metaOgDesc.content = description;
+
+    // Aggiungi il meta tag mobile-web-app-capable
+    let mobileWebApp = document.querySelector('meta[name="mobile-web-app-capable"]');
+    if (!mobileWebApp) {
+      mobileWebApp = document.createElement('meta');
+      mobileWebApp.name = 'mobile-web-app-capable';
+      mobileWebApp.content = 'yes';
+      document.head.appendChild(mobileWebApp);
+    }
   };
 
   // Formatta date da firebase
