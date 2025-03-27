@@ -126,7 +126,7 @@ function AdminDashboard() {
     <div className="admin-dashboard">
       <Header />
       <div className="dashboard-header">
-        <h1>Dashboard Amministratore</h1>
+        <h1 className="text-2xl">Dashboard Amministratore</h1>
         <div className="header-actions">
           <button 
             className={`btn-download ${downloadingReport ? 'loading' : ''}`}
@@ -144,174 +144,184 @@ function AdminDashboard() {
       </div>
 
       <div className="dashboard-content">
-        <div className="admin-dashboard">
-          <div className="admin-tabs">
-            <button 
-              className={`tab-button ${activeTab === 'users' ? 'active' : ''}`}
-              onClick={() => setActiveTab('users')}
-            >
-              Gestione Utenti
-            </button>
-            <button 
-              className={`tab-button ${activeTab === 'events' ? 'active' : ''}`}
-              onClick={() => setActiveTab('events')}
-            >
-              Gestione Eventi
-            </button>
-            <button 
-              className={`tab-button ${activeTab === 'tickets' ? 'active' : ''}`}
-              onClick={() => setActiveTab('tickets')}
-            >
-              <FaHistory /> Storico Biglietti
-            </button>
+        <div className="admin-tabs">
+          <button 
+            className={`tab-button ${activeTab === 'users' ? 'active' : ''}`}
+            onClick={() => setActiveTab('users')}
+          >
+            Gestione Utenti
+          </button>
+          <button 
+            className={`tab-button ${activeTab === 'events' ? 'active' : ''}`}
+            onClick={() => setActiveTab('events')}
+          >
+            Gestione Eventi
+          </button>
+          <button 
+            className={`tab-button ${activeTab === 'tickets' ? 'active' : ''}`}
+            onClick={() => setActiveTab('tickets')}
+          >
+            <FaHistory /> Storico Biglietti
+          </button>
+        </div>
+
+        {activeTab === 'users' ? (
+          <>
+            <div className="dashboard-header">
+              <h2 className="text-xl">Gestione Utenti</h2>
+              <div className="action-buttons">
+                <button 
+                  className="button button-primary"
+                  onClick={() => handleCreateUser('manager')}
+                >
+                  Nuovo Manager
+                </button>
+                <button 
+                  className="button button-primary"
+                  onClick={() => handleCreateUser('teamLeader')}
+                >
+                  Nuovo Team Leader
+                </button>
+                <button 
+                  className="button button-primary"
+                  onClick={() => handleCreateUser('promoter')}
+                >
+                  Nuovo Promoter
+                </button>
+                <button 
+                  className="button button-primary"
+                  onClick={() => handleCreateUser('validator')}
+                >
+                  Nuovo Validatore
+                </button>
+              </div>
+            </div>
+
+            <div className="filters">
+              <input
+                type="text"
+                placeholder="Cerca per nome o email..."
+                value={filter}
+                onChange={(e) => setFilter(e.target.value)}
+                className="search-input"
+              />
+              
+              <select
+                value={roleFilter}
+                onChange={(e) => setRoleFilter(e.target.value)}
+                className="role-filter"
+              >
+                <option value="all">Tutti i ruoli</option>
+                <option value="manager">Manager</option>
+                <option value="teamLeader">Team Leader</option>
+                <option value="promoter">Promoter</option>
+                <option value="validator">Validatore</option>
+              </select>
+            </div>
+
+            <div className="table-container">
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>Nome</th>
+                    <th>Email</th>
+                    <th>Ruolo</th>
+                    <th>Assegnato a</th>
+                    <th>Stato</th>
+                    <th>Azioni</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredUsers.map(user => (
+                    <tr key={user.id}>
+                      <td data-label="Nome">{user.name}</td>
+                      <td data-label="Email">{user.email}</td>
+                      <td data-label="Ruolo">{user.role}</td>
+                      <td data-label="Assegnato a">
+                        {user.teamLeaderId && `Team Leader: ${
+                          teamLeaders.find(tl => tl.id === user.teamLeaderId)?.name || 'N/A'
+                        }`}
+                        {user.managerId && `Manager: ${
+                          managers.find(m => m.id === user.managerId)?.name || 'N/A'
+                        }`}
+                      </td>
+                      <td data-label="Stato">{user.status}</td>
+                      <td data-label="Azioni">
+                        <div className="action-buttons">
+                          <button 
+                            className="button button-secondary"
+                            onClick={() => {
+                              setSelectedUser(user);
+                              setShowEditModal(true);
+                            }}
+                          >
+                            Gestisci
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        ) : activeTab === 'events' ? (
+          <EventManagement />
+        ) : activeTab === 'tickets' ? (
+          <TicketHistory />
+        ) : null}
+
+        {showCreateModal && (
+          <CreateUserModal
+            userType={createUserType}
+            teamLeaders={teamLeaders}
+            managers={managers}
+            onClose={() => setShowCreateModal(false)}
+            onUserCreated={fetchUsers}
+          />
+        )}
+
+        {showEditModal && selectedUser && (
+          <EditUserModal
+            user={selectedUser}
+            managers={managers}
+            teamLeaders={teamLeaders}
+            onClose={() => {
+              setShowEditModal(false);
+              setSelectedUser(null);
+            }}
+            onUpdate={fetchUsers}
+          />
+        )}
+
+        <div className="stats-overview">
+          <div className="stat-card">
+            <div className="stat-icon">
+              <FaUsers />
+            </div>
+            <div className="stat-info">
+              <h3>Utenti Totali</h3>
+              <div className="stat-value">{stats.totalUsers}</div>
+            </div>
           </div>
 
-          {activeTab === 'users' ? (
-            <>
-              <div className="dashboard-header">
-                <h2>Gestione Utenti</h2>
-                <div className="action-buttons">
-                  <button onClick={() => handleCreateUser('manager')}>
-                    Nuovo Manager
-                  </button>
-                  <button onClick={() => handleCreateUser('teamLeader')}>
-                    Nuovo Team Leader
-                  </button>
-                  <button onClick={() => handleCreateUser('promoter')}>
-                    Nuovo Promoter
-                  </button>
-                  <button onClick={() => handleCreateUser('validator')}>
-                    Nuovo Validatore
-                  </button>
-                </div>
-              </div>
-
-              <div className="filters">
-                <input
-                  type="text"
-                  placeholder="Cerca per nome o email..."
-                  value={filter}
-                  onChange={(e) => setFilter(e.target.value)}
-                  className="search-input"
-                />
-                
-                <select
-                  value={roleFilter}
-                  onChange={(e) => setRoleFilter(e.target.value)}
-                  className="role-filter"
-                >
-                  <option value="all">Tutti i ruoli</option>
-                  <option value="manager">Manager</option>
-                  <option value="teamLeader">Team Leader</option>
-                  <option value="promoter">Promoter</option>
-                  <option value="validator">Validatore</option>
-                </select>
-              </div>
-
-              <div className="users-table">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Nome</th>
-                      <th>Email</th>
-                      <th>Ruolo</th>
-                      <th>Assegnato a</th>
-                      <th>Stato</th>
-                      <th>Azioni</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredUsers.map(user => (
-                      <tr key={user.id}>
-                        <td data-label="Nome">{user.name}</td>
-                        <td data-label="Email">{user.email}</td>
-                        <td data-label="Ruolo">{user.role}</td>
-                        <td data-label="Assegnato a">
-                          {user.teamLeaderId && `Team Leader: ${
-                            teamLeaders.find(tl => tl.id === user.teamLeaderId)?.name || 'N/A'
-                          }`}
-                          {user.managerId && `Manager: ${
-                            managers.find(m => m.id === user.managerId)?.name || 'N/A'
-                          }`}
-                        </td>
-                        <td data-label="Stato">{user.status}</td>
-                        <td data-label="Azioni">
-                          <div className="action-buttons">
-                            <button 
-                              className="btn btn-primary"
-                              onClick={() => {
-                                setSelectedUser(user);
-                                setShowEditModal(true);
-                              }}
-                            >
-                              Gestisci
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </>
-          ) : activeTab === 'events' ? (
-            <EventManagement />
-          ) : activeTab === 'tickets' ? (
-            <TicketHistory />
-          ) : null}
-
-          {showCreateModal && (
-            <CreateUserModal
-              userType={createUserType}
-              teamLeaders={teamLeaders}
-              managers={managers}
-              onClose={() => setShowCreateModal(false)}
-              onUserCreated={fetchUsers}
-            />
-          )}
-
-          {showEditModal && selectedUser && (
-            <EditUserModal
-              user={selectedUser}
-              managers={managers}
-              teamLeaders={teamLeaders}
-              onClose={() => {
-                setShowEditModal(false);
-                setSelectedUser(null);
-              }}
-              onUpdate={fetchUsers}
-            />
-          )}
-
-          <div className="stats-overview">
-            <div className="stat-card">
-              <div className="stat-icon">
-                <FaUsers />
-              </div>
-              <div className="stat-info">
-                <h3>Utenti Totali</h3>
-                <div className="stat-value">{stats.totalUsers}</div>
-              </div>
+          <div className="stat-card">
+            <div className="stat-icon">
+              <FaTicketAlt />
             </div>
-
-            <div className="stat-card">
-              <div className="stat-icon">
-                <FaTicketAlt />
-              </div>
-              <div className="stat-info">
-                <h3>Biglietti Venduti</h3>
-                <div className="stat-value">{stats.totalTickets}</div>
-              </div>
+            <div className="stat-info">
+              <h3>Biglietti Venduti</h3>
+              <div className="stat-value">{stats.totalTickets}</div>
             </div>
+          </div>
 
-            <div className="stat-card">
-              <div className="stat-icon">
-                <FaEuroSign />
-              </div>
-              <div className="stat-info">
-                <h3>Ricavo Totale</h3>
-                <div className="stat-value">€{stats.totalRevenue.toFixed(2)}</div>
-              </div>
+          <div className="stat-card">
+            <div className="stat-icon">
+              <FaEuroSign />
+            </div>
+            <div className="stat-info">
+              <h3>Ricavo Totale</h3>
+              <div className="stat-value">€{stats.totalRevenue.toFixed(2)}</div>
             </div>
           </div>
         </div>

@@ -1,6 +1,6 @@
 .admin-dashboard {
-  padding: 2rem;
-  max-width: 1200px;
+  padding: var(--content-padding);
+  max-width: 100%;
   margin: 0 auto;
   min-height: 100vh;
   background-color: var(--background-color);
@@ -34,6 +34,7 @@
   transition: all 0.3s ease;
   min-width: 200px;
   justify-content: center;
+  height: var(--button-height);
 }
 
 .btn-download:hover:not(:disabled) {
@@ -164,6 +165,7 @@
   border-radius: 4px;
   cursor: pointer;
   transition: all 0.3s ease;
+  height: var(--button-height);
 }
 
 .user-actions button:hover {
@@ -248,6 +250,7 @@
   margin-bottom: 20px;
   border-bottom: 1px solid var(--border-color);
   padding-bottom: 10px;
+  flex-wrap: wrap;
 }
 
 .tab-button {
@@ -259,6 +262,11 @@
   font-weight: 500;
   position: relative;
   transition: all 0.3s ease;
+  height: var(--button-height);
+  min-width: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .tab-button::after {
@@ -284,4 +292,100 @@
 
 .tab-button.active::after {
   transform: scaleX(1);
+}
+
+/* Responsive table */
+.table-container {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin: 1rem 0;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 600px;
+}
+
+.table th,
+.table td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--border-color);
+}
+
+/* Action buttons */
+.action-buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.action-buttons button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  height: var(--button-height);
+  min-width: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+/* Filters */
+.filters {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.search-input {
+  flex: 1;
+  min-width: 200px;
+  height: var(--input-height);
+  padding: 0 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  font-size: 1rem;
+}
+
+.role-filter {
+  min-width: 160px;
+  height: var(--input-height);
+  padding: 0 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background-color: var(--background-white);
+  color: var(--text-color);
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+@media (max-width: 768px) {
+  .filters {
+    flex-direction: column;
+  }
+
+  .search-input,
+  .role-filter {
+    width: 100%;
+  }
+
+  .action-buttons {
+    flex-direction: column;
+  }
+
+  .action-buttons button {
+    width: 100%;
+  }
+
+  .tab-button {
+    width: 100%;
+    margin-bottom: 8px;
+  }
 } 

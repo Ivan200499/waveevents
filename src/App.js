@@ -4,6 +4,7 @@ import { NotificationProvider } from './contexts/NotificationContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { DeviceProvider } from './contexts/DeviceContext';
 import './styles/theme.css';
+import './styles/responsive.css';
 import './App.css';
 import Login from './components/auth/Login';
 import Register from './components/auth/Register';
