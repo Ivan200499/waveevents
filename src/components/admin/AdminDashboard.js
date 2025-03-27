@@ -118,6 +118,46 @@ function AdminDashboard() {
     return matchesSearch && matchesRole;
   });
 
+  const TicketCard = ({ ticket }) => {
+    return (
+      <div className="ticket-card">
+        <div className="ticket-info">
+          <h3>{ticket.eventName}</h3>
+          <p>Prezzo: €{ticket.price}</p>
+          <p>Quantità disponibile: {ticket.availableQuantity}</p>
+        </div>
+        <div className="ticket-actions">
+          <button 
+            className="button button-primary"
+            onClick={() => handleSellTicket(ticket)}
+          >
+            Vendi Biglietto
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  const TeamMemberCard = ({ member }) => {
+    return (
+      <div className="team-member-card">
+        <div className="member-info">
+          <h3>{member.name}</h3>
+          <p>{member.email}</p>
+          <p>Ruolo: {member.role}</p>
+        </div>
+        <div className="member-actions">
+          <button 
+            className="button button-secondary"
+            onClick={() => handleEditMember(member)}
+          >
+            Gestisci
+          </button>
+        </div>
+      </div>
+    );
+  };
+
   if (loading) {
     return <div className="loading-container">Caricamento dashboard...</div>;
   }
@@ -326,6 +366,30 @@ function AdminDashboard() {
           </div>
         </div>
       </div>
+
+      <nav className="bottom-nav">
+        <button 
+          className={`bottom-nav-item ${activeTab === 'users' ? 'active' : ''}`}
+          onClick={() => setActiveTab('users')}
+        >
+          <FaUsers className="bottom-nav-icon" />
+          <span>Utenti</span>
+        </button>
+        <button 
+          className={`bottom-nav-item ${activeTab === 'events' ? 'active' : ''}`}
+          onClick={() => setActiveTab('events')}
+        >
+          <FaTicketAlt className="bottom-nav-icon" />
+          <span>Eventi</span>
+        </button>
+        <button 
+          className={`bottom-nav-item ${activeTab === 'tickets' ? 'active' : ''}`}
+          onClick={() => setActiveTab('tickets')}
+        >
+          <FaHistory className="bottom-nav-icon" />
+          <span>Biglietti</span>
+        </button>
+      </nav>
 
       <ThemeToggle />
     </div>

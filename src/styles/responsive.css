@@ -145,51 +145,227 @@
 /* Mobile */
 @media (max-width: 576px) {
   :root {
-    --content-padding: 12px;
+    --content-padding: 16px;
     --card-padding: 16px;
     --button-height: 48px;
     --input-height: 48px;
+    --header-height: 56px;
+  }
+
+  .app {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
   }
 
   .header {
+    height: var(--header-height);
     padding: 0 var(--content-padding);
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    background: var(--background-white);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  .dashboard-container {
+    padding-top: calc(var(--header-height) + var(--content-padding));
+    padding-bottom: calc(var(--content-padding) + env(safe-area-inset-bottom));
+  }
+
+  .card {
+    border-radius: 12px;
+    margin-bottom: 16px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   }
 
   .button {
     width: 100%;
+    height: var(--button-height);
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 500;
     margin-bottom: 8px;
-    min-width: 100%;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   }
 
-  .table th,
-  .table td {
-    padding: 8px;
-    font-size: 0.875rem;
+  .button-primary {
+    background: var(--primary-color);
+    color: white;
   }
 
-  .table td[data-label]::before {
-    content: attr(data-label);
-    font-weight: 600;
-    margin-right: 8px;
-    color: var(--text-secondary);
+  .button-secondary {
+    background: var(--secondary-color);
+    color: white;
   }
 
-  .table td[data-label] {
-    display: block;
-    padding: 8px;
-    border-bottom: 1px solid var(--border-color);
+  .input {
+    height: var(--input-height);
+    border-radius: 8px;
+    font-size: 1rem;
+    padding: 0 16px;
+    border: 1px solid var(--border-color);
+    background: var(--background-white);
+  }
+
+  .table-container {
+    margin: 0;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   }
 
   .table tr {
-    display: block;
-    margin-bottom: 16px;
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    overflow: hidden;
+    margin: 0;
+    border-radius: 0;
+    border-bottom: 1px solid var(--border-color);
   }
 
-  .table thead {
+  .table td[data-label] {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .table td[data-label]::before {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+    display: block;
+  }
+
+  .stats-overview {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin: 16px 0;
+  }
+
+  .stat-card {
+    border-radius: 12px;
+    padding: 16px;
+    background: var(--background-white);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  }
+
+  .stat-icon {
+    font-size: 1.5rem;
+    margin-bottom: 8px;
+  }
+
+  .stat-info h3 {
+    font-size: 0.875rem;
+    margin-bottom: 4px;
+  }
+
+  .stat-value {
+    font-size: 1.25rem;
+  }
+
+  .admin-tabs {
+    position: sticky;
+    top: var(--header-height);
+    background: var(--background-white);
+    padding: 8px var(--content-padding);
+    margin: 0;
+    border-bottom: 1px solid var(--border-color);
+    z-index: 900;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .admin-tabs::-webkit-scrollbar {
     display: none;
+  }
+
+  .tab-button {
+    padding: 8px 16px;
+    font-size: 0.875rem;
+    white-space: nowrap;
+    margin-right: 8px;
+  }
+
+  .tab-button.active {
+    background: var(--primary-color);
+    color: white;
+    border-radius: 20px;
+  }
+
+  .tab-button.active::after {
+    display: none;
+  }
+
+  .filters {
+    position: sticky;
+    top: calc(var(--header-height) + 48px);
+    background: var(--background-white);
+    padding: 12px var(--content-padding);
+    margin: 0;
+    z-index: 800;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .search-input,
+  .role-filter {
+    width: 100%;
+    height: var(--input-height);
+    border-radius: 8px;
+    font-size: 1rem;
+    padding: 0 16px;
+    background: var(--background-white);
+    border: 1px solid var(--border-color);
+  }
+
+  .action-buttons {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+    padding: 16px;
+  }
+
+  .action-buttons button {
+    width: 100%;
+    height: var(--button-height);
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 500;
+  }
+
+  /* Bottom Navigation */
+  .bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--background-white);
+    padding: 8px var(--content-padding);
+    padding-bottom: calc(8px + env(safe-area-inset-bottom));
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+  }
+
+  .bottom-nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: 0.75rem;
+    padding: 8px;
+  }
+
+  .bottom-nav-item.active {
+    color: var(--primary-color);
+  }
+
+  .bottom-nav-icon {
+    font-size: 1.5rem;
+    margin-bottom: 4px;
   }
 }
 
@@ -383,4 +559,42 @@
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* Statistiche */
+.stat-value {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--primary-color);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  word-break: break-word;
+}
+
+.stat-card {
+  background: var(--background-white);
+  border-radius: 8px;
+  padding: var(--card-padding);
+  box-shadow: 0 2px 4px var(--shadow-color);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0; /* Importante per permettere il text-overflow */
+  width: 100%;
+}
+
+.stat-info {
+  flex: 1;
+  min-width: 0; /* Importante per permettere il text-overflow */
+}
+
+.stat-info h3 {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 } 
