@@ -20,6 +20,20 @@ function PromoterDashboard() {
   const [showSellModal, setShowSellModal] = useState(false);
   const [loading, setLoading] = useState(true);
 
+  const formatDate = (date) => {
+    if (!date) return 'Data non disponibile';
+    return new Date(date).toLocaleDateString('it-IT', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+  };
+
+  const handleSellTicket = (event) => {
+    setSelectedEvent(event);
+    setShowSellModal(true);
+  };
+
   useEffect(() => {
     fetchStats();
     fetchEvents();
