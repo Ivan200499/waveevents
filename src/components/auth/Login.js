@@ -3,7 +3,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../../firebase/config';
 import { doc, getDoc } from 'firebase/firestore';
-import { FaUser, FaLock, FaEnvelope, FaMobileAlt } from 'react-icons/fa';
+import { FaUser, FaLock, FaEnvelope, FaMobileAlt, FaApple } from 'react-icons/fa';
 import './Login.css';
 
 function Login() {
@@ -13,6 +13,7 @@ function Login() {
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [isIOS, setIsIOS] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
+  const [showInstallButton, setShowInstallButton] = useState(true);
   const { login } = useAuth();
   const navigate = useNavigate();
 
@@ -26,6 +27,11 @@ function Login() {
                             window.navigator.standalone || 
                             document.referrer.includes('android-app://');
     setIsStandalone(isStandaloneMode);
+
+    // Nascondi il pulsante di installazione se l'app è già installata
+    if (isStandaloneMode) {
+      setShowInstallButton(false);
+    }
 
     // Gestione dell'evento beforeinstallprompt per il pulsante di installazione PWA
     const handleBeforeInstallPrompt = (e) => {
@@ -48,46 +54,19 @@ function Login() {
     
     if (outcome === 'accepted') {
       setDeferredPrompt(null);
+      setShowInstallButton(false);
     }
   };
 
-  async function handleSubmit(e) {
+  const handleLogin = async (e) => {
     e.preventDefault();
     try {
-      setError('');
-      const { user } = await login(email, password);
-      
-      // Verifica il ruolo dell'utente
-      const userDoc = await getDoc(doc(db, 'users', user.uid));
-      const userData = userDoc.data();
-      
-      // Reindirizza in base al ruolo
-      switch(userData.role) {
-        case 'admin':
-          navigate('/admin');
-          break;
-        case 'manager':
-          navigate('/manager');
-          break;
-        case 'teamLeader':
-          navigate('/team-leader');
-          break;
-        case 'promoter':
-          navigate('/promoter');
-          break;
-        case 'validator':
-          navigate('/validate-ticket');
-          break;
-        default:
-          navigate('/');
-      }
+      await login(email, password);
+      navigate('/dashboard');
     } catch (error) {
       setError('Credenziali non valide');
     }
-  }
-
-  // Mostra il pulsante di installazione solo se non siamo in modalità standalone
-  const showInstallButton = (deferredPrompt || isIOS) && !isStandalone;
+  };
 
   return (
     <div className="login-container">
@@ -100,7 +79,7 @@ function Login() {
 
         {error && <div className="error-message">{error}</div>}
         
-        <form onSubmit={handleSubmit} className="login-form">
+        <form onSubmit={handleLogin} className="login-form">
           <div className="form-group">
             <div className="input-with-icon">
               <FaUser className="input-icon" />
@@ -136,8 +115,11 @@ function Login() {
 
         {showInstallButton && (
           <div className="pwa-install-section">
-            <button onClick={handleInstallPWA} className="pwa-install-button">
-              <FaMobileAlt className="pwa-icon" />
+            <button 
+              onClick={handleInstallPWA} 
+              className={`pwa-install-button ${isIOS ? 'ios-button' : ''}`}
+            >
+              {isIOS ? <FaApple className="pwa-icon" /> : <FaMobileAlt className="pwa-icon" />}
               {isIOS ? 'Aggiungi alla schermata Home' : 'Installa l\'App'}
             </button>
             {isIOS && (

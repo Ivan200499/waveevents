@@ -104,53 +104,132 @@
   
   /* Sezione installazione PWA */
   .pwa-install-section {
-    margin-top: 1rem;
+    margin-top: 1.5rem;
     text-align: center;
+    padding: 0 1rem;
   }
   
   .pwa-install-button {
     display: inline-flex;
     align-items: center;
-    gap: 0.5rem;
-    padding: 0.75rem 1.5rem;
-    background-color: #4CAF50;
+    justify-content: center;
+    gap: 0.75rem;
+    padding: 0.875rem 1.75rem;
+    background-color: #435bcc;
     color: white;
     border: none;
-    border-radius: 4px;
-    font-size: 0.9rem;
+    border-radius: 12px;
+    font-size: 1rem;
+    font-weight: 500;
     cursor: pointer;
     transition: all 0.3s ease;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    min-width: 240px;
+    width: 100%;
+    max-width: 320px;
+    margin: 0 auto;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
   }
   
   .pwa-install-button:hover {
-    background-color: #45a049;
+    background-color: #364a9e;
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   }
   
   .pwa-install-button:active {
     transform: translateY(0);
   }
   
+  .pwa-install-button.ios-button {
+    background-color: #000000;
+    padding: 1rem 2rem;
+    border-radius: 14px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+  }
+  
+  .pwa-install-button.ios-button:hover {
+    background-color: #1a1a1a;
+  }
+  
   .pwa-icon {
-    font-size: 1.2rem;
+    font-size: 1.4rem;
   }
   
   /* Istruzioni per iOS */
   .ios-instructions {
-    margin-top: 1rem;
-    padding: 1rem;
+    margin-top: 1.25rem;
+    padding: 1.25rem;
     background-color: #f8f9fa;
-    border-radius: 4px;
+    border-radius: 12px;
     text-align: left;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
   }
   
   .ios-instructions p {
-    margin: 0.5rem 0;
-    color: #666;
-    font-size: 0.9rem;
-    line-height: 1.4;
+    margin: 0.75rem 0;
+    color: #4a5568;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  
+  .ios-instructions p:before {
+    content: '';
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    background-color: #435bcc;
+    border-radius: 50%;
+    margin-right: 0.5rem;
+  }
+  
+  /* Supporto per iOS */
+  @supports (-webkit-touch-callout: none) {
+    .pwa-install-button {
+      -webkit-appearance: none;
+      appearance: none;
+      padding: 1rem 2rem;
+      min-height: 44px;
+    }
+  
+    .pwa-install-button:active {
+      opacity: 0.8;
+      transform: scale(0.98);
+    }
+  }
+  
+  /* Media queries */
+  @media (max-width: 480px) {
+    .pwa-install-button {
+      padding: 0.75rem 1.5rem;
+      font-size: 0.95rem;
+    }
+  
+    .pwa-install-button.ios-button {
+      padding: 0.875rem 1.75rem;
+      font-size: 1rem;
+    }
+  
+    .ios-instructions {
+      padding: 1rem;
+    }
+  
+    .ios-instructions p {
+      font-size: 0.9rem;
+    }
+  }
+  
+  /* Supporto per PWA */
+  @media all and (display-mode: standalone) {
+    .pwa-install-section {
+      display: none;
+    }
   }
   
   /* Footer */
@@ -195,15 +274,6 @@
   
     input {
       font-size: 16px; /* Prevents zoom on mobile */
-    }
-  
-    .pwa-install-button {
-      width: 100%;
-      justify-content: center;
-    }
-  
-    .ios-instructions {
-      font-size: 0.85rem;
     }
   }
   

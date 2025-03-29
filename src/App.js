@@ -24,26 +24,45 @@ import { useEffect } from 'react';
 
 function App() {
   useEffect(() => {
+    // Gestione viewport
     const metaViewport = document.querySelector('meta[name="viewport"]');
     if (metaViewport) {
       metaViewport.content = 'width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover, user-scalable=yes';
     }
     
+    // Gestione safe areas
     document.documentElement.style.setProperty('--sat', 'env(safe-area-inset-top)');
     document.documentElement.style.setProperty('--sar', 'env(safe-area-inset-right)');
     document.documentElement.style.setProperty('--sab', 'env(safe-area-inset-bottom)');
     document.documentElement.style.setProperty('--sal', 'env(safe-area-inset-left)');
     
+    // Gestione altezza viewport
     const appHeight = () => {
       const doc = document.documentElement;
+      const vh = window.innerHeight * 0.01;
+      doc.style.setProperty('--vh', `${vh}px`);
       doc.style.setProperty('--app-height', `${window.innerHeight}px`);
     };
     
-    window.addEventListener('resize', appHeight);
-    appHeight();
+    // Gestione orientamento
+    const handleOrientation = () => {
+      const isPortrait = window.innerHeight > window.innerWidth;
+      document.documentElement.classList.toggle('portrait', isPortrait);
+      document.documentElement.classList.toggle('landscape', !isPortrait);
+    };
     
+    // Event listeners
+    window.addEventListener('resize', appHeight);
+    window.addEventListener('orientationchange', handleOrientation);
+    
+    // Inizializzazione
+    appHeight();
+    handleOrientation();
+    
+    // Cleanup
     return () => {
       window.removeEventListener('resize', appHeight);
+      window.removeEventListener('orientationchange', handleOrientation);
     };
   }, []);
 
