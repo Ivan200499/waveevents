@@ -89,13 +89,13 @@ function ManagerDashboard() {
       for (const leader of teamLeadersList) {
         try {
           // Cerca tutti i promoter associati a questo team leader
-          const promotersQuery = query(
-            collection(db, 'users'),
+        const promotersQuery = query(
+          collection(db, 'users'),
             where('teamLeaderId', '==', leader.id)
-          );
+        );
           
-          const promotersSnapshot = await getDocs(promotersQuery);
-          
+        const promotersSnapshot = await getDocs(promotersQuery);
+        
           // Conta solo gli utenti con ruolo promoter (in qualsiasi formato)
           let promoterCount = 0;
           promotersSnapshot.forEach(doc => {
@@ -222,8 +222,8 @@ function ManagerDashboard() {
       
       querySnapshot.forEach((doc) => {
         const eventData = {
-          id: doc.id,
-          ...doc.data()
+        id: doc.id,
+        ...doc.data()
         };
         
         // Aggiungi l'evento alla lista (non filtriamo per manager per vederli tutti)
@@ -430,7 +430,7 @@ function ManagerDashboard() {
               <p>Nessun evento disponibile. Aggiungi eventi dalla dashboard di amministrazione.</p>
             </div>
           ) : (
-            <div className="events-grid">
+          <div className="events-grid">
               {events.map(event => {
                 // Gestisce diversi possibili nomi dei campi degli eventi
                 const eventName = event.name || event.nome || event.eventName || 'Evento';
@@ -442,42 +442,42 @@ function ManagerDashboard() {
                 const eventImage = event.imageUrl || event.immagine || '';
                 
                 return (
-                  <div key={event.id} className="event-card">
+              <div key={event.id} className="event-card">
                     {eventImage && (
-                      <div className="event-image">
+                  <div className="event-image">
                         <img src={eventImage} alt={eventName} />
-                      </div>
-                    )}
-                    <div className="event-content">
+                  </div>
+                )}
+                <div className="event-content">
                       <h3>{eventName}</h3>
-                      <p>
-                        <FaCalendarAlt />
+                  <p>
+                    <FaCalendarAlt />
                         {new Date(eventDate).toLocaleDateString()}
-                      </p>
-                      <p>
-                        <FaMapMarkerAlt />
+                  </p>
+                  <p>
+                    <FaMapMarkerAlt />
                         {eventLocation}
                       </p>
                       <div className="event-price">€{typeof eventPrice === 'number' ? eventPrice.toFixed(2) : eventPrice}</div>
                       <div className={`tickets-available ${eventAvailableTickets === 0 ? 'tickets-unavailable' : ''}`}>
-                      </div>
-                      {eventDescription && (
-                        <div className="event-description">
-                          <p>{eventDescription}</p>
-                        </div>
-                      )}
-                      <button 
-                        onClick={() => handleSellTicket(event)}
-                        className="sell-button"
-                        disabled={eventAvailableTickets === 0}
-                      >
-                        Vendi Ticket
-                      </button>
-                    </div>
                   </div>
+                      {eventDescription && (
+                    <div className="event-description">
+                          <p>{eventDescription}</p>
+                    </div>
+                  )}
+                  <button 
+                    onClick={() => handleSellTicket(event)}
+                    className="sell-button"
+                        disabled={eventAvailableTickets === 0}
+                  >
+                    Vendi Ticket
+                  </button>
+                </div>
+              </div>
                 );
               })}
-            </div>
+          </div>
           )}
         </div>
       )}
@@ -508,7 +508,7 @@ function ManagerDashboard() {
               <p>Nessun team leader trovato. Aggiungi team leader dalla dashboard di amministrazione.</p>
             </div>
           ) : (
-            <div className="leaders-grid">
+          <div className="leaders-grid">
               {teamLeaders
                 .filter(leader => {
                   const leaderName = leader.name || leader.nome || leader.fullName || '';
@@ -526,29 +526,29 @@ function ManagerDashboard() {
                   const promotersCount = leader.promotersCount || leader.numPromoters || 0;
                   
                   return (
-                    <div 
-                      key={leader.id}
-                      className="leader-card"
-                      onClick={() => {
-                        console.log("Card cliccata:", leader);
-                        handleTeamLeaderClick(leader);
-                      }}
-                    >
-                      <div className="leader-icon">
-                        <FaUser size={24} />
-                      </div>
+              <div 
+                key={leader.id}
+                className="leader-card"
+                onClick={() => {
+                  console.log("Card cliccata:", leader);
+                  handleTeamLeaderClick(leader);
+                }}
+              >
+                <div className="leader-icon">
+                  <FaUser size={24} />
+                </div>
                       <h3>{leaderName}</h3>
                       <p>{leaderEmail}</p>
-                      <div className="leader-stats">
-                        <div className="stat">
-                          <FaUser />
+                <div className="leader-stats">
+                  <div className="stat">
+                    <FaUser />
                           <span>{promotersCount} Promoter</span>
-                        </div>
-                      </div>
-                    </div>
+                  </div>
+                </div>
+              </div>
                   );
                 })}
-            </div>
+          </div>
           )}
 
           {selectedTeamLeader && (
