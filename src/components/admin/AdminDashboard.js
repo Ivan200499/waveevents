@@ -9,7 +9,6 @@ import Header from '../common/Header';
 import { FaDownload, FaUsers, FaTicketAlt, FaEuroSign, FaHistory } from 'react-icons/fa';
 import { generateGlobalStatisticsPDF } from '../../services/ReportService';
 import AssignmentModal from './AssignmentModal';
-import ThemeToggle from '../shared/ThemeToggle';
 import { generateOptimizedReport } from '../../services/OptimizedReportService';
 import TicketHistory from './TicketHistory';
 
@@ -390,8 +389,6 @@ function AdminDashboard() {
           <span>Biglietti</span>
         </button>
       </nav>
-
-      <ThemeToggle />
     </div>
   );
 }
