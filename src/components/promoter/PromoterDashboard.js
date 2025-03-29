@@ -5,7 +5,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import Header from '../common/Header';
 import TicketHistory from '../tickets/TicketHistory';
 import SellTicketModal from '../tickets/SellTicketModal';
-import { FaTicketAlt, FaEuroSign, FaCalendarAlt, FaMapMarkerAlt, FaClock } from 'react-icons/fa';
+import { FaTicketAlt, FaEuroSign, FaCalendarAlt, FaMapMarkerAlt, FaClock, FaShoppingCart } from 'react-icons/fa';
 import './PromoterDashboard.css';
 
 function PromoterDashboard() {
@@ -129,84 +129,36 @@ function PromoterDashboard() {
       ) : (
         <div className="sell-tickets-container">
           <h2>Seleziona un Evento</h2>
-          <div className="events-grid">
-            {events.map(event => (
-              <div key={event.id} className="event-card">
-                {event.imageUrl && (
-                  <div className="event-image">
-                    <img src={event.imageUrl} alt={event.name} />
-                  </div>
-                )}
-                <div className="event-content">
-                  <h3>{event.name}</h3>
-                  <div className="event-details">
-                    <p className="event-detail">
-                      <FaCalendarAlt className="icon" />
-                      {event.date ? new Date(event.date).toLocaleDateString('it-IT', {
-                        day: '2-digit',
-                        month: '2-digit',
-                        year: 'numeric'
-                      }) : 'Data non disponibile'}
-                    </p>
-                    {event.time && (
-                      <p className="event-detail">
-                        <FaClock className="icon" />
-                        {event.time}
-                      </p>
-                    )}
-                    <p className="event-detail">
-                      <FaMapMarkerAlt className="icon" />
-                      {event.location || 'Località non specificata'}
-                    </p>
-                    {event.ticketTypes && event.ticketTypes.length > 0 ? (
-                      <div className="ticket-types">
-                        {event.ticketTypes.map((type, index) => (
-                          <p key={index} className="event-detail">
-                            <FaTicketAlt className="icon" />
-                            {type.name}: €{type.price}
-                          </p>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="event-detail">
-                        <FaEuroSign className="icon" />
-                        {event.ticketPrice ? `€${event.ticketPrice}` : 'Prezzo non disponibile'}
-                      </p>
-                    )}
-                  </div>
-                  
-                  <div className={`tickets-available ${event.availableTickets === 0 ? 'tickets-unavailable' : ''}`}>
-                    {event.availableTickets > 0 
-                      ? (
-                        <div className="tickets-info">
-                          <FaTicketAlt className="ticket-icon" />
-                          <span>Disponibili: {event.availableTickets}</span>
-                        </div>
-                      )
-                      : (
-                        <div className="tickets-info">
-                          <FaTicketAlt className="ticket-icon" />
-                        </div>
-                      )
-                    }
-                  </div>
-                  
-                  {event.description && (
-                    <div className="event-description">
-                      <p>{event.description}</p>
+          <div className="events-grid grid">
+            {events.map((event) => (
+              <div key={event.id} className="card">
+                <div className="card-image" style={{ backgroundImage: `url(${event.imageUrl})` }} />
+                <div className="card-content">
+                  <h3 className="card-title">{event.name}</h3>
+                  <div className="card-text">
+                    <div className="event-date">
+                      <FaCalendarAlt />
+                      <span>{formatDate(event.date)}</span>
                     </div>
-                  )}
-                  
-                  <div className="event-actions">
+                    <div className="event-location">
+                      <FaMapMarkerAlt />
+                      <span>{event.location}</span>
+                    </div>
+                    <div className={`tickets-info ${event.availableTickets === 0 ? 'text-secondary' : ''}`}>
+                      <FaTicketAlt className="ticket-icon" />
+                      {event.availableTickets > 0 && (
+                        <span>Disponibili: {event.availableTickets}</span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="card-footer">
                     <button
-                      className="button button-primary"
-                      onClick={() => {
-                        setSelectedEvent(event);
-                        setShowSellModal(true);
-                      }}
-                      disabled={event.availableTickets <= 0}
+                      className={`action-button ${event.availableTickets === 0 ? 'disabled' : ''}`}
+                      onClick={() => handleSellTicket(event)}
+                      disabled={event.availableTickets === 0}
                     >
-                      Vendi Biglietti
+                      <FaShoppingCart />
+                      <span>Vendi Biglietto</span>
                     </button>
                   </div>
                 </div>

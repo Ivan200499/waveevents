@@ -7,6 +7,7 @@
   --text-primary: #212121;
   --text-secondary: #757575;
   --border-radius: 8px;
+  --border-radius-lg: 12px;
   --spacing-xs: 0.25rem;
   --spacing-sm: 0.5rem;
   --spacing-md: 1rem;
@@ -16,6 +17,13 @@
   --shadow-md: 0 4px 6px rgba(0,0,0,0.1);
   --shadow-lg: 0 10px 15px rgba(0,0,0,0.1);
   --transition-speed: 0.3s;
+  --card-min-width: 280px;
+  --card-max-width: 400px;
+  --card-height: auto;
+  --card-image-height: 200px;
+  --card-image-height-mobile: 180px;
+  --card-padding: var(--spacing-md);
+  --card-padding-mobile: var(--spacing-sm);
 }
 
 * {
@@ -23,16 +31,204 @@
   padding: 0;
   box-sizing: border-box;
   -webkit-tap-highlight-color: transparent;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
   background-color: var(--background-light);
   color: var(--text-primary);
   line-height: 1.5;
+  overflow-x: hidden;
+  position: relative;
 }
+
+/* Card Base Styles */
+.card {
+  background: white;
+  border-radius: var(--border-radius-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  transition: transform var(--transition-speed) ease,
+              box-shadow var(--transition-speed) ease;
+  width: 100%;
+  max-width: var(--card-max-width);
+  min-width: var(--card-min-width);
+  height: var(--card-height);
+  display: flex;
+  flex-direction: column;
+}
+
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-md);
+}
+
+.card-image {
+  width: 100%;
+  height: var(--card-image-height);
+  object-fit: cover;
+  background-position: center;
+  background-size: cover;
+}
+
+.card-content {
+  padding: var(--card-padding);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.card-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: var(--spacing-sm);
+}
+
+.card-text {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  line-height: 1.5;
+  margin-bottom: var(--spacing-sm);
+}
+
+.card-footer {
+  margin-top: auto;
+  padding-top: var(--spacing-sm);
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+/* Grid Layout Utilities */
+.grid {
+  display: grid;
+  gap: var(--spacing-md);
+  grid-template-columns: repeat(auto-fit, minmax(var(--card-min-width), 1fr));
+  width: 100%;
+}
+
+.grid-dense {
+  grid-auto-flow: dense;
+}
+
+/* Flex Utilities */
+.flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.flex-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.flex-wrap {
+  flex-wrap: wrap;
+}
+
+/* Spacing Utilities */
+.p-0 { padding: 0; }
+.p-1 { padding: var(--spacing-xs); }
+.p-2 { padding: var(--spacing-sm); }
+.p-3 { padding: var(--spacing-md); }
+.p-4 { padding: var(--spacing-lg); }
+
+.m-0 { margin: 0; }
+.m-1 { margin: var(--spacing-xs); }
+.m-2 { margin: var(--spacing-sm); }
+.m-3 { margin: var(--spacing-md); }
+.m-4 { margin: var(--spacing-lg); }
+
+/* Text Utilities */
+.text-sm { font-size: 0.875rem; }
+.text-md { font-size: 1rem; }
+.text-lg { font-size: 1.125rem; }
+.text-xl { font-size: 1.25rem; }
+
+.font-bold { font-weight: 600; }
+.font-medium { font-weight: 500; }
+.font-normal { font-weight: 400; }
+
+/* Mobile Optimizations */
+@media (max-width: 768px) {
+  :root {
+    --card-min-width: 100%;
+    --card-image-height: var(--card-image-height-mobile);
+    --card-padding: var(--card-padding-mobile);
+  }
+
+  .card {
+    border-radius: var(--border-radius);
+  }
+
+  .card:hover {
+    transform: none;
+  }
+
+  .card-content {
+    padding: var(--spacing-sm);
+  }
+
+  .card-title {
+    font-size: 1.125rem;
+  }
+
+  .grid {
+    gap: var(--spacing-sm);
+    grid-template-columns: 1fr;
+  }
+
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .touch-scroll {
+    -webkit-overflow-scrolling: touch;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+  }
+
+  .touch-scroll > * {
+    scroll-snap-align: start;
+  }
+}
+
+/* Active States */
+.active {
+  background-color: var(--primary-light);
+  color: white;
+}
+
+/* Loading States */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0.06) 25%,
+    rgba(0, 0, 0, 0.15) 37%,
+    rgba(0, 0, 0, 0.06) 63%
+  );
+  background-size: 400% 100%;
+  animation: skeleton-loading 1.4s ease infinite;
+}
+
+@keyframes skeleton-loading {
+  0% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0 50%;
+  }
+}
+
+/* Existing code ... */
 
 button, input, select, textarea {
   font-family: inherit;
