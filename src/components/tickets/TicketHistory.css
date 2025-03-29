@@ -230,22 +230,35 @@ th {
   color: white;
   padding: var(--spacing-md);
   position: relative;
+  border-bottom: none;
 }
 
 .ticket-header h3 {
   margin: 0;
   font-size: 1.125rem;
   font-weight: 500;
-  margin-bottom: var(--spacing-xs);
+  margin-bottom: var(--spacing-sm);
+  color: white;
 }
 
 .ticket-code {
-  font-size: 0.875rem;
-  opacity: 0.9;
   display: block;
-  padding: var(--spacing-xs) 0;
-  font-family: monospace;
-  letter-spacing: 0.5px;
+  font-family: 'Courier New', monospace;
+  font-size: 1rem;
+  font-weight: 600;
+  color: white;
+  background: none;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  margin: 0;
+  border-radius: 4px;
+  letter-spacing: 1px;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.ticket-code::before {
+  content: "Codice: ";
+  font-weight: normal;
+  opacity: 0.8;
 }
 
 .ticket-details {
@@ -334,10 +347,12 @@ th {
   }
 
   .ticket-code {
-    background: none;
+    font-size: 0.9rem;
     padding: var(--spacing-xs) 0;
+    background: none;
+    border: none;
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
     margin-top: var(--spacing-xs);
-    border-radius: 0;
   }
 }
 
