@@ -460,7 +460,6 @@ function ManagerDashboard() {
                       </p>
                       <div className="event-price">€{typeof eventPrice === 'number' ? eventPrice.toFixed(2) : eventPrice}</div>
                       <div className={`tickets-available ${eventAvailableTickets === 0 ? 'tickets-unavailable' : ''}`}>
-                        {eventAvailableTickets === 0 && 'Esaurito'}
                       </div>
                       {eventDescription && (
                         <div className="event-description">

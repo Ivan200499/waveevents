@@ -18,9 +18,6 @@ function Header() {
   return (
     <header className="app-header">
       <div className="header-content">
-        <div className="logo">
-          <img src="/logo.PNG" alt="Logo" />
-        </div>
         <div className="user-menu">
           <div className="user-info">
             <span className="user-email">{currentUser?.email}</span>

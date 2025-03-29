@@ -186,7 +186,6 @@ function PromoterDashboard() {
                       : (
                         <div className="tickets-info">
                           <FaTicketAlt className="ticket-icon" />
-                          <span>Evento al completo</span>
                         </div>
                       )
                     }
