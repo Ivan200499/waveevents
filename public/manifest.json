@@ -1,6 +1,6 @@
 {
   "short_name": "Wave Events",
-  "name": "Wave Events",
+  "name": "Wave Events - Sistema di Gestione Biglietti",
   "description": "Sistema di gestione biglietti per eventi",
   "icons": [
     {
@@ -19,21 +19,40 @@
       "type": "image/png",
       "sizes": "512x512",
       "purpose": "any maskable"
+    },
+    {
+      "src": "logo152.png",
+      "type": "image/png",
+      "sizes": "152x152",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "logo167.png",
+      "type": "image/png",
+      "sizes": "167x167",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "logo180.png",
+      "type": "image/png",
+      "sizes": "180x180",
+      "purpose": "any maskable"
     }
   ],
   "start_url": ".",
+  "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
-  "theme_color": "#1976D2",
+  "theme_color": "#435bcc",
   "background_color": "#ffffff",
-  "categories": ["utilities", "productivity", "events", "tickets"],
+  "categories": ["business", "productivity", "utilities"],
   "screenshots": [
     {
       "src": "screenshot1.png",
       "sizes": "1280x720",
       "type": "image/png",
       "platform": "wide",
-      "label": "Lista Biglietti"
+      "label": "Homescreen of Wave Events"
     },
     {
       "src": "screenshot2.png",
@@ -60,5 +79,8 @@
     }
   ],
   "related_applications": [],
-  "prefer_related_applications": false
+  "prefer_related_applications": false,
+  "dir": "ltr",
+  "lang": "it",
+  "iarc_rating_id": "e84b072d-71b3-4d3e-86ae-31a8ce4e53b7"
 }
