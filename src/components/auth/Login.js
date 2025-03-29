@@ -1,17 +1,43 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../../firebase/config';
 import { doc, getDoc } from 'firebase/firestore';
-import { FaUser, FaLock, FaEnvelope } from 'react-icons/fa';
+import { FaUser, FaLock, FaEnvelope, FaMobileAlt } from 'react-icons/fa';
 import './Login.css';
 
 function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
   const { login } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    // Gestione dell'evento beforeinstallprompt per il pulsante di installazione PWA
+    const handleBeforeInstallPrompt = (e) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, []);
+
+  const handleInstallPWA = async () => {
+    if (!deferredPrompt) return;
+    
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    
+    if (outcome === 'accepted') {
+      setDeferredPrompt(null);
+    }
+  };
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -68,6 +94,7 @@ function Login() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                placeholder="Email"
               />
             </div>
           </div>
@@ -80,6 +107,7 @@ function Login() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                placeholder="Password"
               />
             </div>
           </div>
@@ -88,6 +116,15 @@ function Login() {
             Accedi
           </button>
         </form>
+
+        {deferredPrompt && (
+          <div className="pwa-install-section">
+            <button onClick={handleInstallPWA} className="pwa-install-button">
+              <FaMobileAlt className="pwa-icon" />
+              Installa l'App
+            </button>
+          </div>
+        )}
 
         <div className="login-footer">
           <p>© 2024 Ticket Management System</p>
