@@ -198,16 +198,18 @@ function PromoterDashboard() {
                     </div>
                   )}
                   
-                  <button 
-                    className="sell-button"
-                    onClick={() => {
-                      setSelectedEvent(event);
-                      setShowSellModal(true);
-                    }}
-                    disabled={event.availableTickets === 0}
-                  >
-                    Vendi Ticket
-                  </button>
+                  <div className="event-actions">
+                    <button
+                      className="button button-primary"
+                      onClick={() => {
+                        setSelectedEvent(event);
+                        setShowSellModal(true);
+                      }}
+                      disabled={event.availableTickets <= 0}
+                    >
+                      Vendi Biglietti
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}

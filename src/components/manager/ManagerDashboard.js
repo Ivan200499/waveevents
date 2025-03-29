@@ -305,26 +305,26 @@ function ManagerDashboard() {
     setShowSellModal(false);
   };
 
-  const TicketCard = ({ ticket }) => {
-    return (
-      <div className="ticket-card">
-        <div className="ticket-info">
-          <h3>{ticket.eventName}</h3>
-          <p>Prezzo: €{ticket.price}</p>
-          <p>Quantità disponibile: {ticket.availableQuantity}</p>
-        </div>
-        <div className="ticket-actions">
-          <button 
-            className="button button-primary"
-            onClick={() => handleSellTicket(ticket)}
-            disabled={ticket.availableQuantity <= 0}
-          >
-            Vendi Biglietto
-          </button>
-        </div>
+  const TicketCard = ({ ticket }) => (
+    <div className="ticket-card">
+      <div className="ticket-info">
+        <h3>{ticket.eventName}</h3>
+        <p>Data: {formatDate(ticket.date)}</p>
+        <p>Luogo: {ticket.location}</p>
+        <p>Prezzo: €{ticket.price}</p>
+        <p>Biglietti disponibili: {ticket.availableQuantity}</p>
       </div>
-    );
-  };
+      <div className="ticket-actions">
+        <button 
+          className="button button-primary"
+          onClick={() => handleSellTicket(ticket)}
+          disabled={ticket.availableQuantity <= 0}
+        >
+          Vendi Biglietto
+        </button>
+      </div>
+    </div>
+  );
 
   if (loading) {
     return (
