@@ -47,6 +47,11 @@ function Login() {
   }, []);
 
   const handleInstallPWA = async () => {
+    if (isIOS) {
+      // Per iOS, mostra solo le istruzioni
+      return;
+    }
+    
     if (!deferredPrompt) return;
     
     deferredPrompt.prompt();
@@ -61,8 +66,33 @@ function Login() {
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
-      await login(email, password);
-      navigate('/dashboard');
+      setError('');
+      const { user } = await login(email, password);
+      
+      // Verifica il ruolo dell'utente
+      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      const userData = userDoc.data();
+      
+      // Reindirizza in base al ruolo
+      switch(userData.role) {
+        case 'admin':
+          navigate('/admin');
+          break;
+        case 'manager':
+          navigate('/manager');
+          break;
+        case 'teamLeader':
+          navigate('/team-leader');
+          break;
+        case 'promoter':
+          navigate('/promoter');
+          break;
+        case 'validator':
+          navigate('/validate-ticket');
+          break;
+        default:
+          navigate('/');
+      }
     } catch (error) {
       setError('Credenziali non valide');
     }
