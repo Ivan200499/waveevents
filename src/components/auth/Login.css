@@ -137,6 +137,22 @@
     font-size: 1.2rem;
   }
   
+  /* Istruzioni per iOS */
+  .ios-instructions {
+    margin-top: 1rem;
+    padding: 1rem;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+    text-align: left;
+  }
+  
+  .ios-instructions p {
+    margin: 0.5rem 0;
+    color: #666;
+    font-size: 0.9rem;
+    line-height: 1.4;
+  }
+  
   /* Footer */
   .login-footer {
     text-align: center;
@@ -184,6 +200,10 @@
     .pwa-install-button {
       width: 100%;
       justify-content: center;
+    }
+  
+    .ios-instructions {
+      font-size: 0.85rem;
     }
   }
   

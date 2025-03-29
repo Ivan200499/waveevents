@@ -11,10 +11,22 @@ function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [deferredPrompt, setDeferredPrompt] = useState(null);
+  const [isIOS, setIsIOS] = useState(false);
+  const [isStandalone, setIsStandalone] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
+    // Rileva se l'utente sta usando iOS
+    const isIOSDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    setIsIOS(isIOSDevice);
+
+    // Verifica se l'app è in modalità standalone
+    const isStandaloneMode = window.matchMedia('(display-mode: standalone)').matches || 
+                            window.navigator.standalone || 
+                            document.referrer.includes('android-app://');
+    setIsStandalone(isStandaloneMode);
+
     // Gestione dell'evento beforeinstallprompt per il pulsante di installazione PWA
     const handleBeforeInstallPrompt = (e) => {
       e.preventDefault();
@@ -74,6 +86,9 @@ function Login() {
     }
   }
 
+  // Mostra il pulsante di installazione solo se non siamo in modalità standalone
+  const showInstallButton = (deferredPrompt || isIOS) && !isStandalone;
+
   return (
     <div className="login-container">
       <div className="login-box">
@@ -95,6 +110,7 @@ function Login() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 placeholder="Email"
+                autoComplete="email"
               />
             </div>
           </div>
@@ -108,6 +124,7 @@ function Login() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 placeholder="Password"
+                autoComplete="current-password"
               />
             </div>
           </div>
@@ -117,17 +134,24 @@ function Login() {
           </button>
         </form>
 
-        {deferredPrompt && (
+        {showInstallButton && (
           <div className="pwa-install-section">
             <button onClick={handleInstallPWA} className="pwa-install-button">
               <FaMobileAlt className="pwa-icon" />
-              Installa l'App
+              {isIOS ? 'Aggiungi alla schermata Home' : 'Installa l\'App'}
             </button>
+            {isIOS && (
+              <div className="ios-instructions">
+                <p>1. Tocca il pulsante "Condividi"</p>
+                <p>2. Scorri verso il basso e seleziona "Aggiungi alla schermata Home"</p>
+                <p>3. Tocca "Aggiungi"</p>
+              </div>
+            )}
           </div>
         )}
 
         <div className="login-footer">
-          <p>© 2024 Ticket Management System</p>
+          <p>© 2024 Wave Events</p>
         </div>
       </div>
     </div>
