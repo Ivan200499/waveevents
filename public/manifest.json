@@ -1,6 +1,6 @@
 {
-  "short_name": "Tickets App",
-  "name": "Ticket Management System",
+  "short_name": "Wave Events",
+  "name": "Wave Events",
   "description": "Sistema di gestione biglietti per eventi",
   "icons": [
     {
@@ -24,8 +24,8 @@
   "start_url": ".",
   "display": "standalone",
   "orientation": "portrait",
-  "theme_color": "#1a1a1a",
-  "background_color": "#1a1a1a",
+  "theme_color": "#1976D2",
+  "background_color": "#ffffff",
   "categories": ["utilities", "productivity", "events", "tickets"],
   "screenshots": [
     {
@@ -49,7 +49,7 @@
       "short_name": "Biglietti",
       "description": "Visualizza tutti i tuoi biglietti",
       "url": "/tickets",
-      "icons": [{ "src": "shortcuts/tickets.png", "sizes": "96x96" }]
+      "icons": [{ "src": "ticket-icon.png", "sizes": "192x192" }]
     },
     {
       "name": "Scansiona Codice QR",
