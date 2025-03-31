@@ -24,24 +24,24 @@
 }
 
 [data-theme="dark"] {
-  --primary-color: #4dabff;
-  --primary-hover: #3d8fdd;
-  --secondary-color: #8a95a0;
-  --secondary-hover: #6c757d;
+  --primary-color: #57b3ff;
+  --primary-hover: #7bc5ff;
+  --secondary-color: #9ea7b1;
+  --secondary-hover: #b8c1cc;
   --background-color: #121212;
   --surface-color: #1e1e1e;
   --text-primary: #ffffff;
-  --text-secondary: #cccccc;
-  --border-color: #444444;
+  --text-secondary: #e0e0e0;
+  --border-color: #555555;
   --shadow-color: rgba(0, 0, 0, 0.5);
-  --error-color: #ff5c5c;
-  --success-color: #5cff5c;
-  --warning-color: #ffda5c;
-  --info-color: #5ce0ff;
+  --error-color: #ff6b6b;
+  --success-color: #6dff6d;
+  --warning-color: #ffe066;
+  --info-color: #66e7ff;
   --loading-background: #121212;
-  --loading-foreground: #2a2a2a;
-  --card-background: #1e1e1e;
-  --input-background: #2a2a2a;
+  --loading-foreground: #333333;
+  --card-background: #242424;
+  --input-background: #333333;
   --input-text: #ffffff;
   --button-text: #ffffff;
   --card-text: #ffffff;
@@ -50,24 +50,24 @@
 /* System preference dark theme */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --primary-color: #4dabff;
-    --primary-hover: #3d8fdd;
-    --secondary-color: #8a95a0;
-    --secondary-hover: #6c757d;
+    --primary-color: #57b3ff;
+    --primary-hover: #7bc5ff;
+    --secondary-color: #9ea7b1;
+    --secondary-hover: #b8c1cc;
     --background-color: #121212;
     --surface-color: #1e1e1e;
     --text-primary: #ffffff;
-    --text-secondary: #cccccc;
-    --border-color: #444444;
+    --text-secondary: #e0e0e0;
+    --border-color: #555555;
     --shadow-color: rgba(0, 0, 0, 0.5);
-    --error-color: #ff5c5c;
-    --success-color: #5cff5c;
-    --warning-color: #ffda5c;
-    --info-color: #5ce0ff;
+    --error-color: #ff6b6b;
+    --success-color: #6dff6d;
+    --warning-color: #ffe066;
+    --info-color: #66e7ff;
     --loading-background: #121212;
-    --loading-foreground: #2a2a2a;
-    --card-background: #1e1e1e;
-    --input-background: #2a2a2a;
+    --loading-foreground: #333333;
+    --card-background: #242424;
+    --input-background: #333333;
     --input-text: #ffffff;
     --button-text: #ffffff;
     --card-text: #ffffff;
@@ -361,56 +361,85 @@ th {
 /* High contrast improvements for dark theme */
 @media (prefers-color-scheme: dark) {
   .button-primary {
-    background-color: #4dabff; /* More vibrant blue for dark mode */
+    background-color: #57b3ff; /* More vibrant blue for dark mode */
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
   }
   
   .button-secondary {
-    background-color: #8a95a0; /* Lighter gray for dark mode */
+    background-color: #9ea7b1; /* Lighter gray for dark mode */
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
   }
   
   input, select, textarea {
-    background-color: #2a2a2a; /* Slightly lighter than background */
-    border-color: #555555;
+    background-color: #333333; /* Darker than before for better contrast */
+    border-color: #666666;
+    color: #ffffff;
   }
   
   .card {
-    background-color: #1e1e1e;
-    border: 1px solid #444444;
+    background-color: #242424;
+    border: 1px solid #555555;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
   }
   
   a {
-    color: #6bb9ff; /* Brighter links for dark mode */
+    color: #80ccff; /* Brighter links for dark mode */
+    text-decoration: underline;
+    text-underline-offset: 2px;
   }
   
   /* Specific improvements for form elements */
   input::placeholder {
-    color: #aaaaaa;
+    color: #bbbbbb;
   }
   
   button {
-    background-color: #4dabff;
+    background-color: #57b3ff;
     color: white;
+    font-weight: 500;
   }
   
   .input-with-icon .input-icon {
-    color: #bbbbbb;
+    color: #cccccc;
   }
   
   /* Table improvements */
   table {
-    border: 1px solid #444444;
+    border: 1px solid #555555;
   }
   
   th {
-    background-color: #2a2a2a;
+    background-color: #333333;
+    color: #ffffff;
+    font-weight: 600;
   }
   
   tr:nth-child(even) {
-    background-color: #1a1a1a;
+    background-color: #1e1e1e;
+  }
+  
+  tr:nth-child(odd) {
+    background-color: #242424;
   }
   
   tr:hover {
-    background-color: #333333;
+    background-color: #3a3a3a;
+  }
+  
+  td {
+    border-bottom: 1px solid #444444;
+  }
+  
+  /* Miglioriamo lo stile dei pulsanti */
+  .btn-download {
+    background-color: #57b3ff;
+    color: white;
+    border: none;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  }
+  
+  .btn-download:hover {
+    background-color: #7bc5ff;
   }
 }
 
@@ -458,11 +487,27 @@ th {
     }
     
     input, select, textarea {
-      background-color: #2a2a2a;
+      background-color: #333333;
+      color: #ffffff;
+      border-color: #666666;
     }
     
     .card, .button {
-      border: 1px solid #444444;
+      border: 1px solid #555555;
+    }
+    
+    /* Migliorando il contrasto su iOS */
+    button, .btn {
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    }
+    
+    select {
+      background-image: linear-gradient(45deg, transparent 50%, #ffffff 50%), 
+                         linear-gradient(135deg, #ffffff 50%, transparent 50%);
+      background-position: calc(100% - 20px) calc(1em + 2px), 
+                           calc(100% - 15px) calc(1em + 2px);
+      background-size: 5px 5px, 5px 5px;
+      background-repeat: no-repeat;
     }
   }
 } 
