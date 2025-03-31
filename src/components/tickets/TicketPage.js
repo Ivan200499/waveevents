@@ -485,62 +485,82 @@ function TicketPage() {
   // Mostra il biglietto
   return (
     <div className="ticket-page">
-      <div className="ticket-container">
-        <div className="ticket-header">
-          <h1>{ticket.ticketCode || ticket.code || ticket.id}</h1>
-          <h2>{ticket.eventName}</h2>
+      {loading ? (
+        <div className="ticket-container loading">
+          <div className="ticket-header">
+            <h1>Caricamento...</h1>
+          </div>
+          <div className="ticket-content">
+            <p>Stiamo recuperando i dettagli del tuo biglietto...</p>
+          </div>
         </div>
-        
-        <div className="ticket-content">
-          <div className="ticket-info">
-            <div className="ticket-info-item">
-              <span className="ticket-info-label">Data Evento</span>
-              <span className="ticket-info-value">{formatDate(ticket.eventDate)}</span>
+      ) : error ? (
+        <div className="ticket-container error">
+          <div className="ticket-header">
+            <h1>Errore</h1>
+          </div>
+          <div className="ticket-content">
+            <p>{error}</p>
+          </div>
+        </div>
+      ) : ticket ? (
+        <div className="ticket-container">
+          <div className="ticket-header">
+            <h1>{ticket.ticketCode || ticket.code || ticket.id}</h1>
+            <h2>{ticket.eventName || 'Evento'}</h2>
+          </div>
+          
+          <div className="ticket-content">
+            <div className="ticket-info">
+              <div className="ticket-info-item">
+                <span className="ticket-info-label">Data Evento</span>
+                <span className="ticket-info-value">{ticket.eventDate ? formatDate(ticket.eventDate) : 'N/A'}</span>
+              </div>
+              <div className="ticket-info-item">
+                <span className="ticket-info-label">Ora Evento</span>
+                <span className="ticket-info-value">{ticket.eventDate ? formatTime(ticket.eventDate) : 'N/A'}</span>
+              </div>
+              <div className="ticket-info-item">
+                <span className="ticket-info-label">Luogo</span>
+                <span className="ticket-info-value">{ticket.eventLocation || 'N/A'}</span>
+              </div>
+              <div className="ticket-info-item">
+                <span className="ticket-info-label">Tipo Biglietto</span>
+                <span className="ticket-info-value">{ticket.ticketType || 'Standard'}</span>
+              </div>
+              <div className="ticket-info-item">
+                <span className="ticket-info-label">Quantità</span>
+                <span className="ticket-info-value">{ticket.quantity || 1}</span>
+              </div>
+              <div className="ticket-info-item">
+                <span className="ticket-info-label">Prezzo Unitario</span>
+                <span className="ticket-info-value">€{ticket.price || '0.00'}</span>
+              </div>
+              <div className="ticket-info-item">
+                <span className="ticket-info-label">Totale Ordine</span>
+                <span className="ticket-info-value">€{ticket.totalPrice || '0.00'}</span>
+              </div>
+              <div className="ticket-info-item">
+                <span className="ticket-info-label">Cliente</span>
+                <span className="ticket-info-value">{ticket.customerName || 'N/A'}</span>
+              </div>
             </div>
-            <div className="ticket-info-item">
-              <span className="ticket-info-label">Ora Evento</span>
-              <span className="ticket-info-value">{formatTime(ticket.eventDate)}</span>
-            </div>
-            <div className="ticket-info-item">
-              <span className="ticket-info-label">Luogo</span>
-              <span className="ticket-info-value">{ticket.eventLocation || 'N/A'}</span>
-            </div>
-            <div className="ticket-info-item">
-              <span className="ticket-info-label">Tipo Biglietto</span>
-              <span className="ticket-info-value">{ticket.ticketType || 'Standard'}</span>
-            </div>
-            <div className="ticket-info-item">
-              <span className="ticket-info-label">Quantità</span>
-              <span className="ticket-info-value">{ticket.quantity}</span>
-            </div>
-            <div className="ticket-info-item">
-              <span className="ticket-info-label">Prezzo Unitario</span>
-              <span className="ticket-info-value">€{ticket.price}</span>
-            </div>
-            <div className="ticket-info-item">
-              <span className="ticket-info-label">Totale Ordine</span>
-              <span className="ticket-info-value">€{ticket.totalPrice}</span>
-            </div>
-            <div className="ticket-info-item">
-              <span className="ticket-info-label">Cliente</span>
-              <span className="ticket-info-value">{ticket.customerName}</span>
+
+            <div className="ticket-qr">
+              <img 
+                src={ticket.qrCode || generateQRCode(ticket.ticketCode || ticket.code || ticket.id)} 
+                alt="QR Code del biglietto" 
+                onClick={() => window.open(ticket.qrCode || generateQRCode(ticket.ticketCode || ticket.code || ticket.id), '_blank')}
+              />
+              <p>Mostra questo QR code all'ingresso dell'evento per la validazione</p>
             </div>
           </div>
 
-          <div className="ticket-qr">
-            <img 
-              src={ticket.qrCode} 
-              alt="QR Code del biglietto" 
-              onClick={() => window.open(ticket.qrCode, '_blank')}
-            />
-            <p>Mostra questo QR code all'ingresso dell'evento per la validazione</p>
+          <div className="ticket-footer">
+            <p>Questo biglietto è valido solo per l'evento e la data indicati</p>
           </div>
         </div>
-
-        <div className="ticket-footer">
-          <p>Questo biglietto è valido solo per l'evento e la data indicati</p>
-        </div>
-      </div>
+      ) : null}
     </div>
   );
 }
