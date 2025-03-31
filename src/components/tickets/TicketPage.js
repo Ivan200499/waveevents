@@ -361,13 +361,30 @@ function TicketPage() {
           setHasLoadedOnce(true);
         }
         
-        // Verifica che ticketCode sia valido
-        if (!ticketCode || ticketCode === 'undefined' || ticketCode === 'null') {
-          throw new Error('Codice biglietto non valido');
+        // Log del codice biglietto per debug
+        console.log('URL ticketCode ricevuto:', ticketCode);
+        
+        // Decifra il codice URL se necessario
+        let processedTicketCode = ticketCode;
+        try {
+          const decodedTicketCode = decodeURIComponent(ticketCode);
+          if (decodedTicketCode !== ticketCode) {
+            console.log('Codice decodificato da URL:', decodedTicketCode);
+            processedTicketCode = decodedTicketCode;
+          }
+        } catch (e) {
+          console.warn('Errore nella decodifica del ticketCode:', e);
+        }
+        
+        // La verifica del codice ora è meno restrittiva: 
+        // controlliamo solo che esista un valore
+        if (!processedTicketCode) {
+          console.warn('Codice biglietto mancante o vuoto');
+          throw new Error('Codice biglietto non valido o mancante');
         }
         
         // Verifica se il biglietto è già in cache
-        const cacheKey = getTicketCacheKey(ticketCode);
+        const cacheKey = getTicketCacheKey(processedTicketCode);
         const cachedTicket = getPersistentCache(cacheKey);
         
         if (cachedTicket) {
@@ -391,8 +408,8 @@ function TicketPage() {
         
         try {
           // Prova prima a cercare per ticketCode
-          console.log('Cercando biglietto con ticketCode:', ticketCode);
-          const q1 = query(ticketsRef, where('ticketCode', '==', ticketCode));
+          console.log('Cercando biglietto con ticketCode:', processedTicketCode);
+          const q1 = query(ticketsRef, where('ticketCode', '==', processedTicketCode));
           const querySnapshot1 = await getDocs(q1);
           
           if (!querySnapshot1.empty) {
@@ -403,8 +420,8 @@ function TicketPage() {
             };
           } else {
             // Prova con il campo code
-            console.log('Cercando biglietto con code:', ticketCode);
-            const q2 = query(ticketsRef, where('code', '==', ticketCode));
+            console.log('Cercando biglietto con code:', processedTicketCode);
+            const q2 = query(ticketsRef, where('code', '==', processedTicketCode));
             const querySnapshot2 = await getDocs(q2);
             
             if (!querySnapshot2.empty) {
@@ -415,8 +432,8 @@ function TicketPage() {
               };
             } else {
               // Prova come ID diretto
-              console.log('Cercando biglietto con ID:', ticketCode);
-              const ticketDocRef = doc(db, 'tickets', ticketCode);
+              console.log('Cercando biglietto con ID:', processedTicketCode);
+              const ticketDocRef = doc(db, 'tickets', processedTicketCode);
               ticketSnapshot = await getDoc(ticketDocRef);
               
               if (ticketSnapshot.exists()) {
@@ -532,113 +549,4 @@ function TicketPage() {
 
   // Mostra il biglietto
   return (
-    <div className={`ticket-page ${device.isMobile ? 'mobile' : 'desktop'} ${isWhatsAppWebView ? 'whatsapp-webview' : ''}`}>
-      <div 
-        className="ticket-container"
-        ref={ticketContainerRef}
-        style={{ padding: deviceConfig.padding.container }}
-      >
-        <img src={APP_LOGO} alt="Logo App" className="app-logo" />
-        
-        <div className="event-logo-header">
-          {ticket.eventDetails?.logoUrl ? (
-            <img 
-              src={ticket.eventDetails.logoUrl} 
-              alt="Logo Evento"
-              loading="eager" 
-            />
-          ) : (
-            <div className="default-event-logo">
-              <IoTicketOutline size={deviceConfig.iconSize.normal} />
-              <span style={textStyles.normal}>{ticket.eventName || ticket.eventDetails?.name || 'Evento'}</span>
-            </div>
-          )}
-        </div>
-        
-        <div className="ticket-qr" style={{ padding: deviceConfig.padding.section }}>
-          <img 
-            src={generateQRCode(ticket.ticketCode)} 
-            alt="QR Code" 
-            className={`qr-code ${qrLoaded ? 'loaded' : ''} ${isZoomed ? 'qr-zoomed' : ''}`}
-            onClick={handleQrCodeClick}
-            onLoad={handleQRLoad}
-            loading="eager"
-            style={qrCodeStyle}
-          />
-          <span className="qr-label" style={textStyles.small}>
-            <IoQrCodeOutline size={deviceConfig.iconSize.small} /> Scansiona all'ingresso
-          </span>
-        </div>
-        
-        <div className="ticket-details" style={{ padding: deviceConfig.padding.section }}>
-          <h2 style={textStyles.title}>{ticket.eventName || ticket.eventDetails?.name || 'Evento'}</h2>
-          
-          <div className="detail-row">
-            <div className="detail-icon"><IoCalendarOutline size={deviceConfig.iconSize.small} /></div>
-            <div style={textStyles.normal}>{formatDate(ticket.eventDate)}</div>
-          </div>
-          
-          <div className="detail-row">
-            <div className="detail-icon"><IoTimeOutline size={deviceConfig.iconSize.small} /></div>
-            <div style={textStyles.normal}>{formatTime(ticket.eventDate)}</div>
-          </div>
-          
-          <div className="detail-row">
-            <div className="detail-icon"><IoLocationOutline size={deviceConfig.iconSize.small} /></div>
-            <div style={textStyles.normal}>{ticket.eventDetails?.location || 'Sede non specificata'}</div>
-          </div>
-          
-          <div className="detail-row">
-            <div className="detail-icon"><IoPersonOutline size={deviceConfig.iconSize.small} /></div>
-            <div style={textStyles.normal}>{ticket.customerName}</div>
-          </div>
-          
-          {ticket.ticketType && (
-            <div className="ticket-type-section">
-              <h3 style={textStyles.subtitle}>Tipo Biglietto</h3>
-              <div className="detail-row">
-                <div className="detail-icon"><IoTicketOutline size={deviceConfig.iconSize.small} /></div>
-                <div style={textStyles.normal}>{typeof ticket.ticketType === 'object' ? ticket.ticketType.name : ticket.ticketType}</div>
-              </div>
-              
-              <div className="detail-row">
-                <div className="detail-icon"><IoPricetagOutline size={deviceConfig.iconSize.small} /></div>
-                <div style={textStyles.normal}>€ {typeof ticket.ticketType === 'object' ? ticket.ticketType.price : ticket.price} / biglietto</div>
-              </div>
-              
-              <div className="total-price" style={textStyles.normal}>
-                Totale: € {(
-                  (typeof ticket.ticketType === 'object' ? ticket.ticketType.price : ticket.price) * ticket.quantity
-                ).toFixed(2)}
-              </div>
-            </div>
-          )}
-          
-          {ticket.tableName && (
-            <div className="table-info">
-              <h3 style={textStyles.subtitle}>Informazioni Tavolo</h3>
-              <p style={textStyles.normal}><strong>Tavolo:</strong> {ticket.tableName}</p>
-              {ticket.tableLocation && <p style={textStyles.normal}><strong>Posizione:</strong> {ticket.tableLocation}</p>}
-            </div>
-          )}
-          
-          <div className="ticket-code">
-            <p style={textStyles.small}>Codice Biglietto:</p>
-            <p style={textStyles.normal}><strong>{ticket.ticketCode}</strong></p>
-          </div>
-        </div>
-        
-        <div className="ticket-footer" style={{ padding: deviceConfig.padding.section }}>
-          <p style={textStyles.small}>Biglietto acquistato il {formatFirebaseTimestamp(ticket.purchaseDate)}</p>
-          <p style={textStyles.small}>Per assistenza: {ticket.eventDetails?.contactEmail || 'support@ticketsystem.com'}</p>
-          
-          <div className="ticket-verification" style={textStyles.small}>
-            <IoCheckmarkCircle size={deviceConfig.iconSize.small} /> Biglietto verificato
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-export default TicketPage; 
+    <div className={`
