@@ -68,14 +68,14 @@
       "short_name": "Biglietti",
       "description": "Visualizza tutti i tuoi biglietti",
       "url": "/tickets",
-      "icons": [{ "src": "ticket-icon.png", "sizes": "192x192" }]
+      "icons": [{ "src": "logo192.png", "sizes": "192x192" }]
     },
     {
       "name": "Scansiona Codice QR",
       "short_name": "Scansiona",
       "description": "Scansiona un codice QR per verificare un biglietto",
       "url": "/validate",
-      "icons": [{ "src": "shortcuts/qr.png", "sizes": "96x96" }]
+      "icons": [{ "src": "logo192.png", "sizes": "192x192" }]
     }
   ],
   "related_applications": [],

@@ -40,6 +40,29 @@ const useDeviceFallback = () => {
   };
 };
 
+// Funzione per rilevare se siamo in una WebView di WhatsApp
+const isInWhatsAppWebView = () => {
+  const userAgent = navigator.userAgent || '';
+  return (
+    userAgent.includes('WhatsApp') || 
+    userAgent.includes('FBAV') || 
+    userAgent.includes('FB_IAB')
+  );
+};
+
+// Funzione per rilevare se siamo su un dispositivo iOS
+const isIOS = () => {
+  return (
+    /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+  );
+};
+
+// Funzione per rilevare se siamo su un dispositivo Android
+const isAndroid = () => {
+  return /Android/.test(navigator.userAgent);
+};
+
 // Componente per la visualizzazione elegante del biglietto
 function TicketPage() {
   const { ticketCode } = useParams();
@@ -48,7 +71,10 @@ function TicketPage() {
   const [error, setError] = useState(null);
   const [qrLoaded, setQrLoaded] = useState(false);
   const [isZoomed, setIsZoomed] = useState(false);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   const ticketContainerRef = useRef(null);
+  const isWhatsAppWebView = isInWhatsAppWebView();
+  const isIOSDevice = isIOS();
 
   // Utilizziamo il nostro hook con gestione errori
   let device;
@@ -317,8 +343,24 @@ function TicketPage() {
     // Imposta titolo e meta tag quando il componente si monta
     updateMetaTags('Caricamento Biglietto', 'Caricamento dei dettagli del biglietto in corso...');
     
+    // Aggiungi classe per WhatsApp WebView
+    if (isWhatsAppWebView) {
+      document.body.classList.add('whatsapp-webview');
+    }
+    
+    // Rimuovi scroll prevention che potrebbe essere attivo
+    document.body.style.overflow = 'auto';
+    document.documentElement.style.overflow = 'auto';
+    
     async function fetchTicket() {
       try {
+        // Aggiungiamo un ritardo intenzionale solo per iOS WebView
+        // per dare tempo al browser di renderizzare la UI
+        if (isIOSDevice && isWhatsAppWebView && !hasLoadedOnce) {
+          await new Promise(resolve => setTimeout(resolve, 300));
+          setHasLoadedOnce(true);
+        }
+        
         // Verifica se il biglietto è già in cache
         const cacheKey = getTicketCacheKey(ticketCode);
         const cachedTicket = getPersistentCache(cacheKey);
@@ -339,14 +381,46 @@ function TicketPage() {
         
         // Se non in cache, carica dal database
         const ticketsRef = collection(db, 'tickets');
-        const q = query(ticketsRef, where('ticketCode', '==', ticketCode));
-        const querySnapshot = await getDocs(q);
+        let ticketSnapshot;
+        
+        // Prova prima a cercare per ticketCode (preferibile)
+        let q = query(ticketsRef, where('ticketCode', '==', ticketCode));
+        let querySnapshot = await getDocs(q);
         
         if (querySnapshot.empty) {
-          setError('Biglietto non trovato');
-          updateMetaTags('Biglietto non trovato', 'Il biglietto richiesto non è stato trovato nel sistema', true);
-          setLoading(false);
-          return;
+          // Se non trovato con ticketCode, prova con il campo code (backward compatibility)
+          q = query(ticketsRef, where('code', '==', ticketCode));
+          querySnapshot = await getDocs(q);
+          
+          // Se ancora non trovato, prova con l'ID stesso
+          if (querySnapshot.empty) {
+            const ticketDocRef = doc(db, 'tickets', ticketCode);
+            ticketSnapshot = await getDoc(ticketDocRef);
+            
+            if (!ticketSnapshot.exists()) {
+              throw new Error('Biglietto non trovato');
+            }
+            
+            const ticketData = {
+              id: ticketSnapshot.id,
+              ...ticketSnapshot.data()
+            };
+            
+            setTicket(ticketData);
+            
+            // Salvare in cache
+            setPersistentCache(cacheKey, ticketData, CACHE_DURATION.TICKETS);
+            
+            // Aggiorna meta tag
+            const pageTitle = ticketData.eventName ? `Biglietto: ${ticketData.eventName}` : 'Visualizza biglietto';
+            const pageDesc = ticketData.eventName
+              ? `Biglietto per ${ticketData.eventName}${ticketData.eventDate ? ` il ${formatDate(ticketData.eventDate)}` : ''}`
+              : 'Dettagli del biglietto per l\'evento';
+              
+            updateMetaTags(pageTitle, pageDesc);
+            setLoading(false);
+            return;
+          }
         }
         
         // Prendi il primo risultato (dovrebbe essere unico)
@@ -357,11 +431,13 @@ function TicketPage() {
         };
         
         // Recupera anche i dettagli dell'evento
-        const eventRef = doc(db, 'events', ticketData.eventId);
-        const eventSnap = await getDoc(eventRef);
-        
-        if (eventSnap.exists()) {
-          ticketData.eventDetails = eventSnap.data();
+        if (ticketData.eventId) {
+          const eventRef = doc(db, 'events', ticketData.eventId);
+          const eventSnap = await getDoc(eventRef);
+          
+          if (eventSnap.exists()) {
+            ticketData.eventDetails = eventSnap.data();
+          }
         }
         
         setTicket(ticketData);
@@ -378,7 +454,7 @@ function TicketPage() {
         updateMetaTags(pageTitle, pageDesc);
       } catch (err) {
         console.error('Errore nel recupero del biglietto:', err);
-        setError('Errore nel caricamento del biglietto');
+        setError(err.message || 'Errore nel caricamento del biglietto');
         updateMetaTags('Errore - Biglietto', 'Si è verificato un errore durante il caricamento del biglietto', true);
       } finally {
         setLoading(false);
@@ -389,9 +465,10 @@ function TicketPage() {
     
     // Ripristina il titolo originale quando il componente si smonta
     return () => {
-      document.title = 'Ticket Management System';
+      document.title = 'Wave Events';
+      document.body.classList.remove('whatsapp-webview');
     };
-  }, [ticketCode]);
+  }, [ticketCode, isWhatsAppWebView, isIOSDevice, hasLoadedOnce]);
 
   // Mostra stato di caricamento
   if (loading) {
@@ -442,7 +519,7 @@ function TicketPage() {
 
   // Mostra il biglietto
   return (
-    <div className={`ticket-page ${device.isMobile ? 'mobile' : 'desktop'}`}>
+    <div className={`ticket-page ${device.isMobile ? 'mobile' : 'desktop'} ${isWhatsAppWebView ? 'whatsapp-webview' : ''}`}>
       <div 
         className="ticket-container"
         ref={ticketContainerRef}

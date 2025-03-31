@@ -294,7 +294,8 @@ function TicketHistory() {
       `Prezzo: €${ticket.price}\n` +
       `Totale: €${ticket.totalPrice}\n` +
       `Codice: ${ticket.code}\n\n` +
-      `Per validare il biglietto, presenta questo codice all'ingresso dell'evento.`;
+      `Per visualizzare e validare il biglietto, visita questo link:\n` +
+      `${window.location.origin}/ticket/${ticket.id || ticket.ticketCode || ticket.code}`;
 
     // Se c'è un numero di telefono, usa quello come destinatario
     const phoneNumber = ticket.customerPhone || ticket.customer_phone;
@@ -309,8 +310,32 @@ function TicketHistory() {
   }
 
   function handleShareWhatsApp(ticket) {
-    const whatsappUrl = generateWhatsAppMessage(ticket);
-    window.open(whatsappUrl, '_blank');
+    try {
+      // Importa dinamicamente il servizio WhatsApp per evitare dipendenze circolari
+      import('../../services/WhatsAppService')
+        .then(module => {
+          const { sendTicketViaWhatsApp } = module;
+          
+          // Usa il numero di telefono esistente o un numero vuoto per condivisione generica
+          const phoneNumber = ticket.customerPhone || ticket.customer_phone || '';
+          
+          // Usa il servizio ottimizzato che gestisce iOS e Android
+          sendTicketViaWhatsApp(ticket, phoneNumber);
+        })
+        .catch(error => {
+          console.error('Errore nel caricamento del servizio WhatsApp:', error);
+          
+          // Fallback alla vecchia implementazione
+          const whatsappUrl = generateWhatsAppMessage(ticket);
+          window.open(whatsappUrl, '_blank');
+        });
+    } catch (error) {
+      console.error('Errore nella condivisione su WhatsApp:', error);
+      
+      // Fallback in caso di errore
+      const whatsappUrl = generateWhatsAppMessage(ticket);
+      window.open(whatsappUrl, '_blank');
+    }
   }
 
   const filteredTickets = tickets.filter(ticket => {
