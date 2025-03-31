@@ -236,8 +236,8 @@ function SellTicketModal({ isOpen, onClose, event, onSell }) {
     // Rimuovi eventuali caratteri non numerici dal numero
     const cleanPhone = phoneNumber.replace(/\D/g, '');
     
-    // Crea un link alla pagina del biglietto usando l'URL appropriato
-    const ticketPageUrl = `https://waveevents.app/ticket/${ticketCode}`;
+    // Crea un link alla pagina del biglietto usando l'URL di Vercel
+    const ticketPageUrl = `https://gestione-pr-ultimata.vercel.app/ticket/${ticketCode}`;
     
     // Aggiungi il link alla pagina del biglietto al messaggio
     const completeMessage = `${message}\n\nVisualizza il tuo biglietto qui: ${ticketPageUrl}`;
