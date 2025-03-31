@@ -63,6 +63,46 @@ const isAndroid = () => {
   return /Android/.test(navigator.userAgent);
 };
 
+// Cache per i biglietti
+const ticketCache = new Map();
+
+// Funzione di validazione del ticket
+function validateTicketStructure(ticketData) {
+  console.log('Validating ticket structure:', ticketData);
+  
+  // Se non è un oggetto, crea un oggetto vuoto
+  if (!ticketData || typeof ticketData !== 'object') {
+    console.error('Ticket data non è un oggetto valido:', ticketData);
+    return {
+      ticketCode: 'unknown',
+      eventName: 'Evento sconosciuto',
+      eventDate: new Date().toISOString(),
+      eventLocation: 'N/A',
+      price: '0.00',
+      quantity: 1,
+      totalPrice: '0.00',
+      customerName: 'Cliente'
+    };
+  }
+  
+  // Se sembra un evento invece che un ticket
+  if (ticketData.description && ticketData.totalTickets && !ticketData.ticketCode) {
+    console.warn('I dati sembrano essere un evento, non un ticket:', ticketData);
+    return {
+      ticketCode: ticketData.id || 'unknown',
+      eventName: ticketData.name || 'Evento',
+      eventDate: new Date().toISOString(),
+      eventLocation: 'N/A',
+      price: ticketData.price || '0.00',
+      quantity: 1,
+      totalPrice: ticketData.price || '0.00',
+      customerName: 'Cliente'
+    };
+  }
+  
+  return ticketData;
+}
+
 // Componente per la visualizzazione elegante del biglietto
 function TicketPage() {
   const { ticketCode } = useParams();
@@ -337,14 +377,13 @@ function TicketPage() {
     setQrLoaded(true);
   };
 
-  // Carica i dati del biglietto
+  // Effetto per caricare il biglietto
   useEffect(() => {
-    // Imposta titolo e meta tag quando il componente si monta
-    updateMetaTags('Caricamento Biglietto', 'Caricamento dei dettagli del biglietto in corso...');
-    
-    let isMounted = true; // Per evitare memory leak e sfarfallii
+    let isMounted = true;
+    setLoading(true);
+    setError(null);
 
-    async function fetchTicket() {
+    const fetchTicket = async () => {
       try {
         console.log('Inizio fetchTicket');
         console.log('TicketCode dal parametro:', ticketCode);
@@ -356,10 +395,15 @@ function TicketPage() {
         }
 
         // Prima controlla se il ticket è già in cache
-        const cachedTicket = getPersistentCache(getTicketCacheKey(ticketCode));
+        let cachedTicket = ticketCache.get(ticketCode);
         if (cachedTicket) {
           console.log('Ticket trovato in cache:', cachedTicket);
+          
+          // Valida la struttura del ticket
+          cachedTicket = validateTicketStructure(cachedTicket);
+          
           setTicket(cachedTicket);
+          setLoading(false);
           return;
         }
 
@@ -371,10 +415,15 @@ function TicketPage() {
         
         if (!querySnapshot.empty) {
           console.log('Ticket trovato per ticketCode');
-          const ticketData = querySnapshot.docs[0].data();
+          let ticketData = querySnapshot.docs[0].data();
           console.log('Dati ticket:', ticketData);
+          
+          // Valida la struttura del ticket
+          ticketData = validateTicketStructure(ticketData);
+          
           setTicket(ticketData);
-          setPersistentCache(getTicketCacheKey(ticketCode), ticketData, CACHE_DURATION.TICKETS);
+          ticketCache.set(ticketCode, ticketData);
+          setLoading(false);
           return;
         }
 
@@ -385,10 +434,15 @@ function TicketPage() {
         
         if (!codeSnapshot.empty) {
           console.log('Ticket trovato per code');
-          const ticketData = codeSnapshot.docs[0].data();
+          let ticketData = codeSnapshot.docs[0].data();
           console.log('Dati ticket:', ticketData);
+          
+          // Valida la struttura del ticket
+          ticketData = validateTicketStructure(ticketData);
+          
           setTicket(ticketData);
-          setPersistentCache(getTicketCacheKey(ticketCode), ticketData, CACHE_DURATION.TICKETS);
+          ticketCache.set(ticketCode, ticketData);
+          setLoading(false);
           return;
         }
 
@@ -399,10 +453,44 @@ function TicketPage() {
         
         if (!idSnapshot.empty) {
           console.log('Ticket trovato per id');
-          const ticketData = idSnapshot.docs[0].data();
+          let ticketData = idSnapshot.docs[0].data();
           console.log('Dati ticket:', ticketData);
+          
+          // Valida la struttura del ticket
+          ticketData = validateTicketStructure(ticketData);
+          
           setTicket(ticketData);
-          setPersistentCache(getTicketCacheKey(ticketCode), ticketData, CACHE_DURATION.TICKETS);
+          ticketCache.set(ticketCode, ticketData);
+          setLoading(false);
+          return;
+        }
+
+        // Ultima chance: controlla se è un evento invece che un ticket
+        console.log('Ricerca evento per id:', ticketCode);
+        const eventRef = collection(db, 'events');
+        const eventQuery = query(eventRef, where('id', '==', ticketCode));
+        const eventSnapshot = await getDocs(eventQuery);
+        
+        if (!eventSnapshot.empty) {
+          console.log('Trovato evento invece di un ticket');
+          let eventData = eventSnapshot.docs[0].data();
+          console.log('Dati evento:', eventData);
+          
+          // Crea un ticket virtuale dall'evento
+          const virtualTicket = {
+            ticketCode: eventData.id,
+            eventName: eventData.name || 'Evento',
+            eventDate: eventData.date || new Date().toISOString(),
+            eventLocation: eventData.location || 'N/A',
+            price: eventData.price || '0.00',
+            quantity: 1,
+            totalPrice: eventData.price || '0.00',
+            customerName: 'Anteprima Evento'
+          };
+          
+          console.log('Ticket virtuale creato:', virtualTicket);
+          setTicket(virtualTicket);
+          setLoading(false);
           return;
         }
 
@@ -412,18 +500,19 @@ function TicketPage() {
         console.error('Errore nel recupero del ticket:', error);
         setError('Errore nel caricamento del biglietto');
       } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
+        setLoading(false);
       }
+    };
+
+    if (ticketCode) {
+      fetchTicket();
+    } else {
+      setError('Codice biglietto non fornito');
+      setLoading(false);
     }
-    
-    fetchTicket();
-    
-    // Cleanup function
+
     return () => {
       isMounted = false;
-      document.title = 'Ticket Management System';
     };
   }, [ticketCode]);
 
@@ -501,56 +590,57 @@ function TicketPage() {
           </div>
           <div className="ticket-content">
             <p>{error}</p>
+            <p>Codice utilizzato: {ticketCode}</p>
           </div>
         </div>
       ) : ticket ? (
         <div className="ticket-container">
           <div className="ticket-header">
-            <h1>{ticket.ticketCode || ticket.code || ticket.id}</h1>
-            <h2>{ticket.eventName || 'Evento'}</h2>
+            <h1>{typeof ticket.ticketCode === 'string' ? ticket.ticketCode : (typeof ticket.code === 'string' ? ticket.code : (typeof ticket.id === 'string' ? ticket.id : 'Ticket'))}</h1>
+            <h2>{typeof ticket.eventName === 'string' ? ticket.eventName : 'Evento'}</h2>
           </div>
           
           <div className="ticket-content">
             <div className="ticket-info">
               <div className="ticket-info-item">
                 <span className="ticket-info-label">Data Evento</span>
-                <span className="ticket-info-value">{ticket.eventDate ? formatDate(ticket.eventDate) : 'N/A'}</span>
+                <span className="ticket-info-value">{ticket.eventDate && typeof ticket.eventDate === 'string' ? formatDate(ticket.eventDate) : 'N/A'}</span>
               </div>
               <div className="ticket-info-item">
                 <span className="ticket-info-label">Ora Evento</span>
-                <span className="ticket-info-value">{ticket.eventDate ? formatTime(ticket.eventDate) : 'N/A'}</span>
+                <span className="ticket-info-value">{ticket.eventDate && typeof ticket.eventDate === 'string' ? formatTime(ticket.eventDate) : 'N/A'}</span>
               </div>
               <div className="ticket-info-item">
                 <span className="ticket-info-label">Luogo</span>
-                <span className="ticket-info-value">{ticket.eventLocation || 'N/A'}</span>
+                <span className="ticket-info-value">{typeof ticket.eventLocation === 'string' ? ticket.eventLocation : 'N/A'}</span>
               </div>
               <div className="ticket-info-item">
                 <span className="ticket-info-label">Tipo Biglietto</span>
-                <span className="ticket-info-value">{ticket.ticketType || 'Standard'}</span>
+                <span className="ticket-info-value">{typeof ticket.ticketType === 'string' ? ticket.ticketType : 'Standard'}</span>
               </div>
               <div className="ticket-info-item">
                 <span className="ticket-info-label">Quantità</span>
-                <span className="ticket-info-value">{ticket.quantity || 1}</span>
+                <span className="ticket-info-value">{typeof ticket.quantity === 'number' ? ticket.quantity : 1}</span>
               </div>
               <div className="ticket-info-item">
                 <span className="ticket-info-label">Prezzo Unitario</span>
-                <span className="ticket-info-value">€{ticket.price || '0.00'}</span>
+                <span className="ticket-info-value">€{typeof ticket.price === 'number' ? ticket.price.toFixed(2) : (typeof ticket.price === 'string' ? ticket.price : '0.00')}</span>
               </div>
               <div className="ticket-info-item">
                 <span className="ticket-info-label">Totale Ordine</span>
-                <span className="ticket-info-value">€{ticket.totalPrice || '0.00'}</span>
+                <span className="ticket-info-value">€{typeof ticket.totalPrice === 'number' ? ticket.totalPrice.toFixed(2) : (typeof ticket.totalPrice === 'string' ? ticket.totalPrice : '0.00')}</span>
               </div>
               <div className="ticket-info-item">
                 <span className="ticket-info-label">Cliente</span>
-                <span className="ticket-info-value">{ticket.customerName || 'N/A'}</span>
+                <span className="ticket-info-value">{typeof ticket.customerName === 'string' ? ticket.customerName : 'N/A'}</span>
               </div>
             </div>
 
             <div className="ticket-qr">
               <img 
-                src={ticket.qrCode || generateQRCode(ticket.ticketCode || ticket.code || ticket.id)} 
+                src={typeof ticket.qrCode === 'string' ? ticket.qrCode : generateQRCode(typeof ticket.ticketCode === 'string' ? ticket.ticketCode : (typeof ticket.code === 'string' ? ticket.code : (typeof ticket.id === 'string' ? ticket.id : 'unknown')))} 
                 alt="QR Code del biglietto" 
-                onClick={() => window.open(ticket.qrCode || generateQRCode(ticket.ticketCode || ticket.code || ticket.id), '_blank')}
+                onClick={handleQrCodeClick}
               />
               <p>Mostra questo QR code all'ingresso dell'evento per la validazione</p>
             </div>
