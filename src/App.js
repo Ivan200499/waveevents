@@ -3,6 +3,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { DeviceProvider } from './contexts/DeviceContext';
+import { useState, useEffect } from 'react';
 import './styles/theme.css';
 import './styles/responsive.css';
 import './App.css';
@@ -20,9 +21,10 @@ import PromoterDashboard from './components/promoter/PromoterDashboard';
 import TicketHistory from './components/tickets/TicketHistory';
 import ValidateTicket from './components/tickets/ValidateTicket';
 import TicketPage from './components/tickets/TicketPage';
-import { useEffect } from 'react';
 
 function App() {
+  const [isAppReady, setIsAppReady] = useState(false);
+
   useEffect(() => {
     // Gestione viewport
     const metaViewport = document.querySelector('meta[name="viewport"]');
@@ -51,23 +53,44 @@ function App() {
       document.documentElement.classList.toggle('landscape', !isPortrait);
     };
     
+    // Gestione tema scuro in base alle preferenze di sistema
+    const handleThemeChange = () => {
+      const prefersDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      document.documentElement.setAttribute('data-theme', prefersDarkMode ? 'dark' : 'light');
+      
+      // Aggiorna meta theme-color
+      const metaThemeColor = document.querySelector('meta[name="theme-color"]');
+      if (metaThemeColor) {
+        metaThemeColor.setAttribute('content', prefersDarkMode ? '#121212' : '#007bff');
+      }
+    };
+    
     // Event listeners
     window.addEventListener('resize', appHeight);
     window.addEventListener('orientationchange', handleOrientation);
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', handleThemeChange);
     
     // Inizializzazione
     appHeight();
     handleOrientation();
+    handleThemeChange();
+    
+    // Imposta app come pronta
+    const timer = setTimeout(() => {
+      setIsAppReady(true);
+    }, 300);
     
     // Cleanup
     return () => {
       window.removeEventListener('resize', appHeight);
       window.removeEventListener('orientationchange', handleOrientation);
+      window.matchMedia('(prefers-color-scheme: dark)').removeEventListener('change', handleThemeChange);
+      clearTimeout(timer);
     };
   }, []);
 
   return (
-    <div className="app">
+    <div className={`app ${isAppReady ? 'app-ready' : 'app-loading'}`}>
       <Router>
         <ThemeProvider>
           <DeviceProvider>
@@ -120,16 +143,24 @@ function App() {
                   <Route 
                     path="/validate-ticket" 
                     element={
-                      <ProtectedRoute allowedRoles={['manager', 'validator']}>
+                      <ProtectedRoute requiredRole="canValidateTickets">
                         <ValidateTicket />
                       </ProtectedRoute>
                     } 
                   />
-                  <Route path="/ticket/:ticketCode" element={<TicketPage />} />
                   <Route 
-                    path="/" 
-                    element={<Navigate to="/login" />} 
+                    path="/ticket/:id" 
+                    element={<TicketPage />} 
                   />
+                  <Route 
+                    path="/dashboard" 
+                    element={
+                      <PrivateRoute>
+                        <Dashboard />
+                      </PrivateRoute>
+                    } 
+                  />
+                  <Route path="/" element={<Navigate to="/login" />} />
                 </Routes>
               </NotificationProvider>
             </AuthProvider>

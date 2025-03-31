@@ -105,6 +105,8 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
 .button-primary {
@@ -172,68 +174,32 @@
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
   }
-
-  .header {
-    height: var(--header-height);
-    padding: 0 var(--content-padding);
-  }
-
-  .dashboard-container {
-    padding: var(--content-padding);
-  }
-
-  .grid-2,
-  .grid-3,
-  .grid-4 {
+  
+  .grid-2, .grid-3, .grid-4 {
     grid-template-columns: 1fr;
   }
-
-  .card {
-    border-radius: 12px;
-    margin-bottom: 16px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-  }
-
+  
   .button {
+    min-height: 48px;
     width: 100%;
-    height: var(--button-height);
-    border-radius: 8px;
-    font-size: 1rem;
-    font-weight: 500;
-    margin-bottom: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    font-size: 16px;
+    padding: 12px 20px;
+    margin-bottom: 10px;
   }
-
+  
   .input {
-    height: var(--input-height);
-    border-radius: 8px;
-    font-size: 1rem;
-    padding: 0 16px;
+    font-size: 16px;
+    padding: 12px;
+    min-height: 48px;
   }
-
-  .table-container {
-    margin: 0;
-    border-radius: 12px;
-    overflow: hidden;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  
+  /* Prevent auto zoom on iOS */
+  input, select, textarea {
+    font-size: 16px !important;
   }
-
-  .table tr {
-    margin: 0;
-    border-radius: 0;
-    border-bottom: 1px solid var(--border-color);
-  }
-
-  .table td[data-label] {
-    padding: 12px 16px;
-    border-bottom: 1px solid var(--border-color);
-  }
-
-  .table td[data-label]::before {
-    font-size: 0.875rem;
-    color: var(--text-secondary);
-    margin-bottom: 4px;
-    display: block;
+  
+  .card {
+    margin-bottom: 16px;
   }
 }
 
@@ -296,6 +262,20 @@
   
   .dashboard-container {
     padding-bottom: env(safe-area-inset-bottom);
+  }
+  
+  /* Prevent styling issues on iOS */
+  input, select, textarea, button {
+    -webkit-appearance: none;
+    appearance: none;
+    border-radius: 4px;
+  }
+  
+  /* Ensure touch targets are at least 44px */
+  button, 
+  .button,
+  input[type="submit"] {
+    min-height: 44px;
   }
 }
 
