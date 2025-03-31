@@ -361,6 +361,11 @@ function TicketPage() {
           setHasLoadedOnce(true);
         }
         
+        // Verifica che ticketCode sia valido
+        if (!ticketCode || ticketCode === 'undefined' || ticketCode === 'null') {
+          throw new Error('Codice biglietto non valido');
+        }
+        
         // Verifica se il biglietto è già in cache
         const cacheKey = getTicketCacheKey(ticketCode);
         const cachedTicket = getPersistentCache(cacheKey);
@@ -381,77 +386,85 @@ function TicketPage() {
         
         // Se non in cache, carica dal database
         const ticketsRef = collection(db, 'tickets');
-        let ticketSnapshot;
+        let ticketSnapshot = null;
+        let ticketData = null;
         
-        // Prova prima a cercare per ticketCode (preferibile)
-        let q = query(ticketsRef, where('ticketCode', '==', ticketCode));
-        let querySnapshot = await getDocs(q);
-        
-        if (querySnapshot.empty) {
-          // Se non trovato con ticketCode, prova con il campo code (backward compatibility)
-          q = query(ticketsRef, where('code', '==', ticketCode));
-          querySnapshot = await getDocs(q);
+        try {
+          // Prova prima a cercare per ticketCode
+          console.log('Cercando biglietto con ticketCode:', ticketCode);
+          const q1 = query(ticketsRef, where('ticketCode', '==', ticketCode));
+          const querySnapshot1 = await getDocs(q1);
           
-          // Se ancora non trovato, prova con l'ID stesso
-          if (querySnapshot.empty) {
-            const ticketDocRef = doc(db, 'tickets', ticketCode);
-            ticketSnapshot = await getDoc(ticketDocRef);
-            
-            if (!ticketSnapshot.exists()) {
-              throw new Error('Biglietto non trovato');
-            }
-            
-            const ticketData = {
-              id: ticketSnapshot.id,
-              ...ticketSnapshot.data()
+          if (!querySnapshot1.empty) {
+            const ticketDoc = querySnapshot1.docs[0];
+            ticketData = {
+              id: ticketDoc.id,
+              ...ticketDoc.data()
             };
+          } else {
+            // Prova con il campo code
+            console.log('Cercando biglietto con code:', ticketCode);
+            const q2 = query(ticketsRef, where('code', '==', ticketCode));
+            const querySnapshot2 = await getDocs(q2);
             
-            setTicket(ticketData);
-            
-            // Salvare in cache
-            setPersistentCache(cacheKey, ticketData, CACHE_DURATION.TICKETS);
-            
-            // Aggiorna meta tag
-            const pageTitle = ticketData.eventName ? `Biglietto: ${ticketData.eventName}` : 'Visualizza biglietto';
-            const pageDesc = ticketData.eventName
-              ? `Biglietto per ${ticketData.eventName}${ticketData.eventDate ? ` il ${formatDate(ticketData.eventDate)}` : ''}`
-              : 'Dettagli del biglietto per l\'evento';
+            if (!querySnapshot2.empty) {
+              const ticketDoc = querySnapshot2.docs[0];
+              ticketData = {
+                id: ticketDoc.id,
+                ...ticketDoc.data()
+              };
+            } else {
+              // Prova come ID diretto
+              console.log('Cercando biglietto con ID:', ticketCode);
+              const ticketDocRef = doc(db, 'tickets', ticketCode);
+              ticketSnapshot = await getDoc(ticketDocRef);
               
-            updateMetaTags(pageTitle, pageDesc);
-            setLoading(false);
-            return;
+              if (ticketSnapshot.exists()) {
+                ticketData = {
+                  id: ticketSnapshot.id,
+                  ...ticketSnapshot.data()
+                };
+              } else {
+                throw new Error('Biglietto non trovato');
+              }
+            }
           }
+        } catch (queryError) {
+          console.error('Errore nella query del biglietto:', queryError);
+          throw new Error('Errore nel recupero del biglietto');
         }
         
-        // Prendi il primo risultato (dovrebbe essere unico)
-        const ticketDoc = querySnapshot.docs[0];
-        const ticketData = {
-          id: ticketDoc.id,
-          ...ticketDoc.data()
-        };
-        
-        // Recupera anche i dettagli dell'evento
-        if (ticketData.eventId) {
-          const eventRef = doc(db, 'events', ticketData.eventId);
-          const eventSnap = await getDoc(eventRef);
+        if (ticketData) {
+          // Recupera anche i dettagli dell'evento se abbiamo un ID evento valido
+          if (ticketData.eventId) {
+            try {
+              const eventRef = doc(db, 'events', ticketData.eventId);
+              const eventSnap = await getDoc(eventRef);
+              
+              if (eventSnap.exists()) {
+                ticketData.eventDetails = eventSnap.data();
+              }
+            } catch (eventError) {
+              console.warn('Non è stato possibile recuperare i dettagli dell\'evento:', eventError);
+              // Continuiamo anche senza dettagli evento
+            }
+          }
           
-          if (eventSnap.exists()) {
-            ticketData.eventDetails = eventSnap.data();
-          }
+          setTicket(ticketData);
+          
+          // Salva il biglietto in cache per uso futuro
+          setPersistentCache(cacheKey, ticketData, CACHE_DURATION.TICKETS);
+          
+          // Aggiorna il titolo con il nome dell'evento
+          const pageTitle = ticketData.eventName ? `Biglietto: ${ticketData.eventName}` : 'Visualizza biglietto';
+          const pageDesc = ticketData.eventName
+            ? `Biglietto per ${ticketData.eventName}${ticketData.eventDate ? ` il ${formatDate(ticketData.eventDate)}` : ''}`
+            : 'Dettagli del biglietto per l\'evento';
+          
+          updateMetaTags(pageTitle, pageDesc);
+        } else {
+          throw new Error('Biglietto non trovato');
         }
-        
-        setTicket(ticketData);
-        
-        // Salva il biglietto in cache per uso futuro
-        setPersistentCache(cacheKey, ticketData, CACHE_DURATION.TICKETS);
-        
-        // Aggiorna il titolo con il nome dell'evento
-        const pageTitle = ticketData.eventName ? `Biglietto: ${ticketData.eventName}` : 'Visualizza biglietto';
-        const pageDesc = ticketData.eventName
-          ? `Biglietto per ${ticketData.eventName}${ticketData.eventDate ? ` il ${formatDate(ticketData.eventDate)}` : ''}`
-          : 'Dettagli del biglietto per l\'evento';
-        
-        updateMetaTags(pageTitle, pageDesc);
       } catch (err) {
         console.error('Errore nel recupero del biglietto:', err);
         setError(err.message || 'Errore nel caricamento del biglietto');

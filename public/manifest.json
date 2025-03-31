@@ -12,31 +12,13 @@
       "src": "logo192.png",
       "type": "image/png",
       "sizes": "192x192",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
       "src": "logo512.png",
       "type": "image/png",
       "sizes": "512x512",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "logo152.png",
-      "type": "image/png",
-      "sizes": "152x152",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "logo167.png",
-      "type": "image/png",
-      "sizes": "167x167",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "logo180.png",
-      "type": "image/png",
-      "sizes": "180x180",
-      "purpose": "any maskable"
+      "purpose": "any"
     }
   ],
   "start_url": ".",
@@ -46,22 +28,6 @@
   "theme_color": "#435bcc",
   "background_color": "#ffffff",
   "categories": ["business", "productivity", "utilities"],
-  "screenshots": [
-    {
-      "src": "screenshot1.png",
-      "sizes": "1280x720",
-      "type": "image/png",
-      "platform": "wide",
-      "label": "Homescreen of Wave Events"
-    },
-    {
-      "src": "screenshot2.png",
-      "sizes": "750x1334",
-      "type": "image/png",
-      "platform": "narrow",
-      "label": "Dettaglio Biglietto su Mobile"
-    }
-  ],
   "shortcuts": [
     {
       "name": "Visualizza Biglietti",
@@ -81,6 +47,5 @@
   "related_applications": [],
   "prefer_related_applications": false,
   "dir": "ltr",
-  "lang": "it",
-  "iarc_rating_id": "e84b072d-71b3-4d3e-86ae-31a8ce4e53b7"
+  "lang": "it"
 }
