@@ -512,47 +512,61 @@ function TicketPage() {
 
   // Mostra il biglietto
   return (
-    <div className={`ticket-page ${isZoomed ? 'zoomed' : ''}`} ref={ticketContainerRef}>
+    <div className="ticket-page">
       <div className="ticket-container">
         <div className="ticket-header">
-          <h1 style={textStyles.title}>{ticket.ticketCode || ticket.code || ticket.id}</h1>
+          <h1>{ticket.ticketCode || ticket.code || ticket.id}</h1>
+          <h2>{ticket.eventName}</h2>
         </div>
-
+        
         <div className="ticket-content">
           <div className="ticket-info">
-            <h2 style={textStyles.subtitle}>{ticket.eventName || 'Biglietto Evento'}</h2>
-            <div className="info-row">
-              <IoLocationOutline size={deviceConfig.iconSize.normal} />
-              <span style={textStyles.normal}>{ticket.eventLocation || 'Luogo non specificato'}</span>
+            <div className="ticket-info-item">
+              <span className="ticket-info-label">Data Evento</span>
+              <span className="ticket-info-value">{formatDate(ticket.eventDate)}</span>
             </div>
-            <div className="info-row">
-              <IoCalendarOutline size={deviceConfig.iconSize.normal} />
-              <span style={textStyles.normal}>{formatDate(ticket.eventDate)} {formatTime(ticket.eventDate)}</span>
+            <div className="ticket-info-item">
+              <span className="ticket-info-label">Ora Evento</span>
+              <span className="ticket-info-value">{formatTime(ticket.eventDate)}</span>
             </div>
-            <div className="info-row">
-              <IoTicketOutline size={deviceConfig.iconSize.normal} />
-              <span style={textStyles.normal}>Quantity: {ticket.quantity || 1}</span>
+            <div className="ticket-info-item">
+              <span className="ticket-info-label">Luogo</span>
+              <span className="ticket-info-value">{ticket.eventLocation || 'N/A'}</span>
             </div>
-            <div className="info-row">
-              <IoPricetagOutline size={deviceConfig.iconSize.normal} />
-              <span style={textStyles.normal}>Total Order: € {ticket.totalPrice?.toFixed(2) || '0.00'}</span>
+            <div className="ticket-info-item">
+              <span className="ticket-info-label">Tipo Biglietto</span>
+              <span className="ticket-info-value">{ticket.ticketType || 'Standard'}</span>
             </div>
-            <div className="info-row">
-              <IoCardOutline size={deviceConfig.iconSize.normal} />
-              <span style={textStyles.normal}>ID: {ticket.ticketCode || ticket.code || ticket.id}</span>
+            <div className="ticket-info-item">
+              <span className="ticket-info-label">Quantità</span>
+              <span className="ticket-info-value">{ticket.quantity}</span>
+            </div>
+            <div className="ticket-info-item">
+              <span className="ticket-info-label">Prezzo Unitario</span>
+              <span className="ticket-info-value">€{ticket.price}</span>
+            </div>
+            <div className="ticket-info-item">
+              <span className="ticket-info-label">Totale Ordine</span>
+              <span className="ticket-info-value">€{ticket.totalPrice}</span>
+            </div>
+            <div className="ticket-info-item">
+              <span className="ticket-info-label">Cliente</span>
+              <span className="ticket-info-value">{ticket.customerName}</span>
             </div>
           </div>
 
           <div className="ticket-qr">
-            <img
-              src={generateQRCode(ticket.ticketCode || ticket.code || ticket.id)}
-              alt="QR Code Biglietto"
-              style={qrCodeStyle}
-              onClick={handleQrCodeClick}
-              onLoad={handleQRLoad}
+            <img 
+              src={ticket.qrCode} 
+              alt="QR Code del biglietto" 
+              onClick={() => window.open(ticket.qrCode, '_blank')}
             />
-            <p style={textStyles.small}>Mostra questo QR code all'ingresso dell'evento per validare il tuo biglietto</p>
+            <p>Mostra questo QR code all'ingresso dell'evento per la validazione</p>
           </div>
+        </div>
+
+        <div className="ticket-footer">
+          <p>Questo biglietto è valido solo per l'evento e la data indicati</p>
         </div>
       </div>
     </div>
