@@ -243,9 +243,40 @@ function SellTicketModal({ isOpen, onClose, event, onSell }) {
     // Aggiungi il link alla pagina del biglietto al messaggio
     const completeMessage = `${message}\n\nVisualizza il tuo biglietto qui: ${ticketPageUrl}`;
     
-    // Apri WhatsApp con il messaggio
-    const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(completeMessage)}`;
-    window.open(whatsappUrl, '_blank');
+    // Usa il servizio WhatsApp ottimizzato se disponibile
+    try {
+      import('../../services/WhatsAppService')
+        .then(module => {
+          const { sendTicketViaWhatsApp } = module;
+          
+          // Crea un oggetto ticket con le informazioni necessarie
+          const ticketObj = {
+            eventName: event.name,
+            eventDate: formData.selectedDate,
+            eventLocation: event.location,
+            customerName: formData.customerName,
+            ticketCode: ticketCode,
+            code: ticketCode,
+            id: ticketCode
+          };
+          
+          // Usa il servizio ottimizzato
+          sendTicketViaWhatsApp(ticketObj, cleanPhone);
+        })
+        .catch(error => {
+          console.error('Errore nel caricamento del servizio WhatsApp:', error);
+          
+          // Fallback con metodo tradizionale
+          const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(completeMessage)}`;
+          window.open(whatsappUrl, '_blank');
+        });
+    } catch (error) {
+      console.error('Errore nell\'invio WhatsApp:', error);
+      
+      // Fallback con metodo tradizionale
+      const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(completeMessage)}`;
+      window.open(whatsappUrl, '_blank');
+    }
   };
 
   const handleSubmit = async (e) => {

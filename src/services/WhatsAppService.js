@@ -43,17 +43,35 @@ const isInWebView = () => {
  */
 export const sendTicketViaWhatsApp = async (ticket, phoneNumber) => {
   try {
-    // Formatta il numero di telefono (rimuovi spazi e caratteri speciali)
-    const formattedPhone = phoneNumber.replace(/\D/g, '');
+    // Verifica che ticket sia un oggetto valido
+    if (!ticket || typeof ticket !== 'object') {
+      console.error('Ticket non valido:', ticket);
+      throw new Error('Formato ticket non valido');
+    }
     
-    // Costruisci il messaggio
-    const message = `🎫 Il tuo biglietto per ${ticket.eventName}\n\n` +
-      `📅 Data: ${new Date(ticket.eventDate).toLocaleDateString('it-IT')}\n` +
-      `📍 Luogo: ${ticket.eventLocation}\n` +
-      `👤 Nome: ${ticket.customerName}\n` +
-      `🎫 Codice: ${ticket.code || ticket.ticketCode}\n\n` +
-      `Per visualizzare il QR code e i dettagli del biglietto, clicca qui:\n` +
-      `${window.location.origin}/ticket/${ticket.id || ticket.ticketCode}`;
+    // Formatta il numero di telefono (rimuovi spazi e caratteri speciali)
+    const formattedPhone = (phoneNumber || '').replace(/\D/g, '');
+    
+    // Valori di fallback per i campi del biglietto
+    const eventName = ticket.eventName || 'Evento';
+    const eventDate = ticket.eventDate ? new Date(ticket.eventDate) : new Date();
+    const eventLocation = ticket.eventLocation || 'Luogo non specificato';
+    const customerName = ticket.customerName || 'Cliente';
+    const ticketCode = ticket.code || ticket.ticketCode || 'N/A';
+    
+    // ID sicuro per il link del biglietto
+    const ticketLinkId = ticket.id || ticket.ticketCode || ticket.code || '';
+    
+    // Costruisci il messaggio con controlli per valori undefined
+    const message = `🎫 Il tuo biglietto per ${eventName}\n\n` +
+      `📅 Data: ${eventDate.toLocaleDateString('it-IT')}\n` +
+      `📍 Luogo: ${eventLocation}\n` +
+      `👤 Nome: ${customerName}\n` +
+      `🎫 Codice: ${ticketCode}\n\n` +
+      (ticketLinkId ? 
+        `Per visualizzare il QR code e i dettagli del biglietto, clicca qui:\n` +
+        `${window.location.origin}/ticket/${ticketLinkId}` : 
+        `Per ulteriori informazioni, contatta l'organizzatore dell'evento.`);
 
     // Determina l'URL di WhatsApp in base al dispositivo
     let whatsappUrl;
@@ -61,7 +79,10 @@ export const sendTicketViaWhatsApp = async (ticket, phoneNumber) => {
     // Il prefisso del numero può cambiare in base al paese - 39 è per l'Italia
     const countryPrefix = '39';
     
-    if (isIOS()) {
+    // Usa un URL generico se il telefono non è specificato
+    if (!formattedPhone) {
+      whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+    } else if (isIOS()) {
       // Su iOS, usa l'URL semplice per WhatsApp
       whatsappUrl = `https://api.whatsapp.com/send?phone=${countryPrefix}${formattedPhone}&text=${encodeURIComponent(message)}`;
     } else {
@@ -95,19 +116,25 @@ export const sendTicketViaWhatsApp = async (ticket, phoneNumber) => {
       }, 100);
     }
 
-    // Aggiorna il biglietto con il numero di telefono
-    if (ticket.id) {
-      const ticketRef = doc(db, 'tickets', ticket.id);
-      await updateDoc(ticketRef, {
-        customerPhone: phoneNumber,
-        whatsappSent: true,
-        whatsappSentAt: new Date()
-      });
+    // Aggiorna il biglietto con il numero di telefono solo se abbiamo un ID valido e un telefono
+    if (ticket.id && formattedPhone) {
+      try {
+        const ticketRef = doc(db, 'tickets', ticket.id);
+        await updateDoc(ticketRef, {
+          customerPhone: phoneNumber,
+          whatsappSent: true,
+          whatsappSentAt: new Date()
+        });
+      } catch (dbError) {
+        console.error('Errore nell\'aggiornamento del biglietto:', dbError);
+        // Non interrompe il flusso se fallisce solo l'aggiornamento su DB
+      }
     }
 
     return true;
   } catch (error) {
     console.error('Errore nell\'invio del biglietto via WhatsApp:', error);
-    throw error;
+    // Non rilanciare l'errore, per permettere di usare il metodo di fallback
+    return false;
   }
 }; 

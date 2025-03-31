@@ -34,12 +34,12 @@ function TicketHistory() {
       let ticketsQuery = collection(db, 'tickets');
       let conditions = [];
 
-      // Applica filtri
-      if (statusFilter !== 'all') {
+      // Applica filtri solo se sono validi
+      if (statusFilter && statusFilter !== 'all') {
         conditions.push(where('status', '==', statusFilter));
       }
 
-      if (eventFilter !== 'all') {
+      if (eventFilter && eventFilter !== 'all') {
         conditions.push(where('eventId', '==', eventFilter));
       }
 
