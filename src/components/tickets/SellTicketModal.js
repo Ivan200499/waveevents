@@ -233,8 +233,8 @@ function SellTicketModal({ isOpen, onClose, event, onSell }) {
   };
 
   const openWhatsApp = (phoneNumber, message, ticketCode) => {
-    // Rimuovi eventuali caratteri non numerici dal numero
-    const cleanPhone = phoneNumber.replace(/\D/g, '');
+    // Non formattare il numero qui, la formattazione avverrà nel servizio WhatsApp
+    // per garantire consistenza in tutta l'app
     
     // Crea un link alla pagina del biglietto invece del link diretto al QR code
     // Utilizziamo una URL della nostra applicazione che mostrerà una pagina elegante con il QR code
@@ -260,21 +260,26 @@ function SellTicketModal({ isOpen, onClose, event, onSell }) {
             id: ticketCode
           };
           
-          // Usa il servizio ottimizzato
-          sendTicketViaWhatsApp(ticketObj, cleanPhone);
+          // Usa il servizio ottimizzato con numero originale, la formattazione 
+          // avverrà dentro il servizio
+          sendTicketViaWhatsApp(ticketObj, phoneNumber);
         })
         .catch(error => {
           console.error('Errore nel caricamento del servizio WhatsApp:', error);
           
           // Fallback con metodo tradizionale
-          const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(completeMessage)}`;
+          // Per il fallback, usa un formato semplice
+          const cleanPhone = phoneNumber.replace(/\D/g, '');
+          const whatsappUrl = `https://wa.me/${cleanPhone.startsWith('39') ? '' : '39'}${cleanPhone}?text=${encodeURIComponent(completeMessage)}`;
           window.open(whatsappUrl, '_blank');
         });
     } catch (error) {
       console.error('Errore nell\'invio WhatsApp:', error);
       
       // Fallback con metodo tradizionale
-      const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(completeMessage)}`;
+      // Per il fallback, usa un formato semplice
+      const cleanPhone = phoneNumber.replace(/\D/g, '');
+      const whatsappUrl = `https://wa.me/${cleanPhone.startsWith('39') ? '' : '39'}${cleanPhone}?text=${encodeURIComponent(completeMessage)}`;
       window.open(whatsappUrl, '_blank');
     }
   };

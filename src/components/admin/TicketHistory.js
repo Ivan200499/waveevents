@@ -300,13 +300,13 @@ function TicketHistory() {
     // Se c'è un numero di telefono, usa quello come destinatario
     const phoneNumber = ticket.customerPhone || ticket.customer_phone;
     if (phoneNumber) {
-      // Rimuovi eventuali caratteri non numerici dal numero
-      const cleanPhone = phoneNumber.replace(/\D/g, '');
-      return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
+      // La formattazione del numero sarà gestita dal servizio WhatsApp
+      // o potrebbe dover essere eseguita qui se il servizio non è disponibile
+      return message;
     }
     
-    // Altrimenti usa l'URL standard di WhatsApp
-    return `https://wa.me/?text=${encodeURIComponent(message)}`;
+    // Messaggio senza telefono
+    return message;
   }
 
   function handleShareWhatsApp(ticket) {

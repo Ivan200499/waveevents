@@ -36,6 +36,33 @@ const isInWebView = () => {
 };
 
 /**
+ * Formatta correttamente un numero di telefono per WhatsApp
+ * @param {string} phoneNumber - Numero di telefono da formattare
+ * @returns {string} - Numero formattato correttamente
+ */
+const formatPhoneForWhatsApp = (phoneNumber) => {
+  if (!phoneNumber) return '';
+  
+  // Rimuovi tutti i caratteri non numerici
+  let cleaned = phoneNumber.replace(/\D/g, '');
+  
+  // Se inizia con il prefisso internazionale dell'Italia (39), rimuovilo
+  // WhatsApp richiede il prefisso nel formato "39" senza il + iniziale
+  if (cleaned.startsWith('39')) {
+    return cleaned; // Già nel formato corretto
+  }
+
+  // Se inizia con il prefisso internazionale dell'Italia (+39), rimuovilo
+  if (cleaned.startsWith('039')) {
+    cleaned = cleaned.substring(3);
+    return '39' + cleaned;
+  }
+  
+  // Se non ha alcun prefisso, aggiungi il prefisso italiano
+  return '39' + cleaned;
+};
+
+/**
  * Invia un biglietto tramite WhatsApp
  * @param {Object} ticket - Oggetto con i dati del biglietto
  * @param {string} phoneNumber - Numero di telefono del destinatario
@@ -49,8 +76,8 @@ export const sendTicketViaWhatsApp = async (ticket, phoneNumber) => {
       throw new Error('Formato ticket non valido');
     }
     
-    // Formatta il numero di telefono (rimuovi spazi e caratteri speciali)
-    const formattedPhone = (phoneNumber || '').replace(/\D/g, '');
+    // Formatta il numero di telefono per WhatsApp
+    const formattedPhone = formatPhoneForWhatsApp(phoneNumber || '');
     
     // Valori di fallback per i campi del biglietto
     const eventName = ticket.eventName || 'Evento';
@@ -76,19 +103,18 @@ export const sendTicketViaWhatsApp = async (ticket, phoneNumber) => {
     // Determina l'URL di WhatsApp in base al dispositivo
     let whatsappUrl;
     
-    // Il prefisso del numero può cambiare in base al paese - 39 è per l'Italia
-    const countryPrefix = '39';
-    
     // Usa un URL generico se il telefono non è specificato
     if (!formattedPhone) {
       whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
     } else if (isIOS()) {
       // Su iOS, usa l'URL semplice per WhatsApp
-      whatsappUrl = `https://api.whatsapp.com/send?phone=${countryPrefix}${formattedPhone}&text=${encodeURIComponent(message)}`;
+      whatsappUrl = `https://api.whatsapp.com/send?phone=${formattedPhone}&text=${encodeURIComponent(message)}`;
     } else {
       // Per Android e altri dispositivi, usa l'URL standard
-      whatsappUrl = `https://wa.me/${countryPrefix}${formattedPhone}?text=${encodeURIComponent(message)}`;
+      whatsappUrl = `https://wa.me/${formattedPhone}?text=${encodeURIComponent(message)}`;
     }
+    
+    console.log('WhatsApp URL generato:', whatsappUrl);
     
     // Per iOS e WebView, usa window.location.href che è più efficace nelle WebView
     const isIOSWebView = isIOS() && isInWebView();
@@ -117,7 +143,7 @@ export const sendTicketViaWhatsApp = async (ticket, phoneNumber) => {
     }
 
     // Aggiorna il biglietto con il numero di telefono solo se abbiamo un ID valido e un telefono
-    if (ticket.id && formattedPhone) {
+    if (ticket.id && phoneNumber) {
       try {
         const ticketRef = doc(db, 'tickets', ticket.id);
         await updateDoc(ticketRef, {
