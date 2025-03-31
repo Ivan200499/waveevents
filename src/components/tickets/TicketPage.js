@@ -549,4 +549,10 @@ function TicketPage() {
 
   // Mostra il biglietto
   return (
-    <div className={`
+    <div className={`ticket-page ${isZoomed ? 'zoomed' : ''}`} ref={ticketContainerRef}>
+      {/* Contenuto del biglietto */}
+    </div>
+  );
+}
+
+export default TicketPage;
