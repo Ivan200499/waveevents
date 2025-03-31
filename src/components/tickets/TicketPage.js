@@ -550,7 +550,63 @@ function TicketPage() {
   // Mostra il biglietto
   return (
     <div className={`ticket-page ${isZoomed ? 'zoomed' : ''}`} ref={ticketContainerRef}>
-      {/* Contenuto del biglietto */}
+      <div className="ticket-container">
+        <div className="ticket-header">
+          <img src={APP_LOGO} alt="Wave Events Logo" className="ticket-logo" />
+          <h1 style={textStyles.title}>{ticket.eventName || 'Biglietto Evento'}</h1>
+        </div>
+
+        <div className="ticket-content">
+          <div className="ticket-section">
+            <div className="ticket-info">
+              <div className="info-row">
+                <IoCalendarOutline size={deviceConfig.iconSize.normal} />
+                <span style={textStyles.normal}>{formatDate(ticket.eventDate)}</span>
+              </div>
+              <div className="info-row">
+                <IoTimeOutline size={deviceConfig.iconSize.normal} />
+                <span style={textStyles.normal}>{formatTime(ticket.eventDate)}</span>
+              </div>
+              <div className="info-row">
+                <IoLocationOutline size={deviceConfig.iconSize.normal} />
+                <span style={textStyles.normal}>{ticket.eventLocation || 'Luogo non specificato'}</span>
+              </div>
+              <div className="info-row">
+                <IoPersonOutline size={deviceConfig.iconSize.normal} />
+                <span style={textStyles.normal}>{ticket.customerName || 'Nome non specificato'}</span>
+              </div>
+            </div>
+
+            <div className="ticket-qr">
+              <img
+                src={generateQRCode(ticket.ticketCode || ticket.code || ticket.id)}
+                alt="QR Code Biglietto"
+                style={qrCodeStyle}
+                onClick={handleQrCodeClick}
+                onLoad={handleQRLoad}
+              />
+              <p style={textStyles.small}>Clicca per ingrandire</p>
+            </div>
+          </div>
+
+          <div className="ticket-footer">
+            <div className="ticket-details">
+              <div className="detail-row">
+                <IoTicketOutline size={deviceConfig.iconSize.small} />
+                <span style={textStyles.small}>Codice: {ticket.ticketCode || ticket.code || ticket.id}</span>
+              </div>
+              <div className="detail-row">
+                <IoCardOutline size={deviceConfig.iconSize.small} />
+                <span style={textStyles.small}>Tipo: {ticket.ticketType || 'Standard'}</span>
+              </div>
+              <div className="detail-row">
+                <IoPricetagOutline size={deviceConfig.iconSize.small} />
+                <span style={textStyles.small}>Prezzo: €{ticket.price || '0.00'}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
