@@ -16,46 +16,61 @@
   --info-color: #17a2b8;
   --loading-background: #ffffff;
   --loading-foreground: #f0f0f0;
+  --card-background: #ffffff;
+  --input-background: #ffffff;
+  --input-text: #333333;
+  --button-text: #ffffff;
+  --card-text: #333333;
 }
 
 [data-theme="dark"] {
-  --primary-color: #0d6efd;
-  --primary-hover: #0b5ed7;
-  --secondary-color: #6c757d;
-  --secondary-hover: #5a6268;
+  --primary-color: #4dabff;
+  --primary-hover: #3d8fdd;
+  --secondary-color: #8a95a0;
+  --secondary-hover: #6c757d;
   --background-color: #121212;
   --surface-color: #1e1e1e;
   --text-primary: #ffffff;
-  --text-secondary: #b0b0b0;
-  --border-color: #333333;
-  --shadow-color: rgba(0, 0, 0, 0.3);
-  --error-color: #ef5350;
-  --success-color: #66bb6a;
-  --warning-color: #ffd54f;
-  --info-color: #29b6f6;
+  --text-secondary: #cccccc;
+  --border-color: #444444;
+  --shadow-color: rgba(0, 0, 0, 0.5);
+  --error-color: #ff5c5c;
+  --success-color: #5cff5c;
+  --warning-color: #ffda5c;
+  --info-color: #5ce0ff;
   --loading-background: #121212;
-  --loading-foreground: #1e1e1e;
+  --loading-foreground: #2a2a2a;
+  --card-background: #1e1e1e;
+  --input-background: #2a2a2a;
+  --input-text: #ffffff;
+  --button-text: #ffffff;
+  --card-text: #ffffff;
 }
 
 /* System preference dark theme */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --primary-color: #0d6efd;
-    --primary-hover: #0b5ed7;
-    --secondary-color: #6c757d;
-    --secondary-hover: #5a6268;
+    --primary-color: #4dabff;
+    --primary-hover: #3d8fdd;
+    --secondary-color: #8a95a0;
+    --secondary-hover: #6c757d;
     --background-color: #121212;
     --surface-color: #1e1e1e;
     --text-primary: #ffffff;
-    --text-secondary: #b0b0b0;
-    --border-color: #333333;
-    --shadow-color: rgba(0, 0, 0, 0.3);
-    --error-color: #ef5350;
-    --success-color: #66bb6a;
-    --warning-color: #ffd54f;
-    --info-color: #29b6f6;
+    --text-secondary: #cccccc;
+    --border-color: #444444;
+    --shadow-color: rgba(0, 0, 0, 0.5);
+    --error-color: #ff5c5c;
+    --success-color: #5cff5c;
+    --warning-color: #ffda5c;
+    --info-color: #5ce0ff;
     --loading-background: #121212;
-    --loading-foreground: #1e1e1e;
+    --loading-foreground: #2a2a2a;
+    --card-background: #1e1e1e;
+    --input-background: #2a2a2a;
+    --input-text: #ffffff;
+    --button-text: #ffffff;
+    --card-text: #ffffff;
   }
 }
 
@@ -65,6 +80,7 @@ html, body {
   color: var(--text-primary);
   transition: background-color 0.3s ease, color 0.3s ease;
   min-height: 100vh;
+  overflow-y: auto;
 }
 
 /* Evita pagine bianche durante il caricamento */
@@ -75,18 +91,19 @@ body::before {
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: var(--loading-background);
+  background-color: var(--background-color);
   z-index: -1;
 }
 
 /* Common components */
 .card {
-  background-color: var(--surface-color);
+  background-color: var(--card-background);
   border-radius: 8px;
   padding: 1.5rem;
   box-shadow: 0 2px 4px var(--shadow-color);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
-  color: var(--text-primary);
+  color: var(--card-text);
+  border: 1px solid var(--border-color);
 }
 
 .card:hover {
@@ -101,7 +118,7 @@ body::before {
   font-weight: 500;
   cursor: pointer;
   transition: all 0.3s ease;
-  color: white;
+  color: var(--button-text);
   text-align: center;
   display: inline-flex;
   align-items: center;
@@ -229,8 +246,8 @@ body::before {
 
 /* Form elements */
 input, select, textarea {
-  background-color: var(--surface-color);
-  color: var(--text-primary);
+  background-color: var(--input-background);
+  color: var(--input-text);
   border: 1px solid var(--border-color);
   border-radius: 4px;
   padding: 0.75rem;
@@ -250,7 +267,7 @@ table {
   width: 100%;
   border-collapse: collapse;
   margin: 1rem 0;
-  background-color: var(--surface-color);
+  background-color: var(--card-background);
   color: var(--text-primary);
 }
 
@@ -344,25 +361,56 @@ th {
 /* High contrast improvements for dark theme */
 @media (prefers-color-scheme: dark) {
   .button-primary {
-    background-color: #2196f3; /* More vibrant blue for dark mode */
+    background-color: #4dabff; /* More vibrant blue for dark mode */
   }
   
   .button-secondary {
-    background-color: #757575; /* Lighter gray for dark mode */
+    background-color: #8a95a0; /* Lighter gray for dark mode */
   }
   
   input, select, textarea {
-    background-color: #2c2c2c; /* Slightly lighter than background */
-    border-color: #444444;
+    background-color: #2a2a2a; /* Slightly lighter than background */
+    border-color: #555555;
   }
   
   .card {
     background-color: #1e1e1e;
-    border: 1px solid #333333;
+    border: 1px solid #444444;
   }
   
   a {
-    color: #64b5f6; /* Brighter links for dark mode */
+    color: #6bb9ff; /* Brighter links for dark mode */
+  }
+  
+  /* Specific improvements for form elements */
+  input::placeholder {
+    color: #aaaaaa;
+  }
+  
+  button {
+    background-color: #4dabff;
+    color: white;
+  }
+  
+  .input-with-icon .input-icon {
+    color: #bbbbbb;
+  }
+  
+  /* Table improvements */
+  table {
+    border: 1px solid #444444;
+  }
+  
+  th {
+    background-color: #2a2a2a;
+  }
+  
+  tr:nth-child(even) {
+    background-color: #1a1a1a;
+  }
+  
+  tr:hover {
+    background-color: #333333;
   }
 }
 
@@ -407,6 +455,14 @@ th {
   @media (prefers-color-scheme: dark) {
     body::before {
       background-color: #121212;
+    }
+    
+    input, select, textarea {
+      background-color: #2a2a2a;
+    }
+    
+    .card, .button {
+      border: 1px solid #444444;
     }
   }
 } 

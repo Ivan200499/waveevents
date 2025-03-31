@@ -38,6 +38,10 @@ function App() {
     document.documentElement.style.setProperty('--sab', 'env(safe-area-inset-bottom)');
     document.documentElement.style.setProperty('--sal', 'env(safe-area-inset-left)');
     
+    // Assicurati che html e body abbiano overflow-y: auto
+    document.documentElement.style.overflowY = 'auto';
+    document.body.style.overflowY = 'auto';
+    
     // Gestione altezza viewport
     const appHeight = () => {
       const doc = document.documentElement;
@@ -70,6 +74,9 @@ function App() {
     window.addEventListener('orientationchange', handleOrientation);
     window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', handleThemeChange);
     
+    // Rimuovi qualsiasi evento che blocca lo scorrimento
+    document.removeEventListener('touchmove', preventScroll, { passive: false });
+    
     // Inizializzazione
     appHeight();
     handleOrientation();
@@ -88,9 +95,12 @@ function App() {
       clearTimeout(timer);
     };
   }, []);
+  
+  // Funzione che non viene usata ma è qui per evitare errori con removeEventListener
+  const preventScroll = (e) => {};
 
   return (
-    <div className={`app ${isAppReady ? 'app-ready' : 'app-loading'}`}>
+    <div className={`app ${isAppReady ? 'app-ready' : 'app-loading'}`} style={{ overflowY: 'auto' }}>
       <Router>
         <ThemeProvider>
           <DeviceProvider>
