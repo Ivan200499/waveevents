@@ -1,5 +1,5 @@
 import { db } from '../firebase/config';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 
 /**
  * Rileva se il dispositivo è iOS
@@ -70,97 +70,54 @@ const formatPhoneForWhatsApp = (phoneNumber) => {
  */
 export const sendTicketViaWhatsApp = async (ticket, phoneNumber) => {
   try {
-    // Verifica che ticket sia un oggetto valido
+    // Validazione del ticket
     if (!ticket || typeof ticket !== 'object') {
-      console.error('Ticket non valido:', ticket);
-      throw new Error('Formato ticket non valido');
+      throw new Error('Ticket non valido');
     }
-    
-    // Formatta il numero di telefono per WhatsApp
-    const formattedPhone = formatPhoneForWhatsApp(phoneNumber || '');
-    
-    // Valori di fallback per i campi del biglietto
-    const eventName = ticket.eventName || 'Evento';
-    const eventDate = ticket.eventDate ? new Date(ticket.eventDate) : new Date();
-    const eventLocation = ticket.eventLocation || 'Luogo non specificato';
-    const customerName = ticket.customerName || 'Cliente';
-    const ticketCode = ticket.code || ticket.ticketCode || 'N/A';
-    
-    // ID sicuro per il link del biglietto
-    const ticketLinkId = ticket.id || ticket.ticketCode || ticket.code || '';
-    
-    // Costruisci il messaggio con controlli per valori undefined
-    const message = `🎫 Il tuo biglietto per ${eventName}\n\n` +
-      `📅 Data: ${eventDate.toLocaleDateString('it-IT')}\n` +
-      `📍 Luogo: ${eventLocation}\n` +
-      `👤 Nome: ${customerName}\n` +
-      `🎫 Codice: ${ticketCode}\n\n` +
-      (ticketLinkId ? 
-        `Per visualizzare il QR code e i dettagli del biglietto, clicca qui:\n` +
-        `${window.location.origin}/ticket/${ticketLinkId}` : 
-        `Per ulteriori informazioni, contatta l'organizzatore dell'evento.`);
 
-    // Determina l'URL di WhatsApp in base al dispositivo
-    let whatsappUrl;
-    
-    // Usa un URL generico se il telefono non è specificato
+    // Formatta il numero di telefono
+    const formattedPhone = phoneNumber.replace(/\D/g, '');
     if (!formattedPhone) {
-      whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
-    } else if (isIOS()) {
-      // Su iOS, usa l'URL semplice per WhatsApp
-      whatsappUrl = `https://api.whatsapp.com/send?phone=${formattedPhone}&text=${encodeURIComponent(message)}`;
-    } else {
-      // Per Android e altri dispositivi, usa l'URL standard
-      whatsappUrl = `https://wa.me/${formattedPhone}?text=${encodeURIComponent(message)}`;
-    }
-    
-    console.log('WhatsApp URL generato:', whatsappUrl);
-    
-    // Per iOS e WebView, usa window.location.href che è più efficace nelle WebView
-    const isIOSWebView = isIOS() && isInWebView();
-    
-    if (isIOSWebView) {
-      // Per iOS WebView, usa href invece di window.open
-      setTimeout(() => {
-        // Prima salva lo stato corrente per permettere all'utente di tornare indietro
-        const currentUrl = window.location.href;
-        sessionStorage.setItem('lastPage', currentUrl);
-        
-        // Usa location.href che ha maggiore compatibilità con WebView iOS
-        window.location.href = whatsappUrl;
-      }, 100);
-    } else {
-      // Per altre piattaforme, usa window.open
-      setTimeout(() => {
-        const newWindow = window.open(whatsappUrl, '_blank');
-        
-        // Fallback per alcune WebView che bloccano window.open
-        if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
-          // Se window.open fallisce, tenta con location.href
-          window.location.href = whatsappUrl;
-        }
-      }, 100);
+      throw new Error('Numero di telefono non valido');
     }
 
-    // Aggiorna il biglietto con il numero di telefono solo se abbiamo un ID valido e un telefono
-    if (ticket.id && phoneNumber) {
-      try {
-        const ticketRef = doc(db, 'tickets', ticket.id);
-        await updateDoc(ticketRef, {
-          customerPhone: phoneNumber,
-          whatsappSent: true,
-          whatsappSentAt: new Date()
-        });
-      } catch (dbError) {
-        console.error('Errore nell\'aggiornamento del biglietto:', dbError);
-        // Non interrompe il flusso se fallisce solo l'aggiornamento su DB
-      }
+    // Usa sempre ticketCode come identificatore principale
+    const ticketCode = ticket.ticketCode;
+    if (!ticketCode) {
+      throw new Error('Codice biglietto non valido');
     }
+
+    console.log('Codice biglietto per il link:', ticketCode);
+    
+    // Genera il link del biglietto usando un URL più appropriato
+    const ticketLink = `https://waveevents.app/ticket/${ticketCode}`;
+    console.log('Link generato:', ticketLink);
+
+    // Costruisci il messaggio
+    const message = `Ecco il tuo biglietto per ${ticket.eventName || 'l\'evento'}!\n\n` +
+      `📅 Data: ${formatDate(ticket.eventDate)}\n` +
+      `📍 Luogo: ${ticket.eventLocation || 'Non specificato'}\n` +
+      `👤 Nome: ${ticket.customerName || 'Non specificato'}\n` +
+      `🎫 Codice: ${ticketCode}\n\n` +
+      `Visualizza il biglietto qui: ${ticketLink}`;
+
+    // Costruisci l'URL di WhatsApp
+    const whatsappUrl = `https://wa.me/${formattedPhone}?text=${encodeURIComponent(message)}`;
+    console.log('URL WhatsApp generato:', whatsappUrl);
+
+    // Apri WhatsApp
+    window.open(whatsappUrl, '_blank');
+
+    // Aggiorna il documento del biglietto
+    const ticketRef = doc(db, 'tickets', ticket.id);
+    await updateDoc(ticketRef, {
+      customerPhone: phoneNumber,
+      whatsappSentAt: serverTimestamp()
+    });
 
     return true;
   } catch (error) {
     console.error('Errore nell\'invio del biglietto via WhatsApp:', error);
-    // Non rilanciare l'errore, per permettere di usare il metodo di fallback
-    return false;
+    throw error;
   }
 }; 

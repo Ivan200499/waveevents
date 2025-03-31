@@ -159,7 +159,7 @@ function App() {
                     } 
                   />
                   <Route 
-                    path="/ticket/:id" 
+                    path="/ticket/:ticketCode" 
                     element={<TicketPage />} 
                   />
                   <Route 

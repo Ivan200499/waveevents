@@ -233,55 +233,18 @@ function SellTicketModal({ isOpen, onClose, event, onSell }) {
   };
 
   const openWhatsApp = (phoneNumber, message, ticketCode) => {
-    // Non formattare il numero qui, la formattazione avverrà nel servizio WhatsApp
-    // per garantire consistenza in tutta l'app
+    // Rimuovi eventuali caratteri non numerici dal numero
+    const cleanPhone = phoneNumber.replace(/\D/g, '');
     
-    // Crea un link alla pagina del biglietto invece del link diretto al QR code
-    // Utilizziamo una URL della nostra applicazione che mostrerà una pagina elegante con il QR code
-    const ticketPageUrl = `${window.location.origin}/ticket/${ticketCode}`;
+    // Crea un link alla pagina del biglietto usando l'URL appropriato
+    const ticketPageUrl = `https://waveevents.app/ticket/${ticketCode}`;
     
     // Aggiungi il link alla pagina del biglietto al messaggio
     const completeMessage = `${message}\n\nVisualizza il tuo biglietto qui: ${ticketPageUrl}`;
     
-    // Usa il servizio WhatsApp ottimizzato se disponibile
-    try {
-      import('../../services/WhatsAppService')
-        .then(module => {
-          const { sendTicketViaWhatsApp } = module;
-          
-          // Crea un oggetto ticket con le informazioni necessarie
-          const ticketObj = {
-            eventName: event.name,
-            eventDate: formData.selectedDate,
-            eventLocation: event.location,
-            customerName: formData.customerName,
-            ticketCode: ticketCode,
-            code: ticketCode,
-            id: ticketCode
-          };
-          
-          // Usa il servizio ottimizzato con numero originale, la formattazione 
-          // avverrà dentro il servizio
-          sendTicketViaWhatsApp(ticketObj, phoneNumber);
-        })
-        .catch(error => {
-          console.error('Errore nel caricamento del servizio WhatsApp:', error);
-          
-          // Fallback con metodo tradizionale
-          // Per il fallback, usa un formato semplice
-          const cleanPhone = phoneNumber.replace(/\D/g, '');
-          const whatsappUrl = `https://wa.me/${cleanPhone.startsWith('39') ? '' : '39'}${cleanPhone}?text=${encodeURIComponent(completeMessage)}`;
-          window.open(whatsappUrl, '_blank');
-        });
-    } catch (error) {
-      console.error('Errore nell\'invio WhatsApp:', error);
-      
-      // Fallback con metodo tradizionale
-      // Per il fallback, usa un formato semplice
-      const cleanPhone = phoneNumber.replace(/\D/g, '');
-      const whatsappUrl = `https://wa.me/${cleanPhone.startsWith('39') ? '' : '39'}${cleanPhone}?text=${encodeURIComponent(completeMessage)}`;
-      window.open(whatsappUrl, '_blank');
-    }
+    // Apri WhatsApp con il messaggio
+    const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(completeMessage)}`;
+    window.open(whatsappUrl, '_blank');
   };
 
   const handleSubmit = async (e) => {
@@ -365,28 +328,24 @@ function SellTicketModal({ isOpen, onClose, event, onSell }) {
 
         // Create ticket document
         const ticketRef = doc(collection(db, 'tickets'));
-      const ticketData = {
-        eventId: event.id,
-        eventName: event.name,
+        const ticketData = {
+          ticketCode: ticketCode,
+          code: ticketCode,
+          eventName: event.name,
           eventDate: formData.selectedDate,
-        eventLocation: event.location,
-          ticketCode,
+          eventLocation: event.location,
           customerName: formData.customerName,
           customerEmail: formData.customerEmail,
           customerPhone: formData.customerPhone,
-        quantity: formData.quantity,
+          quantity: formData.quantity,
           ticketType: formData.selectedTicketType,
           price: ticketPrice,
           totalPrice,
-        sellerId: currentUser.uid,
-          sellerName: userData.name,
-          saleDate: serverTimestamp(),
           status: 'active',
-          tableInfo: formData.includeTable && formData.selectedTableType ? {
-            type: formData.selectedTableType,
-            seats: formData.selectedTableType.seats,
-            price: formData.selectedTableType.price
-          } : null
+          saleDate: serverTimestamp(),
+          sellerId: currentUser.uid,
+          sellerName: userData.name,
+          eventId: event.id
         };
 
         console.log('Dati biglietto da salvare:', ticketData);

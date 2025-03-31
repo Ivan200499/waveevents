@@ -71,7 +71,6 @@ function TicketPage() {
   const [error, setError] = useState(null);
   const [qrLoaded, setQrLoaded] = useState(false);
   const [isZoomed, setIsZoomed] = useState(false);
-  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   const ticketContainerRef = useRef(null);
   const isWhatsAppWebView = isInWhatsAppWebView();
   const isIOSDevice = isIOS();
@@ -343,133 +342,87 @@ function TicketPage() {
     // Imposta titolo e meta tag quando il componente si monta
     updateMetaTags('Caricamento Biglietto', 'Caricamento dei dettagli del biglietto in corso...');
     
-    // Aggiungi classe per WhatsApp WebView
-    if (isWhatsAppWebView) {
-      document.body.classList.add('whatsapp-webview');
-    }
-    
-    // Rimuovi scroll prevention che potrebbe essere attivo
-    document.body.style.overflow = 'auto';
-    document.documentElement.style.overflow = 'auto';
-    
+    let isMounted = true; // Per evitare memory leak e sfarfallii
+
     async function fetchTicket() {
       try {
-        // Aggiungiamo un ritardo intenzionale solo per iOS WebView
-        // per dare tempo al browser di renderizzare la UI
-        if (isIOSDevice && isWhatsAppWebView && !hasLoadedOnce) {
-          await new Promise(resolve => setTimeout(resolve, 300));
-          setHasLoadedOnce(true);
+        if (!ticketCode) {
+          throw new Error('Codice biglietto non fornito');
         }
-        
-        // Log del codice biglietto per debug
-        console.log('URL ticketCode ricevuto:', ticketCode);
-        
-        // Decifra il codice URL se necessario
-        let processedTicketCode = ticketCode;
-        try {
-          const decodedTicketCode = decodeURIComponent(ticketCode);
-          if (decodedTicketCode !== ticketCode) {
-            console.log('Codice decodificato da URL:', decodedTicketCode);
-            processedTicketCode = decodedTicketCode;
-          }
-        } catch (e) {
-          console.warn('Errore nella decodifica del ticketCode:', e);
-        }
-        
-        // La verifica del codice ora è meno restrittiva: 
-        // controlliamo solo che esista un valore
-        if (!processedTicketCode) {
-          console.warn('Codice biglietto mancante o vuoto');
-          throw new Error('Codice biglietto non valido o mancante');
-        }
+
+        console.log('Inizio ricerca biglietto con codice:', ticketCode);
         
         // Verifica se il biglietto è già in cache
-        const cacheKey = getTicketCacheKey(processedTicketCode);
+        const cacheKey = getTicketCacheKey(ticketCode);
         const cachedTicket = getPersistentCache(cacheKey);
         
         if (cachedTicket) {
-          setTicket(cachedTicket);
-          
-          // Anche con i dati in cache, aggiorna i meta tag
-          const pageTitle = cachedTicket.eventName ? `Biglietto: ${cachedTicket.eventName}` : 'Visualizza biglietto';
-          const pageDesc = cachedTicket.eventName
-            ? `Biglietto per ${cachedTicket.eventName}${cachedTicket.eventDate ? ` il ${formatDate(cachedTicket.eventDate)}` : ''}`
-            : 'Dettagli del biglietto per l\'evento';
-            
-          updateMetaTags(pageTitle, pageDesc);
-          setLoading(false);
+          console.log('Biglietto trovato in cache:', cachedTicket);
+          if (isMounted) {
+            setTicket(cachedTicket);
+            setLoading(false);
+          }
           return;
         }
         
         // Se non in cache, carica dal database
         const ticketsRef = collection(db, 'tickets');
-        let ticketSnapshot = null;
-        let ticketData = null;
         
-        try {
-          // Prova prima a cercare per ticketCode
-          console.log('Cercando biglietto con ticketCode:', processedTicketCode);
-          const q1 = query(ticketsRef, where('ticketCode', '==', processedTicketCode));
-          const querySnapshot1 = await getDocs(q1);
-          
-          if (!querySnapshot1.empty) {
-            const ticketDoc = querySnapshot1.docs[0];
-            ticketData = {
+        // Cerca prima per ticketCode (identificatore principale)
+        console.log('Cercando biglietto con ticketCode:', ticketCode);
+        let q = query(ticketsRef, where('ticketCode', '==', ticketCode));
+        let querySnapshot = await getDocs(q);
+        
+        if (querySnapshot.empty) {
+          // Se non trovato, cerca per code (fallback)
+          console.log('Biglietto non trovato per ticketCode, cerco per code');
+          q = query(ticketsRef, where('code', '==', ticketCode));
+          querySnapshot = await getDocs(q);
+        }
+        
+        if (querySnapshot.empty) {
+          // Se ancora non trovato, prova con l'ID (ultimo fallback)
+          console.log('Biglietto non trovato per code, cerco per ID');
+          const ticketDoc = await getDoc(doc(db, 'tickets', ticketCode));
+          if (ticketDoc.exists()) {
+            const ticketData = {
               id: ticketDoc.id,
               ...ticketDoc.data()
             };
-          } else {
-            // Prova con il campo code
-            console.log('Cercando biglietto con code:', processedTicketCode);
-            const q2 = query(ticketsRef, where('code', '==', processedTicketCode));
-            const querySnapshot2 = await getDocs(q2);
-            
-            if (!querySnapshot2.empty) {
-              const ticketDoc = querySnapshot2.docs[0];
-              ticketData = {
-                id: ticketDoc.id,
-                ...ticketDoc.data()
-              };
-            } else {
-              // Prova come ID diretto
-              console.log('Cercando biglietto con ID:', processedTicketCode);
-              const ticketDocRef = doc(db, 'tickets', processedTicketCode);
-              ticketSnapshot = await getDoc(ticketDocRef);
-              
-              if (ticketSnapshot.exists()) {
-                ticketData = {
-                  id: ticketSnapshot.id,
-                  ...ticketSnapshot.data()
-                };
-              } else {
-                throw new Error('Biglietto non trovato');
-              }
+            console.log('Biglietto trovato per ID:', ticketData);
+            if (isMounted) {
+              setTicket(ticketData);
+              setPersistentCache(cacheKey, ticketData, CACHE_DURATION.TICKETS);
+              setLoading(false);
             }
+            return;
           }
-        } catch (queryError) {
-          console.error('Errore nella query del biglietto:', queryError);
-          throw new Error('Errore nel recupero del biglietto');
+          
+          throw new Error('Biglietto non trovato');
         }
         
-        if (ticketData) {
-          // Recupera anche i dettagli dell'evento se abbiamo un ID evento valido
-          if (ticketData.eventId) {
-            try {
-              const eventRef = doc(db, 'events', ticketData.eventId);
-              const eventSnap = await getDoc(eventRef);
-              
-              if (eventSnap.exists()) {
-                ticketData.eventDetails = eventSnap.data();
-              }
-            } catch (eventError) {
-              console.warn('Non è stato possibile recuperare i dettagli dell\'evento:', eventError);
-              // Continuiamo anche senza dettagli evento
-            }
+        // Prendi il primo risultato (dovrebbe essere unico)
+        const ticketDoc = querySnapshot.docs[0];
+        const ticketData = {
+          id: ticketDoc.id,
+          ...ticketDoc.data()
+        };
+        
+        console.log('Biglietto trovato:', ticketData);
+        
+        // Recupera anche i dettagli dell'evento
+        if (ticketData.eventId) {
+          const eventRef = doc(db, 'events', ticketData.eventId);
+          const eventSnap = await getDoc(eventRef);
+          
+          if (eventSnap.exists()) {
+            ticketData.eventDetails = eventSnap.data();
+            console.log('Dettagli evento aggiunti:', ticketData.eventDetails);
           }
-          
+        }
+        
+        if (isMounted) {
           setTicket(ticketData);
-          
-          // Salva il biglietto in cache per uso futuro
           setPersistentCache(cacheKey, ticketData, CACHE_DURATION.TICKETS);
           
           // Aggiorna il titolo con il nome dell'evento
@@ -479,26 +432,28 @@ function TicketPage() {
             : 'Dettagli del biglietto per l\'evento';
           
           updateMetaTags(pageTitle, pageDesc);
-        } else {
-          throw new Error('Biglietto non trovato');
         }
       } catch (err) {
-        console.error('Errore nel recupero del biglietto:', err);
-        setError(err.message || 'Errore nel caricamento del biglietto');
-        updateMetaTags('Errore - Biglietto', 'Si è verificato un errore durante il caricamento del biglietto', true);
+        console.error('Errore dettagliato nel recupero del biglietto:', err);
+        if (isMounted) {
+          setError(err.message || 'Errore nel recupero del biglietto');
+          updateMetaTags('Errore - Biglietto', 'Si è verificato un errore durante il caricamento del biglietto', true);
+        }
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     }
     
     fetchTicket();
     
-    // Ripristina il titolo originale quando il componente si smonta
+    // Cleanup function
     return () => {
-      document.title = 'Wave Events';
-      document.body.classList.remove('whatsapp-webview');
+      isMounted = false;
+      document.title = 'Ticket Management System';
     };
-  }, [ticketCode, isWhatsAppWebView, isIOSDevice, hasLoadedOnce]);
+  }, [ticketCode]);
 
   // Mostra stato di caricamento
   if (loading) {
@@ -522,12 +477,20 @@ function TicketPage() {
           </div>
           <h2>Impossibile caricare il biglietto</h2>
           <p>{error || 'Si è verificato un errore durante il caricamento del biglietto'}</p>
-          <button 
-            className="retry-button"
-            onClick={() => window.location.reload()}
-          >
-            Riprova
-          </button>
+          <div className="error-actions">
+            <button 
+              className="retry-button"
+              onClick={() => window.location.reload()}
+            >
+              Riprova
+            </button>
+            <button 
+              className="home-button"
+              onClick={() => window.location.href = '/'}
+            >
+              Torna alla Home
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -552,58 +515,43 @@ function TicketPage() {
     <div className={`ticket-page ${isZoomed ? 'zoomed' : ''}`} ref={ticketContainerRef}>
       <div className="ticket-container">
         <div className="ticket-header">
-          <img src={APP_LOGO} alt="Wave Events Logo" className="ticket-logo" />
-          <h1 style={textStyles.title}>{ticket.eventName || 'Biglietto Evento'}</h1>
+          <h1 style={textStyles.title}>{ticket.ticketCode || ticket.code || ticket.id}</h1>
         </div>
 
         <div className="ticket-content">
-          <div className="ticket-section">
-            <div className="ticket-info">
-              <div className="info-row">
-                <IoCalendarOutline size={deviceConfig.iconSize.normal} />
-                <span style={textStyles.normal}>{formatDate(ticket.eventDate)}</span>
-              </div>
-              <div className="info-row">
-                <IoTimeOutline size={deviceConfig.iconSize.normal} />
-                <span style={textStyles.normal}>{formatTime(ticket.eventDate)}</span>
-              </div>
-              <div className="info-row">
-                <IoLocationOutline size={deviceConfig.iconSize.normal} />
-                <span style={textStyles.normal}>{ticket.eventLocation || 'Luogo non specificato'}</span>
-              </div>
-              <div className="info-row">
-                <IoPersonOutline size={deviceConfig.iconSize.normal} />
-                <span style={textStyles.normal}>{ticket.customerName || 'Nome non specificato'}</span>
-              </div>
+          <div className="ticket-info">
+            <h2 style={textStyles.subtitle}>{ticket.eventName || 'Biglietto Evento'}</h2>
+            <div className="info-row">
+              <IoLocationOutline size={deviceConfig.iconSize.normal} />
+              <span style={textStyles.normal}>{ticket.eventLocation || 'Luogo non specificato'}</span>
             </div>
-
-            <div className="ticket-qr">
-              <img
-                src={generateQRCode(ticket.ticketCode || ticket.code || ticket.id)}
-                alt="QR Code Biglietto"
-                style={qrCodeStyle}
-                onClick={handleQrCodeClick}
-                onLoad={handleQRLoad}
-              />
-              <p style={textStyles.small}>Clicca per ingrandire</p>
+            <div className="info-row">
+              <IoCalendarOutline size={deviceConfig.iconSize.normal} />
+              <span style={textStyles.normal}>{formatDate(ticket.eventDate)} {formatTime(ticket.eventDate)}</span>
+            </div>
+            <div className="info-row">
+              <IoTicketOutline size={deviceConfig.iconSize.normal} />
+              <span style={textStyles.normal}>Quantity: {ticket.quantity || 1}</span>
+            </div>
+            <div className="info-row">
+              <IoPricetagOutline size={deviceConfig.iconSize.normal} />
+              <span style={textStyles.normal}>Total Order: € {ticket.totalPrice?.toFixed(2) || '0.00'}</span>
+            </div>
+            <div className="info-row">
+              <IoCardOutline size={deviceConfig.iconSize.normal} />
+              <span style={textStyles.normal}>ID: {ticket.ticketCode || ticket.code || ticket.id}</span>
             </div>
           </div>
 
-          <div className="ticket-footer">
-            <div className="ticket-details">
-              <div className="detail-row">
-                <IoTicketOutline size={deviceConfig.iconSize.small} />
-                <span style={textStyles.small}>Codice: {ticket.ticketCode || ticket.code || ticket.id}</span>
-              </div>
-              <div className="detail-row">
-                <IoCardOutline size={deviceConfig.iconSize.small} />
-                <span style={textStyles.small}>Tipo: {ticket.ticketType || 'Standard'}</span>
-              </div>
-              <div className="detail-row">
-                <IoPricetagOutline size={deviceConfig.iconSize.small} />
-                <span style={textStyles.small}>Prezzo: €{ticket.price || '0.00'}</span>
-              </div>
-            </div>
+          <div className="ticket-qr">
+            <img
+              src={generateQRCode(ticket.ticketCode || ticket.code || ticket.id)}
+              alt="QR Code Biglietto"
+              style={qrCodeStyle}
+              onClick={handleQrCodeClick}
+              onLoad={handleQRLoad}
+            />
+            <p style={textStyles.small}>Mostra questo QR code all'ingresso dell'evento per validare il tuo biglietto</p>
           </div>
         </div>
       </div>
