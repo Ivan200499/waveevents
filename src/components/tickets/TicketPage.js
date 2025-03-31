@@ -346,99 +346,71 @@ function TicketPage() {
 
     async function fetchTicket() {
       try {
+        console.log('Inizio fetchTicket');
+        console.log('TicketCode dal parametro:', ticketCode);
+        
         if (!ticketCode) {
-          throw new Error('Codice biglietto non fornito');
-        }
-
-        console.log('Inizio ricerca biglietto con codice:', ticketCode);
-        
-        // Verifica se il biglietto è già in cache
-        const cacheKey = getTicketCacheKey(ticketCode);
-        const cachedTicket = getPersistentCache(cacheKey);
-        
-        if (cachedTicket) {
-          console.log('Biglietto trovato in cache:', cachedTicket);
-          if (isMounted) {
-            setTicket(cachedTicket);
-            setLoading(false);
-          }
+          console.error('TicketCode non trovato nei parametri');
+          setError('Codice biglietto non valido');
           return;
         }
-        
-        // Se non in cache, carica dal database
-        const ticketsRef = collection(db, 'tickets');
-        
-        // Cerca prima per ticketCode (identificatore principale)
-        console.log('Cercando biglietto con ticketCode:', ticketCode);
-        let q = query(ticketsRef, where('ticketCode', '==', ticketCode));
-        let querySnapshot = await getDocs(q);
-        
-        if (querySnapshot.empty) {
-          // Se non trovato, cerca per code (fallback)
-          console.log('Biglietto non trovato per ticketCode, cerco per code');
-          q = query(ticketsRef, where('code', '==', ticketCode));
-          querySnapshot = await getDocs(q);
+
+        // Prima controlla se il ticket è già in cache
+        const cachedTicket = getPersistentCache(getTicketCacheKey(ticketCode));
+        if (cachedTicket) {
+          console.log('Ticket trovato in cache:', cachedTicket);
+          setTicket(cachedTicket);
+          return;
         }
+
+        // Query principale: cerca per ticketCode
+        console.log('Ricerca ticket per ticketCode:', ticketCode);
+        const ticketRef = collection(db, 'tickets');
+        const q = query(ticketRef, where('ticketCode', '==', ticketCode));
+        const querySnapshot = await getDocs(q);
         
-        if (querySnapshot.empty) {
-          // Se ancora non trovato, prova con l'ID (ultimo fallback)
-          console.log('Biglietto non trovato per code, cerco per ID');
-          const ticketDoc = await getDoc(doc(db, 'tickets', ticketCode));
-          if (ticketDoc.exists()) {
-            const ticketData = {
-              id: ticketDoc.id,
-              ...ticketDoc.data()
-            };
-            console.log('Biglietto trovato per ID:', ticketData);
-            if (isMounted) {
-              setTicket(ticketData);
-              setPersistentCache(cacheKey, ticketData, CACHE_DURATION.TICKETS);
-              setLoading(false);
-            }
-            return;
-          }
-          
-          throw new Error('Biglietto non trovato');
-        }
-        
-        // Prendi il primo risultato (dovrebbe essere unico)
-        const ticketDoc = querySnapshot.docs[0];
-        const ticketData = {
-          id: ticketDoc.id,
-          ...ticketDoc.data()
-        };
-        
-        console.log('Biglietto trovato:', ticketData);
-        
-        // Recupera anche i dettagli dell'evento
-        if (ticketData.eventId) {
-          const eventRef = doc(db, 'events', ticketData.eventId);
-          const eventSnap = await getDoc(eventRef);
-          
-          if (eventSnap.exists()) {
-            ticketData.eventDetails = eventSnap.data();
-            console.log('Dettagli evento aggiunti:', ticketData.eventDetails);
-          }
-        }
-        
-        if (isMounted) {
+        if (!querySnapshot.empty) {
+          console.log('Ticket trovato per ticketCode');
+          const ticketData = querySnapshot.docs[0].data();
+          console.log('Dati ticket:', ticketData);
           setTicket(ticketData);
-          setPersistentCache(cacheKey, ticketData, CACHE_DURATION.TICKETS);
-          
-          // Aggiorna il titolo con il nome dell'evento
-          const pageTitle = ticketData.eventName ? `Biglietto: ${ticketData.eventName}` : 'Visualizza biglietto';
-          const pageDesc = ticketData.eventName
-            ? `Biglietto per ${ticketData.eventName}${ticketData.eventDate ? ` il ${formatDate(ticketData.eventDate)}` : ''}`
-            : 'Dettagli del biglietto per l\'evento';
-          
-          updateMetaTags(pageTitle, pageDesc);
+          setPersistentCache(getTicketCacheKey(ticketCode), ticketData, CACHE_DURATION.TICKETS);
+          return;
         }
-      } catch (err) {
-        console.error('Errore dettagliato nel recupero del biglietto:', err);
-        if (isMounted) {
-          setError(err.message || 'Errore nel recupero del biglietto');
-          updateMetaTags('Errore - Biglietto', 'Si è verificato un errore durante il caricamento del biglietto', true);
+
+        // Se non trovato, prova a cercare per code
+        console.log('Ricerca ticket per code:', ticketCode);
+        const codeQuery = query(ticketRef, where('code', '==', ticketCode));
+        const codeSnapshot = await getDocs(codeQuery);
+        
+        if (!codeSnapshot.empty) {
+          console.log('Ticket trovato per code');
+          const ticketData = codeSnapshot.docs[0].data();
+          console.log('Dati ticket:', ticketData);
+          setTicket(ticketData);
+          setPersistentCache(getTicketCacheKey(ticketCode), ticketData, CACHE_DURATION.TICKETS);
+          return;
         }
+
+        // Se ancora non trovato, prova a cercare per id
+        console.log('Ricerca ticket per id:', ticketCode);
+        const idQuery = query(ticketRef, where('id', '==', ticketCode));
+        const idSnapshot = await getDocs(idQuery);
+        
+        if (!idSnapshot.empty) {
+          console.log('Ticket trovato per id');
+          const ticketData = idSnapshot.docs[0].data();
+          console.log('Dati ticket:', ticketData);
+          setTicket(ticketData);
+          setPersistentCache(getTicketCacheKey(ticketCode), ticketData, CACHE_DURATION.TICKETS);
+          return;
+        }
+
+        console.error('Nessun ticket trovato per:', ticketCode);
+        setError('Biglietto non trovato');
+      } catch (error) {
+        console.error('Errore nel recupero del ticket:', error);
+        setError('Errore nel caricamento del biglietto');
       } finally {
         if (isMounted) {
           setLoading(false);
