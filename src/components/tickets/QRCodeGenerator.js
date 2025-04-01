@@ -1,15 +1,25 @@
 import React from 'react';
 import QRCode from 'qrcode.react';
-import { format } from 'date-fns';
-import { it } from 'date-fns/locale';
 import useTheme from '../../hooks/useTheme';
 
 const QRCodeGenerator = ({ ticketData }) => {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
 
-  const formatDate = (date) => {
-    return format(new Date(date), 'PPP', { locale: it });
+  const formatDate = (dateString) => {
+    try {
+      const date = new Date(dateString);
+      return new Intl.DateTimeFormat('it-IT', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      }).format(date);
+    } catch (error) {
+      console.error('Errore nella formattazione della data:', error);
+      return dateString;
+    }
   };
 
   const qrValue = JSON.stringify({
