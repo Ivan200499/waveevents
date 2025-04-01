@@ -41,7 +41,7 @@
   cursor: pointer;
 }
 
-.date-item:hover:not(.sold-out) {
+.date-item:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   border-color: #4a90e2;
@@ -51,11 +51,6 @@
   border-color: #4a90e2;
   background-color: #f0f7ff;
   box-shadow: 0 2px 8px rgba(74, 144, 226, 0.2);
-}
-
-.date-item.sold-out {
-  opacity: 0.6;
-  cursor: not-allowed;
 }
 
 .date-item-content {

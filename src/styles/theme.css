@@ -583,4 +583,161 @@ th {
 [data-theme='dark'] .badge-info {
   background-color: var(--info-background);
   color: var(--info-text);
+}
+
+:root[data-theme="light"] {
+  --background-primary: #ffffff;
+  --background-secondary: #f8f9fa;
+  --background-tertiary: #e9ecef;
+  --text-primary: #212529;
+  --text-secondary: #495057;
+  --text-tertiary: #6c757d;
+  --primary-color: #4a90e2;
+  --primary-color-dark: #357abd;
+  --success-color: #28a745;
+  --error-color: #dc3545;
+  --warning-color: #ffc107;
+  --border-color: #dee2e6;
+  --shadow-color: rgba(0, 0, 0, 0.1);
+  --card-background: #ffffff;
+  --notification-background: #ffffff;
+  --notification-text: #212529;
+  --notification-success: #d4edda;
+  --notification-error: #f8d7da;
+  --notification-warning: #fff3cd;
+  --ticket-background: #ffffff;
+  --ticket-text: #212529;
+  --ticket-border: #dee2e6;
+}
+
+:root[data-theme="dark"] {
+  --background-primary: #1a1a1a;
+  --background-secondary: #2d2d2d;
+  --background-tertiary: #404040;
+  --text-primary: #ffffff;
+  --text-secondary: #cccccc;
+  --text-tertiary: #999999;
+  --primary-color: #4a90e2;
+  --primary-color-dark: #357abd;
+  --success-color: #28a745;
+  --error-color: #dc3545;
+  --warning-color: #ffc107;
+  --border-color: #404040;
+  --shadow-color: rgba(0, 0, 0, 0.3);
+  --card-background: #2d2d2d;
+  --notification-background: #2d2d2d;
+  --notification-text: #ffffff;
+  --notification-success: #1e4c2c;
+  --notification-error: #4c1e1e;
+  --notification-warning: #4c401e;
+  --ticket-background: #2d2d2d;
+  --ticket-text: #ffffff;
+  --ticket-border: #404040;
+}
+
+/* Ottimizzazioni per mobile */
+@media (max-width: 768px) {
+  :root {
+    --spacing-unit: 8px;
+  }
+}
+
+/* Stili per le notifiche */
+.notification {
+  position: fixed;
+  bottom: var(--spacing-unit);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 12px 20px;
+  border-radius: 8px;
+  background: var(--notification-background);
+  color: var(--notification-text);
+  box-shadow: 0 2px 10px var(--shadow-color);
+  z-index: 1000;
+  max-width: 90vw;
+  width: auto;
+  text-align: center;
+  font-size: 14px;
+  animation: slideUp 0.3s ease-out;
+}
+
+.notification.success {
+  background: var(--notification-success);
+}
+
+.notification.error {
+  background: var(--notification-error);
+}
+
+.notification.warning {
+  background: var(--notification-warning);
+}
+
+/* Stili per il biglietto WhatsApp */
+.ticket-whatsapp {
+  background: var(--ticket-background);
+  color: var(--ticket-text);
+  border: 1px solid var(--ticket-border);
+  border-radius: 12px;
+  padding: 20px;
+  margin: 10px;
+  box-shadow: 0 2px 8px var(--shadow-color);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+}
+
+.ticket-whatsapp .header {
+  text-align: center;
+  margin-bottom: 15px;
+}
+
+.ticket-whatsapp .event-name {
+  font-size: 1.4em;
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+
+.ticket-whatsapp .ticket-info {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.ticket-whatsapp .qr-code {
+  display: flex;
+  justify-content: center;
+  margin: 20px 0;
+}
+
+.ticket-whatsapp .footer {
+  text-align: center;
+  font-size: 0.9em;
+  color: var(--text-tertiary);
+}
+
+@keyframes slideUp {
+  from {
+    transform: translate(-50%, 100%);
+    opacity: 0;
+  }
+  to {
+    transform: translate(-50%, 0);
+    opacity: 1;
+  }
+}
+
+/* Ottimizzazioni per la leggibilità del testo */
+* {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Miglioramenti per l'accessibilità */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 } 

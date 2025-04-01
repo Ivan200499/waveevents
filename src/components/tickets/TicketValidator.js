@@ -48,13 +48,25 @@ function TicketValidator() {
     if (scannerActive) {
       const html5QrcodeScanner = new Html5QrcodeScanner(
         "reader",
-        { fps: 10, qrbox: { width: 250, height: 250 } },
+        { 
+          fps: 10, 
+          qrbox: { width: 250, height: 250 },
+          videoConstraints: {
+            facingMode: { exact: "environment" }
+          }
+        },
         false
       );
 
-      html5QrcodeScanner.render((decodedText) => {
-        handleValidateTicket(decodedText);
-        html5QrcodeScanner.clear();
+      html5QrcodeScanner.render(async (decodedText) => {
+        try {
+          await handleValidateTicket(decodedText);
+          setTimeout(() => {
+            setMessage('');
+          }, 3000);
+        } catch (error) {
+          console.error('Errore durante la validazione:', error);
+        }
       }, (error) => {
         console.warn(`Code scan error = ${error}`);
       });
@@ -69,7 +81,6 @@ function TicketValidator() {
       console.log('Codice ricevuto:', code);
       let ticketCode;
 
-      // Se il codice è in formato JSON, estraiamo il ticketCode
       try {
         const ticketData = JSON.parse(code);
         console.log('Dati QR decodificati:', ticketData);
@@ -81,7 +92,6 @@ function TicketValidator() {
 
       console.log('Cercando biglietto con codice:', ticketCode);
 
-      // Query per cercare il biglietto
       const salesQuery = query(
         collection(db, 'tickets'),
         where('ticketCode', '==', ticketCode.trim())
@@ -90,13 +100,9 @@ function TicketValidator() {
       const salesSnapshot = await getDocs(salesQuery);
       console.log('Risultati ricerca:', salesSnapshot.size);
 
-      // Log dei documenti trovati
-      salesSnapshot.forEach(doc => {
-        console.log('Documento trovato:', doc.id, doc.data());
-      });
-
       if (salesSnapshot.empty) {
-        throw new Error('Biglietto non trovato');
+        setMessage('Biglietto non trovato');
+        return;
       }
 
       const saleDoc = salesSnapshot.docs[0];
@@ -104,15 +110,16 @@ function TicketValidator() {
       console.log('Dati della vendita:', saleData);
 
       if (saleData.validatedAt) {
-        throw new Error('Questo biglietto è già stato utilizzato!');
+        setMessage('Questo biglietto è già stato utilizzato!');
+        return;
       }
 
-      // Verifica la data dell'evento
       const eventRef = doc(db, 'events', saleData.eventId);
       const eventSnap = await getDoc(eventRef);
       
       if (!eventSnap.exists()) {
-        throw new Error('Evento non trovato');
+        setMessage('Evento non trovato');
+        return;
       }
 
       const eventData = eventSnap.data();
@@ -120,21 +127,17 @@ function TicketValidator() {
       const now = new Date();
 
       if (eventDate < now) {
-        throw new Error('Questo evento è già passato');
+        setMessage('Questo evento è già passato');
+        return;
       }
 
-      // Marca il biglietto come utilizzato
       await updateDoc(doc(db, 'tickets', saleDoc.id), {
         validatedAt: now.toISOString(),
         status: 'used',
         validatedBy: currentUser.uid
       });
 
-      setMessage(`Biglietto validato con successo!
-        Evento: ${saleData.eventName}
-        Cliente: ${saleData.customerEmail}
-        Quantità: ${saleData.quantity}
-      `);
+      setMessage(`✅ Biglietto validato!\n${saleData.eventName}\n${saleData.customerEmail}`);
       setTicketCode('');
 
     } catch (error) {

@@ -59,18 +59,13 @@ function DateSelector({ dates, selectedDate, onDateSelect }) {
           return (
             <div 
               key={dateItem.id} 
-              className={`date-item ${isSelected ? 'selected' : ''} ${dateItem.availableTickets <= 0 ? 'sold-out' : ''}`}
-              onClick={() => dateItem.availableTickets > 0 && onDateSelect(dateItem.id)}
+              className={`date-item ${isSelected ? 'selected' : ''}`}
+              onClick={() => onDateSelect(dateItem.id)}
             >
               <div className="date-item-content">
                 <div className="date-info">
                   <div className="date-day">{formattedDate}</div>
                   <div className="date-time">{formattedTime}</div>
-                </div>
-                <div className="date-tickets">
-                  {dateItem.availableTickets <= 0 && (
-                    <span className="tickets-sold-out">Esaurito</span>
-                  )}
                 </div>
               </div>
               {isSelected && <div className="date-selected-indicator">✓</div>}

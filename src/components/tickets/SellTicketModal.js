@@ -128,8 +128,9 @@ function SellTicketModal({ isOpen, onClose, event, onSell }) {
 
   const handleQuantityChange = (e) => {
     const newValue = e.target.value === '' ? '' : parseInt(e.target.value);
+    const maxTickets = getCurrentAvailableTickets();
     
-    if (newValue === '' || (!isNaN(newValue) && newValue >= 0)) {
+    if (newValue === '' || (!isNaN(newValue) && newValue >= 1 && newValue <= maxTickets)) {
       setFormData(prev => ({
         ...prev,
         quantity: newValue,
@@ -164,29 +165,39 @@ function SellTicketModal({ isOpen, onClose, event, onSell }) {
   };
 
   const getCurrentAvailableTickets = () => {
-    if (!event.isRecurring) {
-      if (formData.selectedTicketType.id === 'general') {
-        return event.availableTickets || 0;
-      }
-      return formData.selectedTicketType.totalTickets || 0;
-    }
-
-    if (!formData.selectedDate) return 0;
-
-    const dates = Array.isArray(event.dates) ? event.dates : [];
+    let availableTickets = 0;
     
-    const selectedDate = dates.find(d => {
-      if (!d || !d.date) return false;
-      return d.date === formData.selectedDate || new Date(d.date).toISOString() === formData.selectedDate;
-    });
+    // Se l'evento non è ricorrente (ha una sola data)
+    if (!event.isRecurring) {
+      // Per biglietti generali
+      if (formData.selectedTicketType.id === 'general') {
+        availableTickets = event.availableTickets || event.totalTickets || 0;
+      } else {
+        // Per altri tipi di biglietti
+        availableTickets = formData.selectedTicketType.availableTickets || formData.selectedTicketType.totalTickets || 0;
+      }
+    } else {
+      // Per eventi ricorrenti (con più date)
+      if (!formData.selectedDate) return 0;
 
-    if (!selectedDate) return 0;
+      const dates = Array.isArray(event.dates) ? event.dates : [];
+      
+      const selectedDate = dates.find(d => {
+        if (!d || !d.date) return false;
+        return d.date === formData.selectedDate || new Date(d.date).toISOString() === formData.selectedDate;
+      });
 
-    if (formData.selectedTicketType.id === 'general') {
-      return selectedDate.availableTickets || 0;
+      if (!selectedDate) return 0;
+
+      if (formData.selectedTicketType.id === 'general') {
+        availableTickets = selectedDate.availableTickets || selectedDate.totalTickets || 0;
+      } else {
+        availableTickets = formData.selectedTicketType.availableTickets || formData.selectedTicketType.totalTickets || 0;
+      }
     }
 
-    return formData.selectedTicketType.totalTickets || 0;
+    // Assicurati che il valore non sia mai negativo
+    return Math.max(0, availableTickets);
   };
 
   if (availableDates.length === 0) {
@@ -194,7 +205,7 @@ function SellTicketModal({ isOpen, onClose, event, onSell }) {
       <div className="modal-overlay">
         <div className="modal-content">
           <h2>Evento non disponibile</h2>
-          <p>Non ci sono date future per questo evento.</p>
+          <p>Non ci sono biglietti disponibili per questo evento.</p>
           <div className="modal-actions">
             <button type="button" className="btn-secondary" onClick={onClose}>
               Chiudi
@@ -514,15 +525,15 @@ function SellTicketModal({ isOpen, onClose, event, onSell }) {
 
           <div className="form-section">
             <h3><FaTicketAlt /> Quantità</h3>
-          <div className="form-group">
-            <input
-              type="number"
-              min="1"
+            <div className="form-group">
+              <input
+                type="number"
+                min="1"
                 max={getCurrentAvailableTickets()}
-                value={formData.quantity}
+                value={formData.quantity || 1}
                 onChange={handleQuantityChange}
-              required
-            />
+                required
+              />
               <span className="available-tickets">
                 Disponibili: {getCurrentAvailableTickets()}
               </span>

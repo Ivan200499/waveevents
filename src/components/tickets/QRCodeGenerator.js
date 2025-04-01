@@ -1,52 +1,70 @@
+import React from 'react';
 import QRCode from 'qrcode.react';
-import { useState } from 'react';
+import { format } from 'date-fns';
+import { it } from 'date-fns/locale';
+import useTheme from '../../hooks/useTheme';
 
-function QRCodeGenerator({ ticketData }) {
-  const [showDetails, setShowDetails] = useState(false);
+const QRCodeGenerator = ({ ticketData }) => {
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
 
-  const qrData = JSON.stringify({
+  const formatDate = (date) => {
+    return format(new Date(date), 'PPP', { locale: it });
+  };
+
+  const qrValue = JSON.stringify({
     ticketCode: ticketData.ticketCode,
     eventId: ticketData.eventId,
-    quantity: ticketData.quantity,
-    customerEmail: ticketData.customerEmail
+    eventName: ticketData.eventName
   });
 
   return (
-    <div style={{ textAlign: 'center', padding: '20px' }}>
-      <QRCode 
-        value={qrData}
-        size={256}
-        level={'H'}
-        includeMargin={true}
-      />
-      <button
-        onClick={() => setShowDetails(!showDetails)}
-        style={{
-          margin: '20px',
-          padding: '10px',
-          backgroundColor: '#2196F3',
-          color: 'white',
-          border: 'none',
-          borderRadius: '4px',
-          cursor: 'pointer'
-        }}
-      >
-        {showDetails ? 'Nascondi Dettagli' : 'Mostra Dettagli'}
-      </button>
-      
-      {showDetails && (
-        <div style={{ marginTop: '20px', textAlign: 'left' }}>
-          <h3>Dettagli Biglietto</h3>
-          <p><strong>Codice:</strong> {ticketData.ticketCode}</p>
-          <p><strong>Evento:</strong> {ticketData.eventName}</p>
-          <p><strong>Data:</strong> {new Date(ticketData.eventDate).toLocaleString()}</p>
-          <p><strong>Luogo:</strong> {ticketData.eventLocation}</p>
-          <p><strong>Quantità:</strong> {ticketData.quantity}</p>
-          <p><strong>Email Cliente:</strong> {ticketData.customerEmail}</p>
+    <div className="ticket-whatsapp">
+      <div className="header">
+        <div className="event-name">{ticketData.eventName}</div>
+        <div className="date">{formatDate(ticketData.eventDate)}</div>
+      </div>
+
+      <div className="ticket-info">
+        <div className="info-row">
+          <strong>Cliente:</strong>
+          <span>{ticketData.customerName}</span>
         </div>
-      )}
+        <div className="info-row">
+          <strong>Email:</strong>
+          <span>{ticketData.customerEmail}</span>
+        </div>
+        <div className="info-row">
+          <strong>Quantità:</strong>
+          <span>{ticketData.quantity}</span>
+        </div>
+        <div className="info-row">
+          <strong>Tipo:</strong>
+          <span>{ticketData.ticketType}</span>
+        </div>
+        <div className="info-row">
+          <strong>Prezzo:</strong>
+          <span>€{ticketData.price.toFixed(2)}</span>
+        </div>
+      </div>
+
+      <div className="qr-code">
+        <QRCode
+          value={qrValue}
+          size={200}
+          level="H"
+          includeMargin={true}
+          bgColor={isDark ? '#2d2d2d' : '#ffffff'}
+          fgColor={isDark ? '#ffffff' : '#000000'}
+        />
+      </div>
+
+      <div className="footer">
+        <p>Codice Biglietto: {ticketData.ticketCode}</p>
+        <small>Mostra questo QR code all'ingresso</small>
+      </div>
     </div>
   );
-}
+};
 
 export default QRCodeGenerator; 

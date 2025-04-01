@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthorization } from '../../hooks/useAuthorization';
 import AdminDashboard from './AdminDashboard';
-import ManagerDashboard from './ManagerDashboard';
+import ManagerDashboard from '../manager/ManagerDashboard';
 import TeamLeaderDashboard from './TeamLeaderDashboard';
 import PromoterDashboard from './PromoterDashboard';
 

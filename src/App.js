@@ -1,9 +1,11 @@
+import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { DeviceProvider } from './contexts/DeviceContext';
 import { useState, useEffect } from 'react';
+import useTheme from './hooks/useTheme';
 import './styles/theme.css';
 import './styles/responsive.css';
 import './App.css';
@@ -24,6 +26,7 @@ import TicketPage from './components/tickets/TicketPage';
 
 function App() {
   const [isAppReady, setIsAppReady] = useState(false);
+  const { theme } = useTheme();
 
   useEffect(() => {
     // Gestione viewport
@@ -100,7 +103,7 @@ function App() {
   const preventScroll = (e) => {};
 
   return (
-    <div className={`app ${isAppReady ? 'app-ready' : 'app-loading'}`} style={{ overflowY: 'auto' }}>
+    <div className={`app ${isAppReady ? 'app-ready' : 'app-loading'}`} style={{ overflowY: 'auto' }} data-theme={theme}>
       <Router>
         <ThemeProvider>
           <DeviceProvider>

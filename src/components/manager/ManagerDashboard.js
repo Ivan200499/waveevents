@@ -437,7 +437,19 @@ function ManagerDashboard() {
                 const eventDate = event.date || event.data || event.eventDate || new Date();
                 const eventLocation = event.location || event.luogo || event.posto || 'Localizzazione non specificata';
                 const eventPrice = event.ticketPrice || event.price || event.prezzo || 0;
-                const eventAvailableTickets = event.availableTickets || event.bigliettiDisponibili || 0;
+                
+                // Calcolo corretto dei biglietti disponibili
+                let eventAvailableTickets = 0;
+                if (event.subEvents && event.subEvents.length > 0) {
+                    // Se ci sono sotto-eventi, somma i biglietti disponibili di tutti
+                    eventAvailableTickets = event.subEvents.reduce((total, subEvent) => {
+                        return total + (subEvent.availableTickets || subEvent.bigliettiDisponibili || 0);
+                    }, 0);
+                } else {
+                    // Se è un evento singolo, usa direttamente il campo dei biglietti disponibili
+                    eventAvailableTickets = event.availableTickets || event.bigliettiDisponibili || event.totalTickets || 0;
+                }
+                
                 const eventDescription = event.description || event.descrizione || '';
                 const eventImage = event.imageUrl || event.immagine || '';
                 
@@ -459,8 +471,9 @@ function ManagerDashboard() {
                         {eventLocation}
                       </p>
                       <div className="event-price">€{typeof eventPrice === 'number' ? eventPrice.toFixed(2) : eventPrice}</div>
-                      <div className={`tickets-available ${eventAvailableTickets === 0 ? 'tickets-unavailable' : ''}`}>
-                  </div>
+                      <div className="tickets-available">
+                        {eventAvailableTickets > 0 && `Disponibili: ${eventAvailableTickets}`}
+                      </div>
                       {eventDescription && (
                     <div className="event-description">
                           <p>{eventDescription}</p>
