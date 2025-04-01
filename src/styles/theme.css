@@ -680,45 +680,73 @@ th {
   border: 1px solid var(--ticket-border);
   border-radius: 12px;
   padding: 20px;
-  margin: 10px;
+  margin: 10px auto;
   box-shadow: 0 2px 8px var(--shadow-color);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  max-width: 400px;
+  width: 100%;
 }
 
 .ticket-whatsapp .header {
   text-align: center;
-  margin-bottom: 15px;
+  margin-bottom: 20px;
+  padding: 15px;
+  background: var(--primary-color);
+  color: white;
+  border-radius: 8px;
 }
 
 .ticket-whatsapp .event-name {
   font-size: 1.4em;
   font-weight: bold;
-  margin-bottom: 10px;
+  margin-bottom: 5px;
+  color: var(--text-primary);
 }
 
 .ticket-whatsapp .ticket-info {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 10px;
-  margin-bottom: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 20px 0;
+  color: var(--text-primary);
 }
 
 .ticket-whatsapp .qr-code {
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin: 20px 0;
+  margin: 25px 0;
+  gap: 15px;
+}
+
+.ticket-whatsapp .qr-code img {
+  max-width: 200px;
+  height: auto;
+  background: white;
+  padding: 10px;
+  border-radius: 8px;
+}
+
+.ticket-whatsapp .qr-instructions {
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 0.95em;
+  margin: 10px 0;
+  font-weight: 500;
 }
 
 .ticket-whatsapp .footer {
   text-align: center;
   font-size: 0.9em;
   color: var(--text-tertiary);
-  margin-top: 15px;
+  margin-top: 20px;
+  padding-top: 15px;
+  border-top: 1px solid var(--border-color);
 }
 
 .ticket-whatsapp .footer p {
   margin: 5px 0;
+  color: var(--text-secondary);
 }
 
 .ticket-whatsapp .footer small {
@@ -726,16 +754,47 @@ th {
   text-align: center;
   width: 100%;
   margin-top: 8px;
+  color: var(--text-tertiary);
 }
 
-@keyframes slideUp {
-  from {
-    transform: translate(-50%, 100%);
-    opacity: 0;
+/* Dark theme specific styles */
+[data-theme="dark"] .ticket-whatsapp {
+  background: var(--background-secondary);
+  border-color: var(--border-color);
+}
+
+[data-theme="dark"] .ticket-whatsapp .header {
+  background: var(--primary-color);
+  color: white;
+}
+
+[data-theme="dark"] .ticket-whatsapp .event-name,
+[data-theme="dark"] .ticket-whatsapp .ticket-info {
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .ticket-whatsapp .qr-instructions {
+  color: var(--text-secondary);
+}
+
+[data-theme="dark"] .ticket-whatsapp .footer {
+  border-color: var(--border-color);
+}
+
+/* Mobile optimizations */
+@media (max-width: 480px) {
+  .ticket-whatsapp {
+    margin: 5px;
+    padding: 15px;
   }
-  to {
-    transform: translate(-50%, 0);
-    opacity: 1;
+
+  .ticket-whatsapp .header {
+    padding: 12px;
+    margin-bottom: 15px;
+  }
+
+  .ticket-whatsapp .qr-code img {
+    max-width: 180px;
   }
 }
 
@@ -753,4 +812,126 @@ th {
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* Layout verticale per manager e admin su mobile */
+@media (max-width: 768px) {
+  .manager-dashboard .dashboard-content,
+  .admin-dashboard .dashboard-content {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1rem;
+  }
+
+  .stats-overview,
+  .events-grid,
+  .team-leaders-section {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    width: 100%;
+  }
+
+  .stat-card,
+  .event-card,
+  .leader-card {
+    width: 100%;
+    margin: 0;
+  }
+}
+
+/* Miglioramenti per il tema scuro */
+[data-theme="dark"] {
+  /* Colori di base migliorati per il contrasto */
+  --text-primary: #ffffff;
+  --text-secondary: #e0e0e0;
+  --text-tertiary: #b0b0b0;
+  --background-secondary: #2d2d2d;
+  --border-color: #4a4a4a;
+  
+  /* Colori specifici per i form e input */
+  --input-background: #3a3a3a;
+  --input-text: #ffffff;
+  --input-border: #5a5a5a;
+  --input-placeholder: #999999;
+  
+  /* Colori per le date e i sotto-eventi */
+  --date-text: #ffffff;
+  --date-background: #3a3a3a;
+  --date-border: #5a5a5a;
+}
+
+/* Stili specifici per le date e i sotto-eventi nel tema scuro */
+[data-theme="dark"] .date-select,
+[data-theme="dark"] .sub-event-date {
+  background-color: var(--date-background);
+  color: var(--date-text);
+  border: 1px solid var(--date-border);
+}
+
+[data-theme="dark"] input,
+[data-theme="dark"] select,
+[data-theme="dark"] textarea {
+  background-color: var(--input-background);
+  color: var(--input-text);
+  border: 1px solid var(--input-border);
+}
+
+[data-theme="dark"] input::placeholder,
+[data-theme="dark"] select::placeholder,
+[data-theme="dark"] textarea::placeholder {
+  color: var(--input-placeholder);
+}
+
+[data-theme="dark"] .event-card,
+[data-theme="dark"] .stat-card,
+[data-theme="dark"] .leader-card {
+  background-color: var(--background-secondary);
+  border: 1px solid var(--border-color);
+}
+
+/* Miglioramenti specifici per i sotto-eventi */
+[data-theme="dark"] .sub-events-list {
+  background-color: var(--background-secondary);
+  border: 1px solid var(--border-color);
+  padding: 1rem;
+  border-radius: 8px;
+}
+
+[data-theme="dark"] .sub-event-item {
+  border-bottom: 1px solid var(--border-color);
+  padding: 0.75rem 0;
+}
+
+[data-theme="dark"] .sub-event-item:last-child {
+  border-bottom: none;
+}
+
+[data-theme="dark"] .sub-event-date,
+[data-theme="dark"] .sub-event-details {
+  color: var(--text-primary);
+}
+
+/* Miglioramenti per la leggibilità delle date disponibili */
+[data-theme="dark"] .available-dates {
+  background-color: var(--date-background);
+  border: 1px solid var(--date-border);
+  padding: 1rem;
+  border-radius: 8px;
+  margin: 1rem 0;
+}
+
+[data-theme="dark"] .date-option {
+  background-color: var(--input-background);
+  color: var(--text-primary);
+  border: 1px solid var(--input-border);
+  padding: 0.75rem;
+  margin: 0.5rem 0;
+  border-radius: 4px;
+}
+
+[data-theme="dark"] .date-option:hover {
+  background-color: var(--primary-color);
+  color: white;
 } 
