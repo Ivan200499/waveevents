@@ -343,6 +343,7 @@
 @media (max-width: 768px) {
   .dashboard-container {
     padding: 16px;
+    overflow-x: hidden;
   }
 
   .dashboard-header {
@@ -351,22 +352,204 @@
     gap: 16px;
   }
 
-  .dashboard-summary {
+  .dashboard-header h2 {
+    font-size: 1.5rem;
+    margin-bottom: 10px;
+  }
+
+  .dashboard-header button {
     width: 100%;
-    overflow-x: auto;
-    padding-bottom: 8px;
+    padding: 12px;
+    font-size: 14px;
+  }
+
+  .dashboard-summary {
+    flex-direction: column;
+    width: 100%;
   }
 
   .summary-card {
-    min-width: 200px;
+    width: 100%;
+    padding: 15px;
   }
 
+  .summary-icon {
+    padding: 8px;
+    font-size: 20px;
+  }
+
+  .summary-info h3 {
+    font-size: 1.25rem;
+  }
+
+  .leaders-grid {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+
+  .stats-content {
+    padding: 16px;
+    width: 95%;
+    max-height: 85vh;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+
+  .promoter-card {
+    padding: 16px;
+  }
+  
   .promoter-stats {
     grid-template-columns: 1fr;
+    gap: 10px;
   }
 
   .stat-row {
     flex-direction: column;
-    gap: 12px;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .stat {
+    width: 100%;
+    justify-content: space-between;
+    font-size: 14px;
+  }
+
+  .promoter-header {
+    flex-direction: column;
+    align-items: flex-start;
+    text-align: left;
+    gap: 10px;
+  }
+
+  .promoter-avatar {
+    width: 40px;
+    height: 40px;
+    font-size: 20px;
+    margin: 0 auto;
+  }
+
+  .promoter-info h3 {
+    font-size: 1rem;
+  }
+
+  .promoter-info p {
+    font-size: 0.8rem;
+  }
+
+  /* Adattamenti specifici per bottoni e azioni */
+  .card-actions {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .card-actions button {
+    width: 100%;
+    padding: 10px;
+    font-size: 14px;
+  }
+
+  /* Miglioramento visibilità delle cards */
+  .event-card {
+    padding: 15px;
+  }
+
+  .event-card h4 {
+    font-size: 1rem;
+  }
+
+  .event-details p {
+    font-size: 0.875rem;
+    margin: 6px 0;
+  }
+
+  .available-promoter-card {
+    padding: 15px;
+  }
+  
+  .available-promoter-card h4 {
+    font-size: 1rem;
+  }
+  
+  .available-promoter-card .email {
+    font-size: 0.8rem;
+  }
+}
+
+/* Ottimizzazioni specifiche per dispositivi più piccoli */
+@media (max-width: 480px) {
+  .dashboard-container {
+    padding: 12px;
+  }
+  
+  .dashboard-header h2 {
+    font-size: 1.3rem;
+  }
+  
+  .summary-card {
+    padding: 12px;
+  }
+  
+  .summary-icon {
+    padding: 6px;
+    font-size: 18px;
+  }
+  
+  .summary-info h3 {
+    font-size: 1.1rem;
+  }
+  
+  .promoter-card {
+    padding: 12px;
+  }
+  
+  .promoter-stats {
+    gap: 8px;
+  }
+  
+  /* Miglioramento della leggibilità dei testi */
+  .stat-info span {
+    font-size: 0.7rem;
+  }
+  
+  .stat-info h4 {
+    font-size: 0.9rem;
+  }
+  
+  /* Miglioramento del contrasto per la leggibilità */
+  .dashboard-header h2 {
+    color: var(--text-color);
+    font-weight: 600;
+  }
+  
+  .stat {
+    color: var(--text-color);
+  }
+}
+
+/* Dark mode enhancement for better readability */
+@media (prefers-color-scheme: dark) {
+  .stat {
+    color: #eee;
+  }
+  
+  .summary-info span {
+    color: #ccc;
+  }
+  
+  .summary-info h3 {
+    color: #fff;
+  }
+  
+  .promoter-info h3 {
+    color: #fff;
+  }
+  
+  .promoter-info p {
+    color: #ccc;
   }
 } 

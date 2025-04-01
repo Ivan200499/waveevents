@@ -151,20 +151,272 @@
 }
 
 @media (max-width: 768px) {
+  .dashboard-container {
+    padding: 16px;
+    overflow-x: hidden;
+  }
+
   .dashboard-header {
     flex-direction: column;
+    align-items: flex-start;
     gap: 15px;
+    margin-bottom: 20px;
+  }
+
+  .dashboard-header h2 {
+    font-size: 1.5rem;
+    margin-bottom: 10px;
   }
 
   .action-buttons {
     width: 100%;
     flex-direction: column;
+    gap: 10px;
+  }
+
+  .action-buttons button {
+    width: 100%;
+    padding: 12px;
+    font-size: 14px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .dashboard-section h3 {
+    font-size: 1.2rem;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #eee;
+  }
+
+  .grid {
+    grid-template-columns: 1fr;
+    gap: 15px;
   }
 
   .card-actions {
     flex-direction: column;
+    width: 100%;
+    gap: 10px;
   }
-} 
+
+  .card-actions button {
+    width: 100%;
+    padding: 10px;
+    font-size: 14px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .team-leader-card {
+    padding: 16px;
+  }
+
+  .header-content {
+    flex-direction: column;
+    align-items: flex-start;
+    text-align: left;
+    gap: 10px;
+  }
+
+  .team-leader-card h4 {
+    font-size: 1.1rem;
+  }
+
+  .email {
+    font-size: 0.85rem;
+  }
+
+  .promoters-list {
+    margin-top: 12px;
+    padding-top: 12px;
+  }
+
+  .promoters-list h5 {
+    font-size: 0.9rem;
+  }
+
+  .promoter-item {
+    padding: 6px;
+    gap: 8px;
+  }
+
+  .promoter-name {
+    font-size: 0.85rem;
+  }
+
+  .promoter-email {
+    font-size: 0.75rem;
+  }
+
+  .event-card {
+    padding: 16px;
+  }
+
+  .event-card h3 {
+    font-size: 1.1rem;
+  }
+
+  .event-details {
+    margin: 12px 0;
+  }
+
+  .detail-item {
+    margin-bottom: 6px;
+    font-size: 0.9rem;
+  }
+
+  .modal-content {
+    width: 95%;
+    padding: 16px;
+  }
+
+  .delete-confirmation {
+    padding: 20px;
+  }
+
+  .warning-message {
+    padding: 10px;
+    font-size: 0.9rem;
+  }
+
+  .confirmation-actions {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .confirmation-actions button {
+    width: 100%;
+  }
+
+  /* Stats modal adjustments */
+  .stats-modal {
+    padding: 10px;
+  }
+
+  .stats-content {
+    padding: 16px;
+    width: 95%;
+    max-height: 85vh;
+  }
+
+  .promoters-stats {
+    gap: 15px;
+  }
+
+  .promoter-card {
+    padding: 12px;
+  }
+
+  .promoter-card h4 {
+    font-size: 1rem;
+  }
+
+  .promoter-totals {
+    flex-direction: column;
+    font-size: 0.85rem;
+  }
+
+  .promoter-totals p {
+    margin: 4px 0;
+  }
+
+  .event-breakdown h5 {
+    font-size: 0.9rem;
+  }
+
+  .event-stat {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 8px;
+  }
+
+  .event-stat p {
+    margin: 2px 0;
+    font-size: 0.85rem;
+  }
+
+  .team-summary {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .summary-stat {
+    padding: 10px;
+  }
+
+  .summary-stat h3 {
+    font-size: 1.1rem;
+  }
+}
+
+/* Extra small devices */
+@media (max-width: 480px) {
+  .dashboard-container {
+    padding: 12px;
+  }
+
+  .dashboard-header h2 {
+    font-size: 1.3rem;
+  }
+
+  .action-buttons button {
+    padding: 10px;
+    font-size: 13px;
+  }
+
+  .team-leader-card, .event-card {
+    padding: 12px;
+  }
+
+  .team-leader-card h4, .event-card h3 {
+    font-size: 1rem;
+  }
+
+  .detail-item {
+    font-size: 0.8rem;
+  }
+
+  .card-actions button {
+    padding: 8px;
+    font-size: 13px;
+  }
+}
+
+/* Dark mode adjustments for better readability */
+@media (prefers-color-scheme: dark) {
+  .email {
+    color: #bbb;
+  }
+
+  .promoter-name {
+    color: #eee;
+  }
+
+  .promoter-email {
+    color: #bbb;
+  }
+
+  .detail-item {
+    color: #eee;
+  }
+
+  .detail-item .icon {
+    color: #4CAF50;
+  }
+
+  .warning-message {
+    background-color: #3a2f0b;
+    color: #f0cf65;
+  }
+
+  .warning-message svg {
+    color: #f0cf65;
+  }
+}
 
 .delete-confirmation {
   text-align: center;
