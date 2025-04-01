@@ -934,4 +934,372 @@ th {
 [data-theme="dark"] .date-option:hover {
   background-color: var(--primary-color);
   color: white;
+}
+
+/* Card degli eventi modernizzate */
+.event-card {
+  background: var(--card-background);
+  border-radius: 16px;
+  padding: 1.5rem;
+  margin: 1rem 0;
+  box-shadow: 0 4px 20px var(--shadow-color);
+  transition: all 0.3s ease;
+  border: 1px solid var(--border-color);
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.event-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 30px var(--shadow-color);
+}
+
+.event-card .event-image {
+  width: 100%;
+  height: 200px;
+  border-radius: 12px;
+  overflow: hidden;
+  margin: -1.5rem -1.5rem 1rem -1.5rem;
+}
+
+.event-card .event-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.event-card:hover .event-image img {
+  transform: scale(1.05);
+}
+
+.event-card .event-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.event-card h3 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+  line-height: 1.3;
+}
+
+.event-card p {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--text-secondary);
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.event-card .event-price {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--primary-color);
+  margin-top: 0.5rem;
+}
+
+.event-card .tickets-available {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: var(--success-background, rgba(40, 167, 69, 0.1));
+  color: var(--success-text, #28a745);
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.event-card .sell-button {
+  width: 100%;
+  padding: 1rem;
+  border-radius: 12px;
+  border: none;
+  background: var(--primary-color);
+  color: white;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-top: auto;
+}
+
+.event-card .sell-button:hover:not(:disabled) {
+  background: var(--primary-hover);
+  transform: translateY(-2px);
+}
+
+.event-card .sell-button:disabled {
+  background: var(--background-tertiary);
+  color: var(--text-tertiary);
+  cursor: not-allowed;
+}
+
+/* Storico biglietti modernizzato */
+.ticket-history {
+  background: var(--card-background);
+  border-radius: 16px;
+  padding: 1.5rem;
+  margin: 1rem 0;
+  box-shadow: 0 4px 20px var(--shadow-color);
+}
+
+.history-card {
+  background: var(--background-secondary);
+  border-radius: 12px;
+  padding: 1.25rem;
+  margin: 1rem 0;
+  border: 1px solid var(--border-color);
+  transition: all 0.3s ease;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 1rem;
+  align-items: center;
+}
+
+.history-card:hover {
+  transform: translateX(5px);
+  box-shadow: 0 4px 15px var(--shadow-color);
+}
+
+.history-card .ticket-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.history-card .ticket-event {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.3;
+}
+
+.history-card .ticket-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+}
+
+.history-card .ticket-price {
+  font-weight: 600;
+  color: var(--primary-color);
+  font-size: 1.1rem;
+}
+
+.history-card .ticket-status {
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.history-card .ticket-status.valid {
+  background: var(--success-background);
+  color: var(--success-text);
+}
+
+.history-card .ticket-status.used {
+  background: var(--warning-background);
+  color: var(--warning-text);
+}
+
+.history-card .ticket-status.expired {
+  background: var(--error-background);
+  color: var(--error-text);
+}
+
+/* Ottimizzazioni per mobile */
+@media (max-width: 768px) {
+  .event-card {
+    padding: 1rem;
+  }
+
+  .event-card .event-image {
+    height: 160px;
+    margin: -1rem -1rem 1rem -1rem;
+  }
+
+  .history-card {
+    grid-template-columns: 1fr;
+    padding: 1rem;
+  }
+
+  .history-card .ticket-status {
+    justify-self: start;
+  }
+
+  .history-card:hover {
+    transform: none;
+  }
+}
+
+/* Dark theme specific styles */
+[data-theme="dark"] .event-card,
+[data-theme="dark"] .history-card {
+  background: var(--background-secondary);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+[data-theme="dark"] .event-card:hover,
+[data-theme="dark"] .history-card:hover {
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .tickets-available {
+  background: var(--success-background, rgba(40, 167, 69, 0.2));
+  color: var(--success-text, #4ade80);
+}
+
+[data-theme="dark"] .ticket-meta {
+  color: var(--text-secondary);
+}
+
+[data-theme="dark"] .history-card {
+  background: var(--background-secondary);
+  border: 1px solid var(--border-color);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+[data-theme="dark"] .history-card:hover {
+  background: var(--background-tertiary);
+  border-color: var(--primary-color);
+}
+
+[data-theme="dark"] .history-details {
+  background: var(--background-tertiary);
+  border-radius: 8px;
+  padding: 1rem;
+  margin: 0.5rem 0;
+}
+
+[data-theme="dark"] .history-label {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+}
+
+[data-theme="dark"] .history-value {
+  color: var(--text-primary);
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+[data-theme="dark"] .history-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+[data-theme="dark"] .history-row:last-child {
+  border-bottom: none;
+}
+
+[data-theme="dark"] .history-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin: 1rem 0;
+}
+
+[data-theme="dark"] .history-item {
+  background: var(--background-tertiary);
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+}
+
+/* Stili per le etichette dei dettagli */
+[data-theme="dark"] .detail-label {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  margin-bottom: 0.25rem;
+  display: block;
+}
+
+[data-theme="dark"] .detail-value {
+  color: var(--text-primary);
+  font-weight: 500;
+  font-size: 1rem;
+}
+
+/* Stili per i campi specifici */
+[data-theme="dark"] .sale-date,
+[data-theme="dark"] .event-date,
+[data-theme="dark"] .quantity,
+[data-theme="dark"] .price,
+[data-theme="dark"] .event-name,
+[data-theme="dark"] .client-email {
+  padding: 0.5rem;
+  background: var(--background-secondary);
+  border-radius: 6px;
+  margin: 0.25rem 0;
+}
+
+[data-theme="dark"] .sale-date .label,
+[data-theme="dark"] .event-date .label,
+[data-theme="dark"] .quantity .label,
+[data-theme="dark"] .price .label,
+[data-theme="dark"] .event-name .label,
+[data-theme="dark"] .client-email .label {
+  color: var(--text-tertiary);
+  font-size: 0.85rem;
+  margin-bottom: 0.25rem;
+}
+
+[data-theme="dark"] .sale-date .value,
+[data-theme="dark"] .event-date .value,
+[data-theme="dark"] .quantity .value,
+[data-theme="dark"] .price .value,
+[data-theme="dark"] .event-name .value,
+[data-theme="dark"] .client-email .value {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+/* Ottimizzazioni per mobile */
+@media (max-width: 768px) {
+  [data-theme="dark"] .history-grid {
+    grid-template-columns: 1fr;
+  }
+
+  [data-theme="dark"] .history-row {
+    padding: 0.5rem;
+  }
+
+  [data-theme="dark"] .history-details {
+    padding: 0.75rem;
+  }
+}
+
+/* Stili per evidenziare i valori importanti */
+[data-theme="dark"] .price .value {
+  color: var(--primary-color);
+  font-weight: 600;
+}
+
+[data-theme="dark"] .quantity .value {
+  color: var(--success-text);
+  font-weight: 600;
+}
+
+[data-theme="dark"] .event-name .value {
+  color: var(--text-primary);
+  font-size: 1.1rem;
+  font-weight: 600;
 } 
