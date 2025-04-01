@@ -45,6 +45,22 @@
   --input-text: #ffffff;
   --button-text: #ffffff;
   --card-text: #ffffff;
+  --background-primary: #1a1b1e;
+  --background-secondary: #2c2d31;
+  --background-tertiary: #3a3b3f;
+  --text-tertiary: #94a3b8;
+  --card-border: #4a4b4f;
+  --input-border: #4a4b4f;
+  --button-background: #3a3b3f;
+  --hover-background: #3a3b3f;
+  --success-background: rgba(34, 197, 94, 0.2);
+  --success-text: #4ade80;
+  --error-background: rgba(239, 68, 68, 0.2);
+  --error-text: #f87171;
+  --warning-background: rgba(234, 179, 8, 0.2);
+  --warning-text: #facc15;
+  --info-background: rgba(59, 130, 246, 0.2);
+  --info-text: #60a5fa;
 }
 
 /* System preference dark theme */
@@ -510,4 +526,61 @@ th {
       background-repeat: no-repeat;
     }
   }
+}
+
+[data-theme='dark'] .card,
+[data-theme='dark'] .event-card,
+[data-theme='dark'] .promoter-card,
+[data-theme='dark'] .team-leader-card,
+[data-theme='dark'] .stats-card {
+  background-color: var(--card-background);
+  border-color: var(--card-border);
+  color: var(--text-primary);
+}
+
+[data-theme='dark'] .sale-history-card,
+[data-theme='dark'] .event-stat-card,
+[data-theme='dark'] .stats-content {
+  background-color: var(--background-secondary);
+  color: var(--text-primary);
+}
+
+[data-theme='dark'] .stat-item,
+[data-theme='dark'] .detail-item,
+[data-theme='dark'] .promoter-info,
+[data-theme='dark'] .event-details {
+  color: var(--text-secondary);
+}
+
+[data-theme='dark'] input,
+[data-theme='dark'] select,
+[data-theme='dark'] textarea {
+  background-color: var(--input-background);
+  border-color: var(--input-border);
+  color: var(--input-text);
+}
+
+[data-theme='dark'] .badge {
+  background-color: var(--background-tertiary);
+  color: var(--text-secondary);
+}
+
+[data-theme='dark'] .badge-success {
+  background-color: var(--success-background);
+  color: var(--success-text);
+}
+
+[data-theme='dark'] .badge-error {
+  background-color: var(--error-background);
+  color: var(--error-text);
+}
+
+[data-theme='dark'] .badge-warning {
+  background-color: var(--warning-background);
+  color: var(--warning-text);
+}
+
+[data-theme='dark'] .badge-info {
+  background-color: var(--info-background);
+  color: var(--info-text);
 } 
