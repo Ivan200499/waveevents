@@ -4,25 +4,36 @@
   padding: 20px;
 }
 
+.validator-container h2 {
+  color: var(--text-primary);
+  text-align: center;
+  margin-bottom: 20px;
+}
+
 .input-methods {
   display: flex;
   gap: 10px;
   margin-bottom: 20px;
+  justify-content: center;
 }
 
 .method-button {
-  flex: 1;
-  padding: 12px;
+  padding: 12px 20px;
   border: none;
-  border-radius: var(--border-radius);
-  background: var(--light-color);
-  color: var(--dark-color);
+  border-radius: 8px;
+  background: var(--background-secondary);
+  color: var(--text-primary);
   cursor: pointer;
   display: flex;
   align-items: center;
-  justify-content: center;
   gap: 8px;
+  font-size: 1rem;
   transition: all 0.3s ease;
+}
+
+.method-button:hover {
+  background: var(--primary-color);
+  color: white;
 }
 
 .method-button.active {
@@ -31,72 +42,112 @@
 }
 
 .scanner-container {
-  aspect-ratio: 1;
-  max-width: 100%;
-  margin: 0 auto;
-  overflow: hidden;
-  border-radius: var(--border-radius);
-  background: #000;
+  margin-top: 20px;
+  padding: 20px;
+  border-radius: 8px;
+  background: var(--background-secondary);
 }
 
 .manual-input {
   display: flex;
   flex-direction: column;
   gap: 15px;
+  margin-top: 20px;
 }
 
 .ticket-input {
   padding: 12px;
-  border: 1px solid #ddd;
-  border-radius: var(--border-radius);
-  font-size: 16px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  font-size: 1rem;
+  background: var(--background-secondary);
+  color: var(--text-primary);
+}
+
+.ticket-input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.2);
 }
 
 .validate-button {
-  padding: 12px;
+  padding: 12px 20px;
   border: none;
-  border-radius: var(--border-radius);
+  border-radius: 8px;
   background: var(--primary-color);
   color: white;
   cursor: pointer;
-  font-size: 16px;
-  transition: all 0.3s ease;
+  font-size: 1rem;
+  font-weight: 500;
+  transition: background-color 0.3s ease;
+}
+
+.validate-button:hover:not(:disabled) {
+  background: var(--primary-color-dark);
 }
 
 .validate-button:disabled {
-  opacity: 0.7;
+  background: var(--background-tertiary);
   cursor: not-allowed;
-}
-
-.validate-button.loading {
-  background: var(--secondary-color);
+  opacity: 0.7;
 }
 
 .message {
   margin-top: 20px;
   padding: 15px;
-  border-radius: var(--border-radius);
+  border-radius: 8px;
+  text-align: center;
   white-space: pre-line;
 }
 
 .message.success {
-  background: #dff0d8;
-  color: #3c763d;
+  background: var(--notification-success);
+  color: var(--text-primary);
 }
 
 .message.error {
-  background: #f2dede;
-  color: #a94442;
+  background: var(--notification-error);
+  color: var(--text-primary);
 }
 
+/* Dark theme specific styles */
+[data-theme="dark"] .method-button {
+  background: var(--background-tertiary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+}
+
+[data-theme="dark"] .method-button:hover,
+[data-theme="dark"] .method-button.active {
+  background: var(--primary-color);
+  color: white;
+  border-color: var(--primary-color);
+}
+
+[data-theme="dark"] .scanner-container {
+  background: var(--background-tertiary);
+  border: 1px solid var(--border-color);
+}
+
+[data-theme="dark"] .ticket-input {
+  background: var(--background-tertiary);
+  color: var(--text-primary);
+  border-color: var(--border-color);
+}
+
+/* Responsive styles */
 @media (max-width: 768px) {
   .validator-container {
-    padding: 10px;
+    padding: 15px;
   }
 
-  .scanner-container {
-    margin: -10px;
-    border-radius: 0;
+  .input-methods {
+    flex-direction: column;
+  }
+
+  .method-button {
+    width: 100%;
+    justify-content: center;
   }
 }
 

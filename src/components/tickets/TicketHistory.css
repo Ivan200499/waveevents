@@ -165,14 +165,97 @@ th {
 } 
 
 .ticket-history {
-  padding: var(--spacing-md);
+  padding: 20px;
+  background: var(--background-secondary);
+  border-radius: 8px;
+  margin-top: 20px;
 }
 
 .ticket-history h2 {
   color: var(--text-primary);
-  margin-bottom: var(--spacing-lg);
+  margin-bottom: 20px;
   font-size: 1.5rem;
-  font-weight: 600;
+}
+
+.ticket-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.ticket-card {
+  background: var(--card-background);
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  padding: 15px;
+  box-shadow: 0 2px 4px var(--shadow-color);
+}
+
+.ticket-card h3 {
+  color: var(--text-primary);
+  margin: 0 0 10px 0;
+  font-size: 1.2rem;
+}
+
+.ticket-card p {
+  color: var(--text-secondary);
+  margin: 5px 0;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ticket-card .ticket-status {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.ticket-card .ticket-status.valid {
+  background-color: var(--success-color);
+  color: white;
+}
+
+.ticket-card .ticket-status.used {
+  background-color: var(--warning-color);
+  color: var(--text-primary);
+}
+
+.ticket-card .ticket-status.expired {
+  background-color: var(--error-color);
+  color: white;
+}
+
+/* Dark theme specific styles */
+[data-theme="dark"] .ticket-history {
+  background: var(--background-tertiary);
+}
+
+[data-theme="dark"] .ticket-card {
+  background: var(--card-background);
+  border-color: var(--card-border);
+}
+
+[data-theme="dark"] .ticket-card h3 {
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .ticket-card p {
+  color: var(--text-secondary);
+}
+
+/* Responsive styles */
+@media (max-width: 768px) {
+  .ticket-list {
+    grid-template-columns: 1fr;
+  }
+  
+  .ticket-card {
+    margin-bottom: 15px;
+  }
 }
 
 .filters-section {

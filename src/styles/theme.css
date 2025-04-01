@@ -705,7 +705,8 @@ th {
 
 .ticket-whatsapp .qr-code {
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
   margin: 20px 0;
 }
 
@@ -713,6 +714,18 @@ th {
   text-align: center;
   font-size: 0.9em;
   color: var(--text-tertiary);
+  margin-top: 15px;
+}
+
+.ticket-whatsapp .footer p {
+  margin: 5px 0;
+}
+
+.ticket-whatsapp .footer small {
+  display: block;
+  text-align: center;
+  width: 100%;
+  margin-top: 8px;
 }
 
 @keyframes slideUp {
