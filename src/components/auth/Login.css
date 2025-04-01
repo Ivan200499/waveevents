@@ -217,3 +217,50 @@
     }
   }
   
+  /* Legal links styles */
+  .legal-links {
+    text-align: center;
+    margin-top: 1.5rem;
+    padding: 1rem 0;
+    border-top: 1px solid var(--border-color);
+  }
+  
+  .legal-links p {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+  }
+  
+  .legal-links a {
+    color: var(--primary-color);
+    text-decoration: none;
+    transition: color 0.3s ease;
+    font-weight: 500;
+  }
+  
+  .legal-links a:hover {
+    color: var(--primary-hover);
+    text-decoration: underline;
+  }
+  
+  /* Dark theme adjustments */
+  [data-theme="dark"] .legal-links p {
+    color: var(--text-secondary);
+  }
+  
+  [data-theme="dark"] .legal-links a {
+    color: var(--primary-color);
+  }
+  
+  /* Mobile adjustments */
+  @media (max-width: 768px) {
+    .legal-links {
+      margin-top: 1rem;
+      padding: 0.75rem 0;
+    }
+  
+    .legal-links p {
+      font-size: 0.8rem;
+    }
+  }
+  

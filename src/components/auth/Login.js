@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { db } from '../../firebase/config';
 import { doc, getDoc } from 'firebase/firestore';
 import { FaUser, FaLock } from 'react-icons/fa';
@@ -92,6 +92,19 @@ function Login() {
             Accedi
           </button>
         </form>
+
+        <div className="legal-links">
+          <p>
+            Accedendo, accetti i nostri{' '}
+            <Link to="/terms">
+              Termini e Condizioni
+            </Link>{' '}
+            e la nostra{' '}
+            <Link to="/privacy">
+              Informativa sulla Privacy
+            </Link>
+          </p>
+        </div>
 
         <div className="login-footer">
           <p>© 2024 Wave Events</p>
