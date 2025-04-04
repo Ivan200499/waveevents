@@ -1,286 +1,348 @@
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { db } from '../../firebase/config';
 import { collection, addDoc } from 'firebase/firestore';
-import { uploadImage } from '../../services/ImageService';
 import './CreateEvent.css';
-import { FaCalendarAlt, FaMapMarkerAlt, FaEuroSign, FaTicketAlt } from 'react-icons/fa';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
 
-function CreateEvent({ onEventCreated }) {
-  console.log("SONO IL FILE GIUSTO - CreateEvent.js");
+function CreateEvent() {
+  const navigate = useNavigate();
+  const { currentUser } = useAuth();
   
-  const [formData, setFormData] = useState({
+  // Stato base dell'evento
+  const [eventData, setEventData] = useState({
     name: '',
-    location: '',
-    totalTickets: '',
-    ticketPrice: '',
     description: '',
+    location: '',
+    price: '',
     isRecurring: false,
-    startDate: '',
-    endDate: '',
-    dates: []
+    date: '',
+    availableTickets: '',
+    subEvents: [],
+    imageUrl: ''
   });
-  const [image, setImage] = useState(null);
-  const [imagePreview, setImagePreview] = useState(null);
+  
+  // Stato per la nuova data da aggiungere
+  const [newSubEvent, setNewSubEvent] = useState({
+    date: '',
+    availableTickets: ''
+  });
+  
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
 
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      if (file.size > 5000000) { // 5MB limit
-        setError('L\'immagine non può superare i 5MB');
-        return;
-      }
-      setImage(file);
-      setImagePreview(URL.createObjectURL(file));
-    }
-  };
-
+  // Gestisco i cambi nei campi principali
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setFormData(prev => ({
-      ...prev,
+    setEventData({
+      ...eventData,
       [name]: type === 'checkbox' ? checked : value
-    }));
+    });
   };
 
-  const generateDates = () => {
-    if (!formData.isRecurring || !formData.startDate || !formData.endDate) return;
-    
-    const start = new Date(formData.startDate);
-    const end = new Date(formData.endDate);
-    const dates = [];
-    
-    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-      dates.push(new Date(d).toISOString());
+  // Gestisco i cambi nei campi del nuovo sotto-evento
+  const handleSubEventChange = (e) => {
+    const { name, value } = e.target;
+    setNewSubEvent({
+      ...newSubEvent,
+      [name]: value
+    });
+  };
+
+  // Aggiungo un nuovo sotto-evento alla lista
+  const addSubEvent = () => {
+    // Validazione
+    if (!newSubEvent.date || !newSubEvent.availableTickets) {
+      setError('Inserisci sia la data che il numero di biglietti per il sotto-evento');
+      return;
     }
     
-    setFormData(prev => ({
-      ...prev,
-      dates
-    }));
+    // Verifico che la data non sia già presente
+    if (eventData.subEvents.some(event => event.date === newSubEvent.date)) {
+      setError('Questa data è già stata inserita');
+      return;
+    }
+    
+    // Aggiungo il nuovo sotto-evento
+    setEventData({
+      ...eventData,
+      subEvents: [...eventData.subEvents, { ...newSubEvent }]
+    });
+    
+    // Resetto il form per il nuovo sotto-evento
+    setNewSubEvent({
+      date: '',
+      availableTickets: ''
+    });
+    
+    setError('');
   };
 
-  async function handleSubmit(e) {
+  // Rimuovo un sotto-evento dalla lista
+  const removeSubEvent = (index) => {
+    const updatedSubEvents = [...eventData.subEvents];
+    updatedSubEvents.splice(index, 1);
+    setEventData({
+      ...eventData,
+      subEvents: updatedSubEvents
+    });
+  };
+
+  // Invio del form
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
-
+    
     try {
-      let imageUrl = null;
-      if (image) {
-        imageUrl = await uploadImage(image);
+      // Validazione
+      if (!eventData.name || !eventData.location || !eventData.price) {
+        throw new Error('Inserisci i campi obbligatori: nome, luogo e prezzo');
+      }
+      
+      if (eventData.isRecurring) {
+        // Per eventi ricorrenti, verifica che ci sia almeno una data
+        if (eventData.subEvents.length === 0) {
+          throw new Error('Aggiungi almeno una data per l\'evento ricorrente');
+        }
+      } else {
+        // Per eventi singoli, verifica che ci sia una data
+        if (!eventData.date) {
+          throw new Error('Inserisci la data dell\'evento');
+        }
+        if (!eventData.availableTickets) {
+          throw new Error('Inserisci il numero di biglietti disponibili');
+        }
       }
 
-      const eventData = {
-        ...formData,
-        totalTickets: parseInt(formData.totalTickets),
-        availableTickets: parseInt(formData.totalTickets),
-        ticketPrice: parseFloat(formData.ticketPrice),
-        imageUrl,
-        status: 'active',
-        createdAt: new Date().toISOString(),
-        isRecurring: formData.isRecurring,
-        dates: formData.isRecurring ? formData.dates : [formData.startDate],
-        soldTickets: 0
+      // Prepare event data
+      const eventToSave = {
+        name: eventData.name,
+        description: eventData.description || '',
+        location: eventData.location,
+        price: parseFloat(eventData.price),
+        createdBy: currentUser.uid,
+        createdAt: new Date(),
+        isRecurring: eventData.isRecurring,
+        imageUrl: eventData.imageUrl || ''
       };
 
-      await addDoc(collection(db, 'events'), eventData);
+      // Add specific data based on event type
+      if (eventData.isRecurring) {
+        // For recurring events, include sub-events
+        eventToSave.subEvents = eventData.subEvents.map(subEvent => ({
+          date: new Date(subEvent.date),
+          availableTickets: parseInt(subEvent.availableTickets, 10)
+        }));
+      } else {
+        // For single events, include date and tickets
+        eventToSave.date = new Date(eventData.date);
+        eventToSave.availableTickets = parseInt(eventData.availableTickets, 10);
+      }
+
+      // Save to Firestore
+      await addDoc(collection(db, 'events'), eventToSave);
       
-      // Reset form
-      setFormData({
-        name: '',
-        location: '',
-        totalTickets: '',
-        ticketPrice: '',
-        description: '',
-        isRecurring: false,
-        startDate: '',
-        endDate: '',
-        dates: []
-      });
-      setImage(null);
-      setImagePreview(null);
-      
-      onEventCreated();
+      setSuccess(true);
+      setTimeout(() => {
+        navigate('/admin/dashboard');
+      }, 2000);
     } catch (error) {
-      setError('Errore nella creazione dell\'evento: ' + error.message);
+      console.error('Error creating event:', error);
+      setError(error.message);
     } finally {
       setLoading(false);
     }
-  }
+  };
 
   return (
     <div className="create-event-container">
       <h2>Crea Nuovo Evento</h2>
-      {error && <div className="error-message">{error}</div>}
       
-      <form onSubmit={handleSubmit}>
+      {error && <div className="error-message">{error}</div>}
+      {success && <div className="success-message">Evento creato con successo!</div>}
+      
+      <form onSubmit={handleSubmit} className="event-form">
         <div className="form-group">
-          <label>Locandina Evento:</label>
-          <div className="image-upload-container">
-            {imagePreview ? (
-              <div className="image-preview">
-                <img src={imagePreview} alt="Preview" />
-                <button 
-                  type="button" 
-                  className="remove-image"
-                  onClick={() => {
-                    setImage(null);
-                    setImagePreview(null);
-                  }}
-                >
-                  ×
-                </button>
-              </div>
-            ) : (
-              <div className="upload-placeholder">
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageChange}
-                  id="event-image"
-                  className="hidden-input"
-                />
-                <label htmlFor="event-image" className="upload-label">
-                  Carica Locandina
-                </label>
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="form-group">
-          <label>Nome Evento:</label>
+          <label htmlFor="name">Nome Evento*</label>
           <input
             type="text"
+            id="name"
             name="name"
-            value={formData.name}
+            value={eventData.name}
             onChange={handleChange}
             required
           />
         </div>
-
+        
         <div className="form-group">
-          <label>Evento Ricorrente:</label>
-          <div className="checkbox-container">
+          <label htmlFor="description">Descrizione</label>
+          <textarea
+            id="description"
+            name="description"
+            value={eventData.description}
+            onChange={handleChange}
+          />
+        </div>
+        
+        <div className="form-group">
+          <label htmlFor="location">Luogo*</label>
+          <input
+            type="text"
+            id="location"
+            name="location"
+            value={eventData.location}
+            onChange={handleChange}
+            required
+          />
+        </div>
+        
+        <div className="form-group">
+          <label htmlFor="price">Prezzo Biglietto*</label>
+          <input
+            type="number"
+            id="price"
+            name="price"
+            value={eventData.price}
+            onChange={handleChange}
+            min="0"
+            step="0.01"
+            required
+          />
+        </div>
+        
+        <div className="form-group">
+          <label htmlFor="imageUrl">URL Immagine</label>
+          <input
+            type="text"
+            id="imageUrl"
+            name="imageUrl"
+            value={eventData.imageUrl}
+            onChange={handleChange}
+            placeholder="https://esempio.com/immagine.jpg"
+          />
+        </div>
+        
+        <div className="form-group checkbox-group">
+          <label>
             <input
               type="checkbox"
               name="isRecurring"
-              checked={formData.isRecurring}
+              checked={eventData.isRecurring}
               onChange={handleChange}
             />
-            <span>Questo evento si svolge in più date</span>
-          </div>
+            Evento con più date
+          </label>
         </div>
-
-        {formData.isRecurring ? (
+        
+        {!eventData.isRecurring ? (
+          // Form per evento singolo
           <>
             <div className="form-group">
-              <label>Data Inizio:</label>
+              <label htmlFor="date">Data Evento*</label>
               <input
                 type="date"
-                name="startDate"
-                value={formData.startDate}
+                id="date"
+                name="date"
+                value={eventData.date}
                 onChange={handleChange}
-                required
+                required={!eventData.isRecurring}
               />
             </div>
-
+            
             <div className="form-group">
-              <label>Data Fine:</label>
+              <label htmlFor="availableTickets">Biglietti Disponibili*</label>
               <input
-                type="date"
-                name="endDate"
-                value={formData.endDate}
-                onChange={(e) => {
-                  handleChange(e);
-                  generateDates();
-                }}
-                required
+                type="number"
+                id="availableTickets"
+                name="availableTickets"
+                value={eventData.availableTickets}
+                onChange={handleChange}
+                min="1"
+                required={!eventData.isRecurring}
               />
             </div>
-
-            {formData.dates.length > 0 && (
-              <div className="dates-preview">
-                <h3>Date Generate:</h3>
-                <div className="dates-list">
-                  {formData.dates.map((date, index) => (
-                    <div key={index} className="date-item">
-                      {new Date(date).toLocaleDateString()}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
           </>
         ) : (
-          <div className="form-group">
-            <label>Data Evento:</label>
-            <input
-              type="date"
-              name="startDate"
-              value={formData.startDate}
-              onChange={handleChange}
-              required
-            />
+          // Form per evento con più date
+          <div className="sub-events-section">
+            <h3>Date dell'Evento</h3>
+            
+            <div className="add-sub-event">
+              <div className="form-group">
+                <label htmlFor="subEventDate">Data</label>
+                <input
+                  type="date"
+                  id="subEventDate"
+                  name="date"
+                  value={newSubEvent.date}
+                  onChange={handleSubEventChange}
+                />
+              </div>
+              
+              <div className="form-group">
+                <label htmlFor="subEventTickets">Biglietti Disponibili</label>
+                <input
+                  type="number"
+                  id="subEventTickets"
+                  name="availableTickets"
+                  value={newSubEvent.availableTickets}
+                  onChange={handleSubEventChange}
+                  min="1"
+                />
+              </div>
+              
+              <button 
+                type="button" 
+                className="add-date-button"
+                onClick={addSubEvent}
+              >
+                Aggiungi Data
+              </button>
+            </div>
+            
+            {eventData.subEvents.length > 0 ? (
+              <div className="sub-events-list">
+                <h4>Date Aggiunte:</h4>
+                <ul>
+                  {eventData.subEvents.map((subEvent, index) => (
+                    <li key={index} className="sub-event-item">
+                      <span>Data: {new Date(subEvent.date).toLocaleDateString()}</span>
+                      <span>Biglietti: {subEvent.availableTickets}</span>
+                      <button 
+                        type="button" 
+                        className="remove-button"
+                        onClick={() => removeSubEvent(index)}
+                      >
+                        Rimuovi
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : (
+              <p className="no-dates-message">Nessuna data aggiunta. Aggiungi almeno una data per l'evento.</p>
+            )}
           </div>
         )}
-
-        <div className="form-group">
-          <label>Luogo:</label>
-          <input
-            type="text"
-            name="location"
-            value={formData.location}
-            onChange={handleChange}
-            required
-          />
+        
+        <div className="form-actions">
+          <button 
+            type="button" 
+            className="cancel-button"
+            onClick={() => navigate('/admin/dashboard')}
+          >
+            Annulla
+          </button>
+          <button 
+            type="submit" 
+            className="submit-button"
+            disabled={loading}
+          >
+            {loading ? 'Creazione in corso...' : 'Crea Evento'}
+          </button>
         </div>
-
-        <div className="form-group">
-          <label>Numero Totale Biglietti:</label>
-          <input
-            type="number"
-            name="totalTickets"
-            value={formData.totalTickets}
-            onChange={handleChange}
-            required
-            min="1"
-          />
-        </div>
-
-        <div className="form-group">
-          <label>Prezzo Biglietto (€):</label>
-          <input
-            type="number"
-            name="ticketPrice"
-            value={formData.ticketPrice}
-            onChange={handleChange}
-            required
-            min="0"
-            step="0.01"
-          />
-        </div>
-
-        <div className="form-group">
-          <label>Descrizione Evento:</label>
-          <textarea
-            name="description"
-            value={formData.description}
-            onChange={handleChange}
-            rows="4"
-            placeholder="Inserisci una descrizione dettagliata dell'evento..."
-          />
-        </div>
-
-        <button 
-          type="submit" 
-          disabled={loading}
-          className="submit-button"
-        >
-          {loading ? 'Creazione in corso...' : 'Crea Evento'}
-        </button>
       </form>
     </div>
   );

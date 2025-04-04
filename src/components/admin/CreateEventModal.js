@@ -30,13 +30,18 @@ function CreateEventModal({ onClose, onEventCreated }) {
     totalTickets: '',
     description: '',
     isRecurring: false,
-    startDate: '',
-    endDate: '',
     dates: [],
     ticketTypes: [], // Array per i tipi di biglietti selezionati
     hasTables: false, // Flag per indicare se l'evento ha tavoli
     tableTypes: [] // Array per i tipi di tavoli selezionati
   });
+  
+  // Stato per una nuova data da aggiungere
+  const [newDate, setNewDate] = useState({
+    date: '',
+    availableTickets: 0
+  });
+  
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -45,6 +50,58 @@ function CreateEventModal({ onClose, onEventCreated }) {
     setFormData(prev => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value
+    }));
+  };
+
+  // Gestisce i cambiamenti nel form della nuova data
+  const handleNewDateChange = (e) => {
+    const { name, value } = e.target;
+    setNewDate(prev => ({
+      ...prev,
+      [name]: name === 'availableTickets' ? Number(value) : value
+    }));
+  };
+
+  // Aggiunge una nuova data all'elenco
+  const addDate = () => {
+    // Validazione
+    if (!newDate.date || newDate.availableTickets <= 0) {
+      setError('Inserisci sia la data che un numero valido di biglietti');
+      return;
+    }
+    
+    // Verifica che la data non sia già presente
+    if (formData.dates.some(date => date.date.split('T')[0] === newDate.date)) {
+      setError('Questa data è già stata inserita');
+      return;
+    }
+    
+    // Formattiamo la data nel formato ISO
+    const formattedDate = new Date(newDate.date + 'T00:00:00').toISOString();
+    
+    // Aggiungiamo la nuova data
+    setFormData(prev => ({
+      ...prev,
+      dates: [...prev.dates, { 
+        date: formattedDate, 
+        availableTickets: newDate.availableTickets 
+      }]
+    }));
+    
+    // Reset del form per la nuova data
+    setNewDate({
+      date: '',
+      availableTickets: 0
+    });
+    
+    setError('');
+  };
+
+  // Rimuove una data dall'elenco
+  const removeDate = (index) => {
+    setFormData(prev => ({
+      ...prev,
+      dates: prev.dates.filter((_, i) => i !== index)
     }));
   };
 
@@ -131,48 +188,6 @@ function CreateEventModal({ onClose, onEventCreated }) {
     }));
   };
 
-  // Genera le date a partire dai dati form
-  const generateDates = () => {
-    if (!formData.isRecurring || !formData.startDate || !formData.endDate) return [];
-    
-    const start = new Date(formData.startDate);
-    const end = new Date(formData.endDate);
-    const dates = [];
-    
-    // Calcola il totale dei biglietti disponibili dai tipi selezionati
-    const totalTicketsAvailable = formData.ticketTypes.reduce(
-      (acc, type) => acc + Number(type.totalTickets || 0), 0
-    );
-    
-    // Se non ci sono biglietti definiti, non creare le date
-    if (totalTicketsAvailable <= 0) {
-      setError('Definisci almeno un tipo di biglietto con quantità maggiore di zero');
-      return [];
-    }
-    
-    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-      dates.push({
-        date: new Date(d).toISOString(),
-        availableTickets: totalTicketsAvailable
-      });
-    }
-    
-    // Aggiorna lo stato con le date generate
-    setFormData(prev => ({
-      ...prev,
-      dates
-    }));
-    
-    return dates;
-  };
-
-  // Effetto per aggiornare le date quando cambiano startDate o endDate
-  useEffect(() => {
-    if (formData.isRecurring && formData.startDate && formData.endDate) {
-      generateDates();
-    }
-  }, [formData.startDate, formData.endDate, formData.isRecurring, formData.ticketTypes]);
-
   async function handleSubmit(e) {
     e.preventDefault();
     setLoading(true);
@@ -196,6 +211,13 @@ function CreateEventModal({ onClose, onEventCreated }) {
       return;
     }
 
+    // Verifica che ci siano date se l'evento è ricorrente
+    if (formData.isRecurring && formData.dates.length === 0) {
+      setError('Aggiungi almeno una data per l\'evento ricorrente');
+      setLoading(false);
+      return;
+    }
+
     // Se l'evento ha tavoli, verifica che tutti i tipi di tavolo abbiano prezzo, posti e quantità
     if (formData.hasTables && formData.tableTypes.length > 0) {
       const invalidTables = formData.tableTypes.filter(type => 
@@ -213,19 +235,13 @@ function CreateEventModal({ onClose, onEventCreated }) {
       // Calcola il totale dei biglietti da tutti i tipi
       const totalTickets = formData.ticketTypes.reduce((acc, type) => acc + Number(type.totalTickets || 0), 0);
       
-      // Assicurati che le date siano generate correttamente
-      let eventDates = formData.dates;
-      if (formData.isRecurring && (!eventDates || eventDates.length === 0)) {
-        eventDates = generateDates();
-      }
-      
       const eventData = {
         ...formData,
         totalTickets,
         status: 'active',
         createdAt: new Date().toISOString(),
         isRecurring: formData.isRecurring,
-        dates: formData.isRecurring ? eventDates : [{
+        dates: formData.isRecurring ? formData.dates : [{
           date: formData.date,
           availableTickets: totalTickets
         }],
@@ -276,46 +292,65 @@ function CreateEventModal({ onClose, onEventCreated }) {
 
           {formData.isRecurring ? (
             <>
-              <div className="form-group">
-                <label>Data Inizio:</label>
-                <input
-                  type="date"
-                  name="startDate"
-                  value={formData.startDate}
-                  onChange={(e) => {
-                    handleChange(e);
-                    generateDates();
-                  }}
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Data Fine:</label>
-                <input
-                  type="date"
-                  name="endDate"
-                  value={formData.endDate}
-                  onChange={(e) => {
-                    handleChange(e);
-                    generateDates();
-                  }}
-                  required
-                />
-              </div>
-
-              {formData.dates.length > 0 && (
-                <div className="dates-preview">
-                  <h3>Date Generate:</h3>
-                  <div className="dates-list">
-                    {formData.dates.map((date, index) => (
-                      <div key={index} className="date-item">
-                        {new Date(date.date).toLocaleDateString()} - {date.availableTickets} biglietti
-                      </div>
-                    ))}
+              <div className="sub-events-section">
+                <h3>Date dell'Evento</h3>
+                
+                <div className="add-sub-event">
+                  <div className="form-group">
+                    <label htmlFor="eventDate">Data</label>
+                    <input
+                      type="date"
+                      id="eventDate"
+                      name="date"
+                      value={newDate.date}
+                      onChange={handleNewDateChange}
+                    />
                   </div>
+                  
+                  <div className="form-group">
+                    <label htmlFor="eventTickets">Biglietti Disponibili</label>
+                    <input
+                      type="number"
+                      id="eventTickets"
+                      name="availableTickets"
+                      value={newDate.availableTickets}
+                      onChange={handleNewDateChange}
+                      min="1"
+                    />
+                  </div>
+                  
+                  <button 
+                    type="button" 
+                    className="add-date-button"
+                    onClick={addDate}
+                  >
+                    Aggiungi Data
+                  </button>
                 </div>
-              )}
+                
+                {formData.dates.length > 0 ? (
+                  <div className="sub-events-list">
+                    <h4>Date Aggiunte:</h4>
+                    <ul>
+                      {formData.dates.map((date, index) => (
+                        <li key={index} className="sub-event-item">
+                          <span>Data: {new Date(date.date).toLocaleDateString()}</span>
+                          <span>Biglietti: {date.availableTickets}</span>
+                          <button 
+                            type="button" 
+                            className="remove-button"
+                            onClick={() => removeDate(index)}
+                          >
+                            Rimuovi
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : (
+                  <p className="no-dates-message">Nessuna data aggiunta. Aggiungi almeno una data per l'evento.</p>
+                )}
+              </div>
             </>
           ) : (
             <div className="form-group">
