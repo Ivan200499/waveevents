@@ -32,7 +32,7 @@ function CreateEventModal({ onClose, onEventCreated }) {
     posterImageUrl: '', // URL dopo l'upload
     eventDates: [], // Array per le date specifiche dell'evento
   });
-
+  
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -92,12 +92,12 @@ function CreateEventModal({ onClose, onEventCreated }) {
    // Gestisce il toggle per i tavoli in una data specifica
    const handleHasTablesToggle = (index, checked) => {
     setFormData(prev => ({
-        ...prev,
+      ...prev,
         eventDates: prev.eventDates.map((dateItem, i) =>
             i === index ? { ...dateItem, hasTablesForDate: checked, tableTypes: checked ? dateItem.tableTypes : [] } : dateItem // Resetta i tavoli se deselezionato
         )
     }));
-};
+  };
 
 
   // --- Gestione Biglietti per Data ---
@@ -209,9 +209,9 @@ const handleTableChangeForDate = (dateIndex, tableId, field, value) => {
 
     if (formData.eventDates.length === 0) {
         setError('Aggiungi almeno una data per l\'evento.');
-        setLoading(false);
-        return;
-      }
+      setLoading(false);
+      return;
+    }
 
     // Validazione per ogni data
     for (const dateItem of formData.eventDates) {
@@ -237,16 +237,16 @@ const handleTableChangeForDate = (dateIndex, tableId, field, value) => {
          if (dateItem.hasTablesForDate) {
             if (dateItem.tableTypes.length === 0) {
                 setError('Se hai selezionato "Prevede tavoli" per la data ' + new Date(dateItem.date).toLocaleDateString() + ', aggiungi almeno un tipo di tavolo.');
-                setLoading(false);
-                return;
-            }
+      setLoading(false);
+      return;
+    }
             for (const table of dateItem.tableTypes) {
                 if (table.price === '' || table.quantity === '' || table.seats === '' || table.price < 0 || table.quantity <= 0 || table.seats <= 0) {
                     setError('Inserisci prezzo (>0), posti (>0) e quantità (>0) validi per il tavolo "' + table.name + '" nella data ' + new Date(dateItem.date).toLocaleDateString() + '.');
-                    setLoading(false);
-                    return;
-                }
-            }
+        setLoading(false);
+        return;
+      }
+    }
         }
     }
 
@@ -310,7 +310,7 @@ const handleTableChangeForDate = (dateIndex, tableId, field, value) => {
         <button onClick={onClose} className="close-modal-btn">&times;</button>
 
         {error && <p className="error-message">{error}</p>}
-
+        
         <form onSubmit={handleSubmit} className="admin-form">
           {/* Campi Base Evento */}
           <div className="form-group">
@@ -320,20 +320,20 @@ const handleTableChangeForDate = (dateIndex, tableId, field, value) => {
           <div className="form-group">
             <label htmlFor="location">Località:</label>
             <input type="text" id="location" name="location" value={formData.location} onChange={handleChange} required />
-          </div>
+            </div>
           <div className="form-group">
             <label htmlFor="description">Descrizione:</label>
             <textarea id="description" name="description" value={formData.description} onChange={handleChange}></textarea>
           </div>
            {/* Upload Locandina */}
-           <div className="form-group">
+                  <div className="form-group">
             <label htmlFor="posterImageFile">Locandina (Opzionale):</label>
             <input type="file" id="posterImageFile" name="posterImageFile" onChange={handleChange} accept="image/*" />
             {/* Mostra anteprima se c'è già un URL o un file selezionato */}
             {formData.posterImageUrl && !formData.posterImageFile && <img src={formData.posterImageUrl} alt="Anteprima Locandina" style={{ maxWidth: '100px', marginTop: '10px' }} />}
             {formData.posterImageFile && <img src={URL.createObjectURL(formData.posterImageFile)} alt="Anteprima Nuova Locandina" style={{ maxWidth: '100px', marginTop: '10px' }} />}
-          </div>
-
+                  </div>
+                  
 
           {/* Sezione Date Evento */}
           <div className="event-dates-section">
@@ -343,18 +343,18 @@ const handleTableChangeForDate = (dateIndex, tableId, field, value) => {
             {formData.eventDates.map((dateItem, index) => (
               <div key={dateItem.id || index} className="event-date-item">
                 <h4>Data {index + 1}</h4>
-                <div className="form-group">
+            <div className="form-group">
                   <label htmlFor={`date-${index}`}>Data e Ora:</label>
-                  <input
+              <input
                     type="datetime-local" // Usa datetime-local per data e ora
                     id={`date-${index}`}
-                    name="date"
+                name="date"
                     value={dateItem.date}
                     onChange={(e) => handleDateChange(index, 'date', e.target.value)}
-                    required
-                  />
+                required
+              />
                    <button type="button" onClick={() => removeEventDate(index)} className="remove-date-btn">Rimuovi Data</button>
-                </div>
+          </div>
 
 
                 {/* Sezione Biglietti per questa Data */}
@@ -363,40 +363,117 @@ const handleTableChangeForDate = (dateIndex, tableId, field, value) => {
                   {TICKET_TYPES.map(ticketType => {
                     const isSelected = dateItem.ticketTypes.some(t => t.id === ticketType.id);
                     const currentTicket = dateItem.ticketTypes.find(t => t.id === ticketType.id);
-                    return (
+                return (
                       <div key={ticketType.id} className="ticket-type-config">
                         <label className="checkbox-label">
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
                             onChange={() => toggleTicketTypeForDate(index, ticketType)}
-                          />
+                        />
                           {ticketType.name} ({ticketType.description})
-                        </label>
-                        {isSelected && (
+                      </label>
+                    {isSelected && (
                           <div className="ticket-details">
                             <div className="form-group inline">
                               <label htmlFor={`ticket-price-${index}-${ticketType.id}`}>Prezzo:</label>
-                              <input
-                                type="number"
+                          <input
+                            type="number"
                                 id={`ticket-price-${index}-${ticketType.id}`}
                                 value={currentTicket?.price ?? ''}
                                 onChange={(e) => handleTicketChangeForDate(index, ticketType.id, 'price', e.target.value)}
                                 placeholder="0.00"
                                 step="0.01"
-                                min="0"
-                                required
-                              />
-                            </div>
+                            min="0"
+                            required
+                          />
+                        </div>
                             <div className="form-group inline">
                               <label htmlFor={`ticket-quantity-${index}-${ticketType.id}`}>Quantità:</label>
-                              <input
-                                type="number"
+                          <input
+                            type="number"
                                 id={`ticket-quantity-${index}-${ticketType.id}`}
                                 value={currentTicket?.quantity ?? ''}
                                 onChange={(e) => handleTicketChangeForDate(index, ticketType.id, 'quantity', e.target.value)}
                                 placeholder="0"
                                 step="1"
+                            min="1"
+                            required
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+          </div>
+
+                 {/* Sezione Tavoli per questa Data */}
+                 <div className="tables-for-date-section">
+            <div className="form-group">
+                                        <label className="checkbox-label">
+                <input
+                  type="checkbox"
+                                                checked={dateItem.hasTablesForDate}
+                                                onChange={(e) => handleHasTablesToggle(index, e.target.checked)}
+                />
+                                            Prevede tavoli per questa data?
+              </label>
+            </div>
+
+                                    {dateItem.hasTablesForDate && (
+                                        <>
+                                            <h5>Tavoli per questa data</h5>
+                                            {TABLE_TYPES.map(tableType => {
+                                                const isSelected = dateItem.tableTypes.some(t => t.id === tableType.id);
+                                                const currentTable = dateItem.tableTypes.find(t => t.id === tableType.id);
+                    return (
+                                                    <div key={tableType.id} className="table-type-config">
+                                                        <label className="checkbox-label">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                                                                onChange={() => toggleTableTypeForDate(index, tableType)}
+                            />
+                                                            {tableType.name} ({tableType.description})
+                          </label>
+                        {isSelected && (
+                                                            <div className="table-details">
+                                                                <div className="form-group inline">
+                                                                    <label htmlFor={`table-price-${index}-${tableType.id}`}>Prezzo:</label>
+                              <input
+                                type="number"
+                                                                        id={`table-price-${index}-${tableType.id}`}
+                                                                        value={currentTable?.price ?? ''}
+                                                                        onChange={(e) => handleTableChangeForDate(index, tableType.id, 'price', e.target.value)}
+                                                                        placeholder="0.00"
+                                                                        step="0.01"
+                                min="0"
+                                required
+                              />
+                            </div>
+                                                                 <div className="form-group inline">
+                                                                    <label htmlFor={`table-seats-${index}-${tableType.id}`}>Posti:</label>
+                              <input
+                                type="number"
+                                                                        id={`table-seats-${index}-${tableType.id}`}
+                                                                        value={currentTable?.seats ?? tableType.defaultSeats} // Usa default se non specificato
+                                                                        onChange={(e) => handleTableChangeForDate(index, tableType.id, 'seats', e.target.value)}
+                                                                        placeholder={tableType.defaultSeats}
+                                                                        step="1"
+                                min="1"
+                                required
+                              />
+                            </div>
+                                                                <div className="form-group inline">
+                                                                    <label htmlFor={`table-quantity-${index}-${tableType.id}`}>Quantità Tavoli:</label>
+                              <input
+                                type="number"
+                                                                        id={`table-quantity-${index}-${tableType.id}`}
+                                                                        value={currentTable?.quantity ?? ''}
+                                                                        onChange={(e) => handleTableChangeForDate(index, tableType.id, 'quantity', e.target.value)}
+                                                                        placeholder="0"
+                                                                        step="1"
                                 min="1"
                                 required
                               />
@@ -406,86 +483,9 @@ const handleTableChangeForDate = (dateIndex, tableId, field, value) => {
                       </div>
                     );
                   })}
-                </div>
-
-                 {/* Sezione Tavoli per questa Data */}
-                 <div className="tables-for-date-section">
-                                    <div className="form-group">
-                                        <label className="checkbox-label">
-                                            <input
-                                                type="checkbox"
-                                                checked={dateItem.hasTablesForDate}
-                                                onChange={(e) => handleHasTablesToggle(index, e.target.checked)}
-                                            />
-                                            Prevede tavoli per questa data?
-                                        </label>
-                                    </div>
-
-                                    {dateItem.hasTablesForDate && (
-                                        <>
-                                            <h5>Tavoli per questa data</h5>
-                                            {TABLE_TYPES.map(tableType => {
-                                                const isSelected = dateItem.tableTypes.some(t => t.id === tableType.id);
-                                                const currentTable = dateItem.tableTypes.find(t => t.id === tableType.id);
-                                                return (
-                                                    <div key={tableType.id} className="table-type-config">
-                                                        <label className="checkbox-label">
-                                                            <input
-                                                                type="checkbox"
-                                                                checked={isSelected}
-                                                                onChange={() => toggleTableTypeForDate(index, tableType)}
-                                                            />
-                                                            {tableType.name} ({tableType.description})
-                                                        </label>
-                                                        {isSelected && (
-                                                            <div className="table-details">
-                                                                <div className="form-group inline">
-                                                                    <label htmlFor={`table-price-${index}-${tableType.id}`}>Prezzo:</label>
-                                                                    <input
-                                                                        type="number"
-                                                                        id={`table-price-${index}-${tableType.id}`}
-                                                                        value={currentTable?.price ?? ''}
-                                                                        onChange={(e) => handleTableChangeForDate(index, tableType.id, 'price', e.target.value)}
-                                                                        placeholder="0.00"
-                                                                        step="0.01"
-                                                                        min="0"
-                                                                        required
-                                                                    />
-                                                                </div>
-                                                                 <div className="form-group inline">
-                                                                    <label htmlFor={`table-seats-${index}-${tableType.id}`}>Posti:</label>
-                                                                    <input
-                                                                        type="number"
-                                                                        id={`table-seats-${index}-${tableType.id}`}
-                                                                        value={currentTable?.seats ?? tableType.defaultSeats} // Usa default se non specificato
-                                                                        onChange={(e) => handleTableChangeForDate(index, tableType.id, 'seats', e.target.value)}
-                                                                        placeholder={tableType.defaultSeats}
-                                                                        step="1"
-                                                                        min="1"
-                                                                        required
-                                                                    />
-                                                                </div>
-                                                                <div className="form-group inline">
-                                                                    <label htmlFor={`table-quantity-${index}-${tableType.id}`}>Quantità Tavoli:</label>
-                                                                    <input
-                                                                        type="number"
-                                                                        id={`table-quantity-${index}-${tableType.id}`}
-                                                                        value={currentTable?.quantity ?? ''}
-                                                                        onChange={(e) => handleTableChangeForDate(index, tableType.id, 'quantity', e.target.value)}
-                                                                        placeholder="0"
-                                                                        step="1"
-                                                                        min="1"
-                                                                        required
-                                                                    />
-                                                                </div>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                );
-                                            })}
-                                        </>
-                                    )}
-                                </div>
+              </>
+            )}
+          </div>
 
 
               </div>
@@ -507,4 +507,4 @@ const handleTableChangeForDate = (dateIndex, tableId, field, value) => {
   );
 }
 
-export default CreateEventModal;
+export default CreateEventModal; 

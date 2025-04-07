@@ -50,9 +50,9 @@ function SellTicketModal({ event, selectedDateItem, onClose, onSold }) {
     const initialTicketPrice = defaultTicketType ? Number(defaultTicketType.price || 0) : 0;
     // Imposta maxQuantity in base alla disponibilità del tipo di default o 1 se non disponibile
     const initialMaxQuantity = defaultTicketType ? Math.max(1, Number(defaultTicketType.quantity || 0)) : 1;
-
+    
     setFormData(prev => ({
-        ...prev,
+      ...prev,
         customerName: '',
         customerEmail: '',
         customerPhone: '',
@@ -112,8 +112,8 @@ function SellTicketModal({ event, selectedDateItem, onClose, onSold }) {
               const defaultTable = formData.availableTablesForDate.find(t => t.quantity > 0);
               const defaultTableId = newIncludeTable && defaultTable ? defaultTable.id : null;
               
-              setFormData(prev => ({
-                  ...prev,
+      setFormData(prev => ({
+        ...prev,
                   includeTable: newIncludeTable,
                   // Seleziona il primo tavolo disponibile se si attiva, altrimenti null
                   selectedTableTypeId: defaultTableId,
@@ -132,8 +132,8 @@ function SellTicketModal({ event, selectedDateItem, onClose, onSold }) {
           // La quantità attuale non può superare la nuova massima
           const currentQuantity = Math.min(formData.quantity, newMax);
 
-          setFormData(prev => ({
-              ...prev,
+    setFormData(prev => ({
+      ...prev,
               selectedTicketTypeId: value,
               quantity: currentQuantity > 0 ? currentQuantity : (newMax > 0 ? 1: 0), // Imposta a 1 se possibile, altrimenti 0
               maxQuantity: newMax,
@@ -151,8 +151,8 @@ function SellTicketModal({ event, selectedDateItem, onClose, onSold }) {
           }
       } else if (name === 'selectedTableTypeId') {
             // Quando si seleziona un tavolo, la quantità di biglietti non è rilevante
-            setFormData(prev => ({ 
-                ...prev, 
+    setFormData(prev => ({
+      ...prev,
                 selectedTableTypeId: value,
                 quantity: 1, // Quantità fissa a 1 per vendita tavolo
                 maxQuantity: 1 
@@ -339,7 +339,7 @@ function SellTicketModal({ event, selectedDateItem, onClose, onSold }) {
             // Aggiorna l'array specifico (ticketTypes o tableTypes) nell'oggetto data clonato
             if (includeTable) {
                  updatedDateItem.tableTypes = updatedItemsArray;
-             } else {
+        } else {
                  updatedDateItem.ticketTypes = updatedItemsArray;
              }
 
@@ -351,13 +351,13 @@ function SellTicketModal({ event, selectedDateItem, onClose, onSold }) {
             transaction.update(eventRef, { eventDates: updatedEventDates });
 
             // Crea il documento del biglietto venduto
-            const ticketData = {
+        const ticketData = {
                 eventId: event.id,
-                eventName: event.name,
+          eventName: event.name,
                 eventDate: selectedDateItem.date, // Salva la data specifica
                 eventLocation: event.location, // Aggiunto per email
                 eventDescription: event.description, // Aggiunto per email
-                sellerId: currentUser.uid,
+          sellerId: currentUser.uid,
                 sellerName: currentUser.displayName || currentUser.email,
                 customerName,
                 customerEmail: customerEmail || null, // Salva null se vuoto
@@ -399,7 +399,7 @@ function SellTicketModal({ event, selectedDateItem, onClose, onSold }) {
             const emailSent = await sendTicketEmail(customerEmail, dataForEmail);
             if (emailSent) {
                 console.log("Email di conferma inviata con successo a", customerEmail);
-            } else {
+        } else {
                 console.warn("Invio email fallito per", customerEmail, "(sendTicketEmail ha restituito false)");
             }
         } catch (emailError) {
@@ -454,7 +454,7 @@ function SellTicketModal({ event, selectedDateItem, onClose, onSold }) {
     (selectedDateItem?.hasTablesForDate && formData.availableTablesForDate.some(t => t.quantity > 0));
 
   return (
-    <div className="modal-overlay"> 
+    <div className="modal-overlay">
       <div className="modal-content sell-ticket-modal">
         <h2>Vendi Biglietti/Tavoli per: {event.name}</h2>
         <p><strong>Data Selezionata:</strong> {selectedDateItem ? new Date(selectedDateItem.date).toLocaleString('it-IT', { dateStyle: 'full', timeStyle: 'short' }) : 'N/D'}</p>
@@ -469,26 +469,26 @@ function SellTicketModal({ event, selectedDateItem, onClose, onSold }) {
                      <button type="button" onClick={onClose} className="cancel-btn">
                          Chiudi
                      </button>
-                </div>
+          </div>
             </div>
         ) : (
             <form onSubmit={handleSubmit} className="sell-form">
             {/* Dati Cliente */} 
             <div className="form-section customer-details">
                 <h4>Dati Cliente</h4>
-                <div className="form-group">
+            <div className="form-group">
                     <label htmlFor="customerName"><FaUser /> Nome Cliente:</label>
                     <input type="text" id="customerName" name="customerName" value={formData.customerName} onChange={handleInputChange} required />
-                </div>
-                <div className="form-group">
+          </div>
+          <div className="form-group">
                     <label htmlFor="customerPhone"><FaWhatsapp /> Telefono Cliente:</label>
                     <input type="tel" id="customerPhone" name="customerPhone" value={formData.customerPhone} onChange={handleInputChange} required placeholder="+39..."/>
-                </div>
-                <div className="form-group">
+          </div>
+          <div className="form-group">
                     <label htmlFor="customerEmail"><FaEnvelope /> Email Cliente (Opzionale):</label>
                     <input type="email" id="customerEmail" name="customerEmail" value={formData.customerEmail} onChange={handleInputChange} />
-                </div>
             </div>
+          </div>
 
             {/* Selezione Biglietto/Tavolo */} 
             <div className="form-section item-selection">
@@ -497,37 +497,37 @@ function SellTicketModal({ event, selectedDateItem, onClose, onSold }) {
                 {selectedDateItem?.hasTablesForDate && formData.availableTablesForDate.some(t=>t.quantity > 0) && (
                     <div className="form-group table-option">
                         <label className="checkbox-label">
-                            <input 
-                                type="checkbox" 
+                  <input
+                    type="checkbox"
                                 name="includeTable"
-                                checked={formData.includeTable}
+                    checked={formData.includeTable}
                                 onChange={handleInputChange}
-                            />
+                  />
                             Vendi un Tavolo (invece di biglietti singoli)
-                        </label>
-                    </div>
+                </label>
+              </div>
                 )}
 
                 {/* Selettore Tavolo (se opzione tavolo attiva) */} 
-                {formData.includeTable && (
-                    <div className="form-group">
+              {formData.includeTable && (
+                <div className="form-group">
                         <label htmlFor="selectedTableTypeId"><FaTable /> Tipo Tavolo:</label>
-                        <select 
+                  <select
                             id="selectedTableTypeId" 
                             name="selectedTableTypeId" 
                             value={formData.selectedTableTypeId || ''} 
                             onChange={handleInputChange} 
-                            required
-                        >
+                    required
+                  >
                             <option value="" disabled>-- Seleziona Tavolo --</option>
                             {formData.availableTablesForDate.map(table => (
                                 <option key={table.id} value={table.id} disabled={!table.quantity || table.quantity <= 0}>
                                     {table.name} - €{Number(table.price || 0).toFixed(2)} (Disponibili: {table.quantity || 0})
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-                )}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
                 {/* Selettore Biglietto (se opzione tavolo NON attiva) */} 
                 {!formData.includeTable && (
@@ -564,21 +564,21 @@ function SellTicketModal({ event, selectedDateItem, onClose, onSold }) {
                                     required 
                                 />
                                 <span> (Disponibili: {formData.maxQuantity})</span>
-                            </div>
-                         )}
+            </div>
+          )}
                           {/* Messaggio se il tipo selezionato è esaurito */} 
                          {formData.selectedTicketTypeId && formData.maxQuantity === 0 && (
                             <p className="warning-message">Questo tipo di biglietto è esaurito per la data selezionata.</p>
                          )}
                     </>
                 )}
-            </div>
-            
+          </div>
+
             {/* Riepilogo e Azioni */} 
             <div className="form-section summary-actions">
                 <h4>Riepilogo</h4>
                 <p className="total-price"><strong><FaEuroSign /> Prezzo Totale: €{formData.totalPrice.toFixed(2)}</strong></p>
-                <div className="modal-actions">
+          <div className="modal-actions">
                         <button 
                             type="submit" 
                             disabled={loading || formData.totalPrice <= 0 || (!formData.includeTable && formData.quantity < 1) || (formData.includeTable && !formData.selectedTableTypeId) }
@@ -587,11 +587,11 @@ function SellTicketModal({ event, selectedDateItem, onClose, onSold }) {
                         {loading ? 'Vendita in corso...' : 'Conferma Vendita e Invia WhatsApp'}
                         </button>
                         <button type="button" onClick={onClose} disabled={loading} className="cancel-btn">
-                        Annulla
-                        </button>
+              Annulla
+            </button>
                     </div>
-            </div>
-            </form>
+          </div>
+        </form>
         )}
 
       </div>
@@ -599,4 +599,4 @@ function SellTicketModal({ event, selectedDateItem, onClose, onSold }) {
   );
 }
 
-export default SellTicketModal;
+export default SellTicketModal; 

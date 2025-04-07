@@ -52,7 +52,7 @@
   /* Dark Theme Colors */
   --text-color: #e9ecef; /* Testo quasi bianco */
   --text-light: #adb5bd; /* Grigio chiaro */
-  --background-color: #121212; 
+  --background-color: #121212;
   --card-bg: #1e1e1e; /* Superficie leggermente più chiara */
   --input-bg: #2c2c2c; /* Input ancora più scuro */
   --input-text: var(--text-color);
@@ -451,7 +451,7 @@ img {
 /* Migliora aspetto tattile su dispositivi mobili */
 button, 
 a, 
-[role="button"],
+[role="button"], 
 .touchable {
   touch-action: manipulation; /* Prevents double-tap to zoom */
   cursor: pointer;

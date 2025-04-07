@@ -1,31 +1,35 @@
 .dashboard-container {
   min-height: 100vh;
-  background: #f5f5f5;
+  background: var(--background-color);
 }
 
 .tabs-container {
-  background: white;
-  padding: 0 20px;
-  border-bottom: 1px solid #e0e0e0;
+  background: var(--card-bg);
+  padding: 0 var(--spacing-md, 20px);
+  border-bottom: 1px solid var(--border-color);
   display: flex;
-  gap: 20px;
+  gap: var(--spacing-md, 20px);
+  overflow-x: auto;
+  white-space: nowrap;
+  -webkit-overflow-scrolling: touch;
 }
 
 .tab-button {
-  padding: 15px 25px;
+  padding: var(--spacing-sm, 15px) var(--spacing-md, 25px);
   border: none;
   background: none;
-  font-size: 16px;
-  color: #666;
+  font-size: 1rem;
+  color: var(--text-light);
   cursor: pointer;
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--spacing-xs, 8px);
   position: relative;
+  flex-shrink: 0;
 }
 
 .tab-button.active {
-  color: #2196F3;
+  color: var(--primary-color);
   font-weight: 500;
 }
 
@@ -36,56 +40,67 @@
   left: 0;
   right: 0;
   height: 2px;
-  background: #2196F3;
+  background: var(--primary-color);
 }
 
 .dashboard-content {
-  padding: 20px;
+  padding: var(--spacing-md, 20px);
   max-width: 1200px;
   margin: 0 auto;
 }
 
-.leaders-grid {
+.leaders-grid,
+.events-grid,
+.stats-container {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  gap: 20px;
-  margin-top: 20px;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: var(--spacing-md, 20px);
+  margin-top: var(--spacing-md, 20px);
+}
+
+.leader-card,
+.event-card,
+.team-leader-card,
+.stats-card {
+  background: var(--card-bg);
+  padding: var(--spacing-md, 20px);
+  border-radius: var(--border-radius-lg);
+  box-shadow: var(--box-shadow);
+  transition: transform 0.2s, box-shadow 0.2s;
+  border: 1px solid var(--border-color);
+}
+
+.leader-card:hover,
+.event-card:hover,
+.team-leader-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--box-shadow-lg);
 }
 
 .leader-card {
-  background: white;
-  padding: 20px;
-  border-radius: 12px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
   text-align: center;
   cursor: pointer;
-  transition: transform 0.2s;
   display: flex;
   flex-direction: column;
   align-items: center;
 }
 
-.leader-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-}
-
 .leader-icon {
   width: 60px;
   height: 60px;
-  background: linear-gradient(135deg, #2196F3, #1976D2);
+  background: linear-gradient(135deg, var(--primary-color), var(--primary-hover-color));
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 15px;
-  color: white;
+  margin-bottom: var(--spacing-sm, 15px);
+  color: var(--btn-primary-text);
 }
 
 .leader-stats {
-  margin-top: 15px;
-  padding-top: 15px;
-  border-top: 1px solid #eee;
+  margin-top: var(--spacing-sm, 15px);
+  padding-top: var(--spacing-sm, 15px);
+  border-top: 1px solid var(--border-color);
   width: 100%;
 }
 
@@ -93,285 +108,224 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  color: #666;
+  gap: var(--spacing-xs, 8px);
+  color: var(--text-light);
 }
 
 .filters {
   display: flex;
-  gap: 15px;
-  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm, 15px);
+  margin-bottom: var(--spacing-md, 20px);
 }
 
 .search-input,
 .date-filter {
-  padding: 8px 12px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  font-size: 14px;
-}
-
-/* Dark mode */
-@media (prefers-color-scheme: dark) {
-  .leader-card {
-    background: #1e1e1e;
-    color: white;
-  }
-
-  .search-input,
-  .date-filter {
-    background: #2d2d2d;
-    color: white;
-    border-color: #444;
-  }
+  padding: 0.5rem 0.8rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  font-size: 0.9rem;
+  background-color: var(--input-bg);
+  color: var(--input-text);
+  flex-grow: 1;
 }
 
 .team-leader-card {
-  background: white;
-  padding: 20px;
-  border-radius: 12px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
   cursor: pointer;
-  transition: all 0.3s ease;
   position: relative;
 }
 
-.team-leader-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-}
-
-/* Stili per il modale delle statistiche */
 .modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: rgba(0, 0, 0, 0.6);
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 1000;
+  z-index: 1050;
+  padding: var(--spacing-sm, 15px);
 }
 
 .modal-content {
-  background: white;
-  padding: 30px;
-  border-radius: 12px;
-  width: 90%;
+  background: var(--card-bg);
+  padding: var(--spacing-lg, 30px);
+  border-radius: var(--border-radius-lg);
+  width: 100%;
   max-width: 1200px;
   max-height: 90vh;
   overflow-y: auto;
   position: relative;
+  box-shadow: var(--box-shadow-lg);
+  border: 1px solid var(--border-color);
 }
 
 .close-button {
   position: absolute;
-  top: 15px;
-  right: 15px;
+  top: var(--spacing-sm, 15px);
+  right: var(--spacing-sm, 15px);
   background: none;
   border: none;
-  font-size: 24px;
-  color: #666;
+  font-size: 1.5rem;
+  color: var(--text-light);
   cursor: pointer;
   padding: 5px;
   line-height: 1;
   transition: color 0.3s ease;
+  z-index: 10;
 }
 
 .close-button:hover {
-  color: #f44336;
-}
-
-/* Stili per le statistiche */
-.stats-container {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 20px;
-  margin-top: 20px;
+  color: var(--error-color);
 }
 
 .stats-card {
-  background: #f8f9fa;
-  padding: 20px;
-  border-radius: 8px;
+  background: var(--background-color);
   text-align: center;
 }
 
 .stats-value {
-  font-size: 24px;
+  font-size: 1.5rem;
   font-weight: bold;
-  color: #2196F3;
+  color: var(--primary-color);
   margin-bottom: 5px;
 }
 
 .stats-label {
-  color: #666;
-  font-size: 14px;
+  color: var(--text-light);
+  font-size: 0.9rem;
 }
 
 @media (max-width: 768px) {
   .modal-content {
-    width: 95%;
-    padding: 20px;
+    padding: var(--spacing-md, 20px);
+    max-height: 85vh;
   }
 
-  .stats-container {
+  .stats-container,
+  .leaders-grid,
+  .events-grid {
     grid-template-columns: 1fr;
+    gap: var(--spacing-sm, 15px);
+  }
+
+  .tabs-container {
+    gap: var(--spacing-sm, 15px);
+    padding: 0 var(--spacing-sm, 15px);
+  }
+
+  .tab-button {
+    padding: var(--spacing-sm, 15px);
+    font-size: 0.95rem;
+  }
+
+  .filters {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .search-input,
+  .date-filter {
+    width: 100%;
   }
 }
 
 .manager-dashboard {
-  padding: 20px;
+  padding: var(--spacing-md, 20px);
   max-width: 1200px;
   margin: 0 auto;
 }
 
-.dashboard-header {
-  margin-bottom: 30px;
-  text-align: center;
-}
-
 .header-title {
-  color: #333;
-  font-size: 2rem;
+  color: var(--text-color);
+  font-size: 1.8rem;
   margin-bottom: 5px;
 }
 
 .header-subtitle {
-  color: #666;
+  color: var(--text-light);
   font-size: 1.1rem;
 }
 
 .dashboard-content {
-  padding: 20px 0;
-}
-
-.stats-overview {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 20px;
-  margin-bottom: 30px;
+  padding: var(--spacing-md, 20px) 0;
 }
 
 .stat-card {
-  background-color: white;
-  border-radius: 8px;
-  padding: 20px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-  transition: transform 0.2s, box-shadow 0.2s;
+  background: var(--card-bg);
+  border-radius: var(--border-radius-lg);
+  padding: var(--spacing-md, 1.5rem);
+  box-shadow: var(--box-shadow);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md, 1.5rem);
+  border: 1px solid var(--border-color);
 }
 
 .stat-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
-}
-
-.stat-header {
-  display: flex;
-  align-items: center;
+  transform: translateY(-3px);
+  box-shadow: var(--box-shadow-lg);
 }
 
 .stat-icon {
-  width: 40px;
-  height: 40px;
-  background-color: #f0f7ff;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-right: 15px;
-  font-size: 1.2rem;
-  color: #4a90e2;
-}
-
-.stat-info {
-  flex-grow: 1;
+  font-size: 2rem;
+  color: var(--primary-color);
+  flex-shrink: 0;
 }
 
 .stat-info h3 {
-  margin: 0 0 5px;
-  color: #555;
+  margin: 0;
   font-size: 0.9rem;
+  color: var(--text-light);
   font-weight: 500;
 }
 
 .stat-info .value {
-  font-size: 1.8rem;
+  font-size: 1.5rem;
   font-weight: 600;
-  color: #333;
-}
-
-.tabs-container {
-  display: flex;
-  border-bottom: 1px solid #eee;
-  margin-bottom: 30px;
-}
-
-.tab-button {
-  padding: 12px 20px;
-  background: none;
-  border: none;
-  border-bottom: 3px solid transparent;
-  color: #777;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.tab-button:hover {
-  color: #4a90e2;
-}
-
-.tab-button.active {
-  color: #4a90e2;
-  border-bottom-color: #4a90e2;
+  color: var(--text-color);
+  margin-top: 0.25rem;
+  display: block;
 }
 
 .sell-tickets-container,
-.team-leaders-section,
-.validator-section {
-  padding: 20px 0;
+.team-management-container {
+  background: var(--card-bg);
+  padding: var(--spacing-lg, 1.5rem);
+  border-radius: var(--border-radius-lg);
+  margin-bottom: var(--spacing-lg, 2rem);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--box-shadow);
 }
 
 .sell-tickets-container h2,
-.team-leaders-section h2 {
-  margin-bottom: 20px;
-  color: #333;
-}
-
-.events-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 25px;
+.team-management-container h2 {
+  color: var(--text-color);
+  margin-bottom: var(--spacing-md, 1.5rem);
+  font-size: 1.3rem;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: var(--spacing-sm, 0.75rem);
 }
 
 .event-card {
-  background: white;
-  border-radius: 10px;
-  overflow: hidden;
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
-  transition: transform 0.3s, box-shadow 0.3s;
   display: flex;
   flex-direction: column;
 }
 
-.event-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
-}
-
 .event-image {
+  width: 100%;
   height: 180px;
   overflow: hidden;
+  border-radius: var(--border-radius-lg) var(--border-radius-lg) 0 0;
 }
 
 .event-image img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 0.5s;
+  transition: transform 0.3s ease;
 }
 
 .event-card:hover .event-image img {
@@ -379,271 +333,200 @@
 }
 
 .event-content {
-  padding: 20px;
+  padding: var(--spacing-md, 1rem);
   flex-grow: 1;
   display: flex;
   flex-direction: column;
 }
 
 .event-content h3 {
-  margin-top: 0;
-  margin-bottom: 15px;
-  color: #333;
-  font-size: 1.3rem;
+  color: var(--text-color);
+  font-size: 1.1rem;
+  margin-bottom: var(--spacing-xs, 0.5rem);
 }
 
 .event-content p {
+  color: var(--text-light);
+  font-size: 0.9rem;
+  margin-bottom: var(--spacing-xs, 0.5rem);
   display: flex;
   align-items: center;
-  margin: 8px 0;
-  color: #666;
+  gap: var(--spacing-xs, 0.3rem);
 }
 
 .event-content p svg {
-  margin-right: 8px;
-  color: #4a90e2;
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
 }
 
 .event-price {
-  font-size: 1.4rem;
-  font-weight: 600;
-  color: #4a90e2;
-  margin: 15px 0;
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: var(--primary-color);
+  margin-top: auto;
+  padding-top: var(--spacing-sm, 0.5rem);
 }
 
 .event-description {
-  margin-top: 15px;
-  color: #777;
+  color: var(--text-light);
   font-size: 0.9rem;
-  line-height: 1.4;
+  margin-bottom: var(--spacing-sm, 0.5rem);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .tickets-available {
-  display: inline-block;
-  padding: 4px 10px;
-  border-radius: 4px;
-  background: #e8f5e9;
-  color: #2e7d32;
   font-size: 0.85rem;
-  margin-bottom: 15px;
+  color: var(--success-color);
+  font-weight: 500;
+  margin-bottom: var(--spacing-md, 1rem);
 }
 
 .sell-button {
+  width: 100%;
   margin-top: auto;
-  padding: 10px 15px;
-  background-color: #4a90e2;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.sell-button:hover {
-  background-color: #3a7bc8;
-}
-
-.sell-button:disabled {
-  background-color: #cccccc;
-  cursor: not-allowed;
 }
 
 .search-container {
+  margin-bottom: var(--spacing-md, 1.5rem);
   position: relative;
-  margin-bottom: 20px;
-  max-width: 500px;
 }
 
 .search-input {
-  width: 100%;
-  padding: 10px 15px;
-  padding-left: 40px;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  font-size: 1rem;
-  transition: all 0.2s;
+  padding-left: 2.5rem;
 }
 
 .search-input:focus {
-  border-color: #4a90e2;
-  box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.2);
-  outline: none;
 }
 
 .search-icon {
   position: absolute;
-  left: 15px;
+  left: 0.8rem;
   top: 50%;
   transform: translateY(-50%);
-  color: #999;
-}
-
-.leaders-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 25px;
+  color: var(--text-light);
+  pointer-events: none;
 }
 
 .leader-card {
-  background: white;
-  border-radius: 10px;
-  padding: 20px;
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
-  transition: transform 0.3s, box-shadow 0.3s;
-  cursor: pointer;
-}
-
-.leader-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
-}
-
-.leader-icon {
-  width: 50px;
-  height: 50px;
-  background-color: #f0f7ff;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0 auto 15px;
-  color: #4a90e2;
 }
 
 .leader-card h3 {
-  text-align: center;
-  margin: 0 0 5px;
-  color: #333;
-  font-size: 1.2rem;
+  font-size: 1.1rem;
+  color: var(--text-color);
+  margin-bottom: var(--spacing-xs, 0.5rem);
+  margin-top: var(--spacing-sm, 1rem);
 }
 
 .leader-card p {
-  text-align: center;
-  margin: 0 0 20px;
-  color: #777;
   font-size: 0.9rem;
+  color: var(--text-light);
+  margin-bottom: var(--spacing-sm, 1rem);
 }
 
 .leader-stats {
   display: flex;
-  justify-content: center;
+  justify-content: space-around;
+  gap: var(--spacing-sm, 1rem);
 }
 
 .leader-stats .stat {
-  display: flex;
+  flex-direction: column;
   align-items: center;
-  background-color: #f5f8fc;
-  padding: 8px 12px;
-  border-radius: 20px;
-  color: #555;
   font-size: 0.85rem;
 }
 
+.leader-stats .stat span {
+  font-weight: 600;
+  font-size: 1.1rem;
+  color: var(--text-color);
+  margin-top: 0.2rem;
+}
+
 .leader-stats .stat svg {
-  margin-right: 5px;
-  color: #4a90e2;
+  width: 18px;
+  height: 18px;
+  margin-bottom: 0.3rem;
 }
 
 .loading-container {
   display: flex;
-  flex-direction: column;
-  align-items: center;
   justify-content: center;
-  height: 100vh;
-  color: #555;
+  align-items: center;
+  min-height: 200px;
+  padding: var(--spacing-lg, 2rem);
 }
 
 .loading-spinner {
-  width: 40px;
-  height: 40px;
-  border: 3px solid #f3f3f3;
-  border-top: 3px solid #4a90e2;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin-bottom: 15px;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
 }
 
 .error {
-  color: #e53935;
+  color: var(--error-color);
+  background-color: rgba(var(--error-color-rgb, 244, 67, 54), 0.1);
+  padding: var(--spacing-sm, 1rem);
+  border-radius: var(--border-radius);
+  margin-bottom: var(--spacing-md, 1.5rem);
   text-align: center;
-  padding: 20px;
-  background-color: #ffebee;
-  border-radius: 8px;
-  margin: 40px 0;
+  border: 1px solid var(--error-color);
 }
 
-/* Ottimizzazioni per dispositivi mobili */
 @media (max-width: 768px) {
   .manager-dashboard {
-    padding: 15px 10px;
+    padding: var(--spacing-sm, 1rem);
   }
   
   .header-title {
-    font-size: 1.6rem;
+    font-size: 1.5rem;
   }
   
   .header-subtitle {
-    font-size: 0.95rem;
+    font-size: 1rem;
   }
 
   .stats-overview {
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-    gap: 15px;
+    grid-template-columns: 1fr;
+    gap: var(--spacing-sm, 1rem);
   }
   
   .stat-card {
-    padding: 15px;
+    flex-direction: row;
+    padding: var(--spacing-sm, 1rem);
   }
   
   .stat-icon {
-    width: 35px;
-    height: 35px;
-    font-size: 1rem;
+    font-size: 1.5rem;
   }
   
   .stat-info .value {
-    font-size: 1.4rem;
-  }
-  
-  .events-grid, .leaders-grid {
-    grid-template-columns: 1fr;
-    gap: 20px;
-  }
-  
-  .tabs-container {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    margin-bottom: 20px;
-  }
-  
-  .tab-button {
-    padding: 10px 15px;
-    white-space: nowrap;
+    font-size: 1.3rem;
   }
   
   .event-content h3 {
-    font-size: 1.2rem;
+    font-size: 1rem;
   }
   
   .event-price {
-    font-size: 1.2rem;
+    font-size: 1rem;
   }
-  
-  .search-container {
-    width: 100%;
+
+  .sell-tickets-container,
+  .team-management-container {
+    padding: var(--spacing-md, 1rem);
+  }
+
+  .sell-tickets-container h2,
+  .team-management-container h2 {
+    font-size: 1.2rem;
   }
 }
 
-/* Ottimizzazioni per schermi molto piccoli */
 @media (max-width: 480px) {
   .header-title {
-    font-size: 1.4rem;
+    font-size: 1.3rem;
   }
   
   .event-image {
@@ -651,22 +534,21 @@
   }
   
   .event-content {
-    padding: 15px;
+    padding: var(--spacing-sm, 0.8rem);
   }
   
   .leader-icon {
-    width: 40px;
-    height: 40px;
-    font-size: 1.1rem;
+    width: 50px;
+    height: 50px;
   }
   
   .leader-card h3 {
-    font-size: 1.1rem;
+    font-size: 1rem;
   }
   
   .sell-button {
-    width: 100%;
-  padding: 12px;
+    padding: 0.6rem 1rem;
+    font-size: 0.9rem;
   }
   
   .stat-info h3 {
@@ -674,225 +556,30 @@
   }
   
   .stat-info .value {
-    font-size: 1.3rem;
+    font-size: 1.2rem;
   }
   
   .leader-stats .stat {
     font-size: 0.8rem;
-    padding: 6px 10px;
+  }
+
+  .leader-stats .stat span {
+    font-size: 1rem;
   }
 }
 
-/* Ottimizzazioni per dispositivi con touch */
-@media (hover: none) {
-  .event-card:hover,
-  .leader-card:hover,
-  .stat-card:hover {
-    transform: none;
-    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
-  }
-  
-  .event-card:active,
-  .leader-card:active,
-  .stat-card:active {
-    transform: scale(0.98);
-  }
-  
-  .event-card:hover .event-image img {
-    transform: none;
-  }
-}
-
-/* Root wrapper to prevent overflow */
-#root {
-  max-width: 100vw;
-  overflow-x: hidden;
-  position: relative;
-}
-
-/* App wrapper */
-.app-wrapper {
-  width: 100%;
-  max-width: 100vw;
-  overflow-x: hidden;
-  position: relative;
-}
-
-body {
-  overflow-x: hidden !important;
-  width: 100% !important;
-  max-width: 100vw !important;
-  position: relative !important;
-  margin: 0 !important;
-  padding: 0 !important;
-}
-
-.dashboard-container {
-  width: 100% !important;
-  max-width: 100% !important;
-  min-height: 100vh !important;
-  margin: 0 !important;
-  padding: 10px !important;
-  overflow-x: hidden !important;
-  position: relative !important;
-  box-sizing: border-box !important;
-}
-
-.dashboard-content {
-  width: 100% !important;
-  max-width: 100% !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  box-sizing: border-box !important;
-  overflow-x: hidden !important;
-  display: flex !important;
-  flex-direction: column !important;
-}
-
-/* Tabs container */
-.tabs-container {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 20px;
-  width: 100%;
-  overflow: hidden;
-  flex-wrap: wrap;
-}
-
-.tab-button {
-  padding: 12px 20px;
-  background-color: var(--background-secondary);
-  color: var(--text-primary);
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  white-space: nowrap;
-  text-align: center;
-  flex: 1;
-  min-width: 120px;
-}
-
-.tab-button.active {
-  background-color: var(--primary-color);
-  color: white;
-}
-
-.tab-button:hover {
-  background-color: var(--primary-color);
-  color: white;
-}
-
-/* Sell ticket section */
-.sell-ticket-section {
-  width: 100%;
-  padding: 20px;
-  box-sizing: border-box;
-}
-
-.sell-ticket-button {
-  width: 100%;
-  padding: 12px 20px;
-  background-color: var(--primary-color);
-  color: white;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 16px;
-  margin-bottom: 20px;
-  transition: all 0.3s ease;
-  z-index: 10;
-  position: relative;
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.sell-ticket-button:hover {
-  background-color: var(--primary-color-dark);
-}
-
-/* Mobile optimizations */
-@media (max-width: 768px) {
-  .tabs-container {
-    flex-direction: column !important;
-    gap: 8px !important;
-    margin-bottom: 15px !important;
-  }
-
-  .tab-button {
-    width: 100% !important;
-    padding: 12px !important;
-    text-align: center !important;
-    font-size: 14px !important;
-  }
-
-  .sell-ticket-section {
-    padding: 10px !important;
-  }
-
-  .sell-ticket-button {
-    padding: 12px !important;
-    font-size: 14px !important;
-    margin-bottom: 15px !important;
-    position: relative !important;
-    z-index: 100 !important;
-  }
-
-  .dashboard-container {
-    padding: 8px !important;
-  }
-
-  .dashboard-content {
-    padding: 0 !important;
-  }
-
-  .grid {
-    grid-template-columns: 1fr !important;
-    gap: 10px !important;
-  }
-
-  .card,
-  .team-leader-card,
-  .event-card,
-  .promoter-card {
-    width: 100% !important;
-    margin-bottom: 10px !important;
-    padding: 12px !important;
-  }
-}
-
-@media (max-width: 480px) {
-  .tabs-container {
-    gap: 6px !important;
-  }
-
-  .tab-button {
-    padding: 10px !important;
-    font-size: 13px !important;
-  }
-
-  .sell-ticket-button {
-    padding: 10px !important;
-    font-size: 13px !important;
-  }
-
-  .dashboard-container {
-    padding: 5px !important;
-  }
-}
-
-/* Dark mode adjustments */
 [data-theme="dark"] .tab-button {
-  background-color: var(--background-tertiary);
-  color: var(--text-primary);
 }
 
 [data-theme="dark"] .tab-button.active {
-  background-color: var(--primary-color);
-  color: white;
 }
 
-[data-theme="dark"] .sell-ticket-button {
-  background-color: var(--primary-color);
-  color: white;
+[data-theme="dark"] .sell-button {
+}
+
+[data-theme="dark"] .stat svg,
+[data-theme="dark"] .leader-stats .stat svg,
+[data-theme="dark"] .event-content p svg,
+[data-theme="dark"] .search-icon {
+  color: var(--text-light);
 } 

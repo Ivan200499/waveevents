@@ -32,7 +32,7 @@ function EditEventModal({ event, onClose, onEventUpdated }) {
     posterImageUrl: '',
     eventDates: [],
   });
-
+  
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -106,7 +106,7 @@ function EditEventModal({ event, onClose, onEventUpdated }) {
 
   const handleHasTablesToggle = (index, checked) => {
     setFormData(prev => ({
-        ...prev,
+      ...prev,
         eventDates: prev.eventDates.map((dateItem, i) =>
             i === index ? { ...dateItem, hasTablesForDate: checked, tableTypes: checked ? dateItem.tableTypes : [] } : dateItem
         )
@@ -122,7 +122,7 @@ function EditEventModal({ event, onClose, onEventUpdated }) {
           let updatedTicketTypes;
           if (existingTicketIndex > -1) {
             updatedTicketTypes = dateItem.ticketTypes.filter(t => t.id !== ticketType.id);
-          } else {
+      } else {
             updatedTicketTypes = [...dateItem.ticketTypes, { ...ticketType, price: '', quantity: '' }];
           }
           return { ...dateItem, ticketTypes: updatedTicketTypes };
@@ -174,10 +174,10 @@ function EditEventModal({ event, onClose, onEventUpdated }) {
     const numericValue = value === '' ? '' : Number(value);
     if (isNaN(numericValue) || numericValue < 0) return;
     setFormData(prev => ({
-        ...prev,
+      ...prev,
         eventDates: prev.eventDates.map((dateItem, i) => {
             if (i === dateIndex) {
-                return {
+          return {
                     ...dateItem,
                     tableTypes: dateItem.tableTypes.map(table =>
                         table.id === tableId ? { ...table, [field]: numericValue } : table
@@ -218,24 +218,24 @@ function EditEventModal({ event, onClose, onEventUpdated }) {
         for (const ticket of dateItem.ticketTypes) {
             if (ticket.price === '' || ticket.quantity === '' || ticket.price < 0 || ticket.quantity <= 0) {
                 setError('Inserisci prezzo (>0) e quantità (>0) validi per il biglietto "' + ticket.name + '" nella data ' + new Date(dateItem.date).toLocaleDateString() + '.');
-                setLoading(false);
-                return;
-            }
+      setLoading(false);
+      return;
+    }
         }
          if (dateItem.hasTablesForDate) {
             if (dateItem.tableTypes.length === 0) {
                 setError('Se hai selezionato "Prevede tavoli" per la data ' + new Date(dateItem.date).toLocaleDateString() + ', aggiungi almeno un tipo di tavolo.');
-                setLoading(false);
-                return;
-            }
+      setLoading(false);
+      return;
+    }
             for (const table of dateItem.tableTypes) {
                 if (table.price === '' || table.quantity === '' || table.seats === '' || table.price < 0 || table.quantity <= 0 || table.seats <= 0) {
                     setError('Inserisci prezzo (>0), posti (>0) e quantità (>0) validi per il tavolo "' + table.name + '" nella data ' + new Date(dateItem.date).toLocaleDateString() + '.');
-                    setLoading(false);
-                    return;
+        setLoading(false);
+        return;
                 }
             }
-        }
+      }
     }
 
     try {
@@ -293,7 +293,7 @@ function EditEventModal({ event, onClose, onEventUpdated }) {
         <button onClick={onClose} className="close-modal-btn">&times;</button>
 
         {error && <p className="error-message">{error}</p>}
-
+        
         <form onSubmit={handleSubmit} className="admin-form">
           <div className="form-group">
             <label htmlFor="name">Nome Evento:</label>
@@ -303,18 +303,18 @@ function EditEventModal({ event, onClose, onEventUpdated }) {
             <label htmlFor="location">Località:</label>
             <input type="text" id="location" name="location" value={formData.location} onChange={handleChange} required />
           </div>
-          <div className="form-group">
+                  <div className="form-group">
             <label htmlFor="description">Descrizione:</label>
             <textarea id="description" name="description" value={formData.description} onChange={handleChange}></textarea>
-          </div>
-          <div className="form-group">
+                  </div>
+                  <div className="form-group">
             <label htmlFor="posterImageFile">Locandina:</label>
             <input type="file" id="posterImageFile" name="posterImageFile" onChange={handleChange} accept="image/*" />
             {formData.posterImageUrl && !formData.posterImageFile && 
               <div className="image-preview">
                 <img src={formData.posterImageUrl} alt="Locandina Attuale" style={{ maxWidth: '100px', marginTop: '10px' }} />
                 <span>Locandina attuale</span>
-             </div>
+                  </div>
              }
             {formData.posterImageFile && 
               <div className="image-preview">
@@ -332,145 +332,145 @@ function EditEventModal({ event, onClose, onEventUpdated }) {
             {formData.eventDates.map((dateItem, index) => (
               <div key={dateItem.id || index} className="event-date-item">
                 <h4>Data {index + 1}</h4>
-                <div className="form-group">
+            <div className="form-group">
                   <label htmlFor={`date-${index}`}>Data e Ora:</label>
-                  <input
-                    type="datetime-local" 
+              <input
+                type="datetime-local"
                     id={`date-${index}`}
-                    name="date"
+                name="date"
                     value={dateItem.date}
                     onChange={(e) => handleDateChange(index, 'date', e.target.value)}
-                    required
-                  />
+                required
+              />
                    <button type="button" onClick={() => removeEventDate(index)} className="remove-date-btn">Rimuovi Data</button>
-                </div>
+          </div>
 
                 <div className="tickets-for-date-section">
                    <h5>Biglietti per questa data</h5>
                    {TICKET_TYPES.map(ticketType => {
                      const isSelected = dateItem.ticketTypes.some(t => t.id === ticketType.id);
                      const currentTicket = dateItem.ticketTypes.find(t => t.id === ticketType.id);
-                     return (
+                return (
                        <div key={ticketType.id} className="ticket-type-config">
                          <label className="checkbox-label">
-                           <input
-                             type="checkbox"
-                             checked={isSelected}
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
                              onChange={() => toggleTicketTypeForDate(index, ticketType)}
-                           />
+                        />
                            {ticketType.name} ({ticketType.description})
-                         </label>
-                         {isSelected && (
+                      </label>
+                    {isSelected && (
                            <div className="ticket-details">
                              <div className="form-group inline">
                                <label htmlFor={`ticket-price-${index}-${ticketType.id}`}>Prezzo:</label>
-                               <input
-                                 type="number"
+                          <input
+                            type="number"
                                  id={`ticket-price-${index}-${ticketType.id}`}
                                  value={currentTicket?.price ?? ''}
                                  onChange={(e) => handleTicketChangeForDate(index, ticketType.id, 'price', e.target.value)}
                                  placeholder="0.00"
                                  step="0.01"
-                                 min="0"
-                                 required
-                               />
-                             </div>
+                            min="0"
+                            required
+                          />
+                        </div>
                              <div className="form-group inline">
                                <label htmlFor={`ticket-quantity-${index}-${ticketType.id}`}>Quantità:</label>
-                               <input
-                                 type="number"
+                          <input
+                            type="number"
                                  id={`ticket-quantity-${index}-${ticketType.id}`}
                                  value={currentTicket?.quantity ?? ''}
                                  onChange={(e) => handleTicketChangeForDate(index, ticketType.id, 'quantity', e.target.value)}
                                  placeholder="0"
                                  step="1"
                                  min="1"
-                                 required
-                               />
-                             </div>
-                           </div>
-                         )}
-                       </div>
-                     );
-                   })}
-                 </div> 
+                            required
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+          </div>
 
                  <div className="tables-for-date-section">
-                    <div className="form-group">
+            <div className="form-group">
                        <label className="checkbox-label">
-                           <input
-                               type="checkbox"
+                <input
+                  type="checkbox"
                                checked={dateItem.hasTablesForDate}
                                onChange={(e) => handleHasTablesToggle(index, e.target.checked)}
-                            />
+                />
                              Prevede tavoli per questa data?
-                        </label>
-                     </div>
+              </label>
+            </div>
                     {dateItem.hasTablesForDate && (
                          <>
                             <h5>Tavoli per questa data</h5>
                              {TABLE_TYPES.map(tableType => {
                                 const isSelected = dateItem.tableTypes.some(t => t.id === tableType.id);
                                  const currentTable = dateItem.tableTypes.find(t => t.id === tableType.id);
-                                 return (
+                  return (
                                      <div key={tableType.id} className="table-type-config">
                                          <label className="checkbox-label">
-                                             <input
-                                                 type="checkbox"
-                                                 checked={isSelected}
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
                                                  onChange={() => toggleTableTypeForDate(index, tableType)}
-                                             />
+                          />
                                              {tableType.name} ({tableType.description})
-                                         </label>
-                                         {isSelected && (
+                        </label>
+                      {isSelected && (
                                              <div className="table-details">
                                                  <div className="form-group inline">
                                                      <label htmlFor={`table-price-${index}-${tableType.id}`}>Prezzo:</label>
-                                                     <input
-                                                         type="number"
+                            <input
+                              type="number"
                                                          id={`table-price-${index}-${tableType.id}`}
                                                          value={currentTable?.price ?? ''}
                                                          onChange={(e) => handleTableChangeForDate(index, tableType.id, 'price', e.target.value)}
                                                          placeholder="0.00"
                                                          step="0.01"
-                                                         min="0"
-                                                         required
-                                                     />
-                                                 </div>
+                              min="0"
+                              required
+                            />
+                          </div>
                                                   <div className="form-group inline">
                                                      <label htmlFor={`table-seats-${index}-${tableType.id}`}>Posti:</label>
-                                                     <input
-                                                         type="number"
+                            <input
+                              type="number"
                                                          id={`table-seats-${index}-${tableType.id}`}
                                                          value={currentTable?.seats ?? tableType.defaultSeats}
                                                          onChange={(e) => handleTableChangeForDate(index, tableType.id, 'seats', e.target.value)}
                                                          placeholder={tableType.defaultSeats}
                                                          step="1"
-                                                         min="1"
-                                                         required
-                                                     />
-                                                 </div>
+                              min="1"
+                              required
+                            />
+                          </div>
                                                  <div className="form-group inline">
                                                      <label htmlFor={`table-quantity-${index}-${tableType.id}`}>Quantità Tavoli:</label>
-                                                     <input
-                                                         type="number"
+                            <input
+                              type="number"
                                                          id={`table-quantity-${index}-${tableType.id}`}
                                                          value={currentTable?.quantity ?? ''}
                                                          onChange={(e) => handleTableChangeForDate(index, tableType.id, 'quantity', e.target.value)}
                                                          placeholder="0"
                                                          step="1"
                                                          min="1"
-                                                         required
-                                                     />
-                                                 </div>
-                                             </div>
-                                         )}
-                                     </div>
-                                 );
-                             })}
+                              required
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
                          </>
-                     )}
-                 </div> 
+            )}
+          </div>
 
               </div>
             ))}
