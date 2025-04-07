@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { db } from '../../firebase/config';
 import { doc, updateDoc } from 'firebase/firestore';
+import { uploadImage } from '../../services/ImageService';
 import './AdminStyles.css';
 import { FaCalendarAlt } from 'react-icons/fa';
 
@@ -24,169 +25,167 @@ const TABLE_TYPES = [
 
 function EditEventModal({ event, onClose, onEventUpdated }) {
   const [formData, setFormData] = useState({
-    name: event.name,
-    date: event.date,
-    location: event.location,
-    description: event.description || '',
-    isRecurring: event.isRecurring || false,
-    dates: event.dates || [{ date: event.date, availableTickets: event.availableTickets }],
-    ticketTypes: event.ticketTypes || [],
-    hasTables: event?.hasTables || false,
-    tableTypes: event?.tableTypes || [],
+    name: '',
+    location: '',
+    description: '',
+    posterImageFile: null,
+    posterImageUrl: '',
+    eventDates: [],
   });
-  
-  // Stato per una nuova data da aggiungere
-  const [newDate, setNewDate] = useState({
-    date: '',
-    availableTickets: 0
-  });
-  
+
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    if (event) {
+      const initialEventDates = event.eventDates?.map((d, index) => ({
+        id: d.id || Date.now() + index,
+        date: d.date || '',
+        ticketTypes: d.ticketTypes?.map(t => ({ ...t, price: t.price ?? '', quantity: t.quantity ?? '' })) || [],
+        hasTablesForDate: d.hasTablesForDate || false,
+        tableTypes: d.tableTypes?.map(tb => ({ ...tb, price: tb.price ?? '', seats: tb.seats ?? TABLE_TYPES.find(tt=>tt.id === tb.id)?.defaultSeats ?? '', quantity: tb.quantity ?? '' })) || [],
+      })) || [];
+
+      setFormData({
+        name: event.name || '',
+        location: event.location || '',
+        description: event.description || '',
+        posterImageUrl: event.posterImageUrl || '',
+        posterImageFile: null,
+        eventDates: initialEventDates,
+      });
+    }
+  }, [event]);
+
   const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    const newValue = type === 'checkbox' ? checked : value;
-    
-    setFormData(prev => ({
-      ...prev,
-      [name]: newValue
-    }));
-  };
-
-  // Gestisce i cambiamenti nel form della nuova data
-  const handleNewDateChange = (e) => {
-    const { name, value } = e.target;
-    setNewDate(prev => ({
-      ...prev,
-      [name]: name === 'availableTickets' ? Number(value) : value
-    }));
-  };
-
-  // Aggiunge una nuova data all'elenco
-  const addDate = () => {
-    // Validazione
-    if (!newDate.date || newDate.availableTickets <= 0) {
-      setError('Inserisci sia la data che un numero valido di biglietti');
-      return;
-    }
-    
-    // Verifica che la data non sia già presente
-    if (formData.dates.some(date => date.date.split('T')[0] === newDate.date)) {
-      setError('Questa data è già stata inserita');
-      return;
-    }
-    
-    // Formattiamo la data nel formato ISO
-    const formattedDate = new Date(newDate.date + 'T00:00:00').toISOString();
-    
-    // Aggiungiamo la nuova data
-    setFormData(prev => ({
-      ...prev,
-      dates: [...prev.dates, { 
-        date: formattedDate, 
-        availableTickets: newDate.availableTickets 
-      }]
-    }));
-    
-    // Reset del form per la nuova data
-    setNewDate({
-      date: '',
-      availableTickets: 0
-    });
-    
-    setError('');
-  };
-
-  // Rimuove una data dall'elenco
-  const removeDate = (index) => {
-    setFormData(prev => ({
-      ...prev,
-      dates: prev.dates.filter((_, i) => i !== index)
-    }));
-  };
-
-  // Gestisce la selezione/deselezione dei tipi di biglietti
-  const handleTicketTypeToggle = (ticketType) => {
-    setFormData(prev => {
-      const currentTypes = [...prev.ticketTypes];
-      const index = currentTypes.findIndex(t => t.id === ticketType.id);
-      
-      if (index === -1) {
-        // Aggiungi il tipo con prezzo e quantità existenti o default
-        currentTypes.push({
-          ...ticketType,
-          price: 0,
-          totalTickets: 0
-        });
-      } else {
-        // Rimuovi il tipo
-        currentTypes.splice(index, 1);
-      }
-
-      return {
+    const { name, value, type } = e.target;
+    if (type === 'file') {
+      setFormData(prev => ({
         ...prev,
-        ticketTypes: currentTypes
-      };
-    });
-  };
-
-  // Gestisce la selezione/deselezione dei tipi di tavoli
-  const handleTableTypeToggle = (tableType) => {
-    setFormData(prev => {
-      // Assicuriamoci che prev.tableTypes sia sempre un array
-      const currentTables = Array.isArray(prev.tableTypes) ? [...prev.tableTypes] : [];
-      const index = currentTables.findIndex(t => t.id === tableType.id);
-      
-      if (index === -1) {
-        // Aggiungi il tipo con prezzo, posti e quantità existenti o default
-        currentTables.push({
-          ...tableType,
-          price: 0,
-          seats: tableType.defaultSeats,
-          totalTables: 0
-        });
-      } else {
-        // Rimuovi il tipo
-        currentTables.splice(index, 1);
-      }
-
-      return {
+        posterImageFile: e.target.files[0]
+      }));
+    } else {
+      setFormData(prev => ({
         ...prev,
-        tableTypes: currentTables
-      };
-    });
+        [name]: value
+      }));
+    }
   };
 
-  // Aggiorna prezzo e quantità per un tipo di biglietto
-  const handleTicketTypeUpdate = (ticketId, field, value) => {
+  const addEventDate = () => {
     setFormData(prev => ({
       ...prev,
-      ticketTypes: prev.ticketTypes.map(type => {
-        if (type.id === ticketId) {
-          return {
-            ...type,
-            [field]: Number(value)
-          };
+      eventDates: [
+        ...prev.eventDates,
+        {
+          id: Date.now(),
+          date: '',
+          ticketTypes: [],
+          hasTablesForDate: false,
+          tableTypes: [],
         }
-        return type;
+      ]
+    }));
+  };
+
+  const removeEventDate = (index) => {
+    setFormData(prev => ({
+      ...prev,
+      eventDates: prev.eventDates.filter((_, i) => i !== index)
+    }));
+  };
+
+  const handleDateChange = (index, field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      eventDates: prev.eventDates.map((dateItem, i) =>
+        i === index ? { ...dateItem, [field]: value } : dateItem
+      )
+    }));
+  };
+
+  const handleHasTablesToggle = (index, checked) => {
+    setFormData(prev => ({
+        ...prev,
+        eventDates: prev.eventDates.map((dateItem, i) =>
+            i === index ? { ...dateItem, hasTablesForDate: checked, tableTypes: checked ? dateItem.tableTypes : [] } : dateItem
+        )
+    }));
+  };
+
+  const toggleTicketTypeForDate = (dateIndex, ticketType) => {
+    setFormData(prev => ({
+      ...prev,
+      eventDates: prev.eventDates.map((dateItem, i) => {
+        if (i === dateIndex) {
+          const existingTicketIndex = dateItem.ticketTypes.findIndex(t => t.id === ticketType.id);
+          let updatedTicketTypes;
+          if (existingTicketIndex > -1) {
+            updatedTicketTypes = dateItem.ticketTypes.filter(t => t.id !== ticketType.id);
+          } else {
+            updatedTicketTypes = [...dateItem.ticketTypes, { ...ticketType, price: '', quantity: '' }];
+          }
+          return { ...dateItem, ticketTypes: updatedTicketTypes };
+        }
+        return dateItem;
       })
     }));
   };
 
-  // Aggiorna prezzo, posti e quantità per un tipo di tavolo
-  const handleTableTypeUpdate = (tableId, field, value) => {
+  const handleTicketChangeForDate = (dateIndex, ticketId, field, value) => {
+     const numericValue = value === '' ? '' : Number(value);
+     if (isNaN(numericValue) || numericValue < 0) return;
     setFormData(prev => ({
       ...prev,
-      tableTypes: Array.isArray(prev.tableTypes) ? prev.tableTypes.map(type => {
-        if (type.id === tableId) {
+      eventDates: prev.eventDates.map((dateItem, i) => {
+        if (i === dateIndex) {
           return {
-            ...type,
-            [field]: Number(value)
+            ...dateItem,
+            ticketTypes: dateItem.ticketTypes.map(ticket =>
+              ticket.id === ticketId ? { ...ticket, [field]: numericValue } : ticket
+            )
           };
         }
-        return type;
-      }) : []
+        return dateItem;
+      })
+    }));
+  };
+
+  const toggleTableTypeForDate = (dateIndex, tableType) => {
+    setFormData(prev => ({
+        ...prev,
+        eventDates: prev.eventDates.map((dateItem, i) => {
+            if (i === dateIndex && dateItem.hasTablesForDate) {
+                const existingTableIndex = dateItem.tableTypes.findIndex(t => t.id === tableType.id);
+                let updatedTableTypes;
+                if (existingTableIndex > -1) {
+                    updatedTableTypes = dateItem.tableTypes.filter(t => t.id !== tableType.id);
+                } else {
+                    updatedTableTypes = [...dateItem.tableTypes, { ...tableType, price: '', seats: tableType.defaultSeats, quantity: '' }];
+                }
+                return { ...dateItem, tableTypes: updatedTableTypes };
+            }
+            return dateItem;
+        })
+    }));
+  };
+
+  const handleTableChangeForDate = (dateIndex, tableId, field, value) => {
+    const numericValue = value === '' ? '' : Number(value);
+    if (isNaN(numericValue) || numericValue < 0) return;
+    setFormData(prev => ({
+        ...prev,
+        eventDates: prev.eventDates.map((dateItem, i) => {
+            if (i === dateIndex) {
+                return {
+                    ...dateItem,
+                    tableTypes: dateItem.tableTypes.map(table =>
+                        table.id === tableId ? { ...table, [field]: numericValue } : table
+                    )
+                };
+            }
+            return dateItem;
+        })
     }));
   };
 
@@ -195,65 +194,93 @@ function EditEventModal({ event, onClose, onEventUpdated }) {
     setLoading(true);
     setError('');
 
-    // Verifica che almeno un tipo di biglietto sia selezionato
-    if (formData.ticketTypes.length === 0) {
-      setError('Seleziona almeno un tipo di biglietto');
+    if (!formData.name || !formData.location) {
+      setError('Nome e Località sono obbligatori.');
       setLoading(false);
       return;
     }
-
-    // Verifica che tutti i tipi di biglietto abbiano prezzo e quantità
-    const invalidTypes = formData.ticketTypes.filter(type => 
-      !type.price || !type.totalTickets
-    );
-
-    if (invalidTypes.length > 0) {
-      setError('Inserisci prezzo e quantità per tutti i tipi di biglietto selezionati');
-      setLoading(false);
-      return;
-    }
-
-    // Verifica che ci siano date se l'evento è ricorrente
-    if (formData.isRecurring && formData.dates.length === 0) {
-      setError('Aggiungi almeno una data per l\'evento ricorrente');
-      setLoading(false);
-      return;
-    }
-
-    // Se l'evento ha tavoli, verifica che tutti i tipi di tavolo abbiano prezzo, posti e quantità
-    if (formData.hasTables && Array.isArray(formData.tableTypes) && formData.tableTypes.length > 0) {
-      const invalidTables = formData.tableTypes.filter(type => 
-        !type.price || !type.seats || !type.totalTables
-      );
-
-      if (invalidTables.length > 0) {
-        setError('Inserisci prezzo, posti e quantità per tutti i tipi di tavolo selezionati');
+    if (formData.eventDates.length === 0) {
+        setError('Aggiungi almeno una data per l\'evento.');
         setLoading(false);
         return;
       }
+    for (const dateItem of formData.eventDates) {
+        if (!dateItem.date) {
+            setError('Seleziona una data valida per l\'evento.');
+            setLoading(false);
+            return;
+        }
+        if (dateItem.ticketTypes.length === 0) {
+            setError('Aggiungi almeno un tipo di biglietto per la data ' + new Date(dateItem.date).toLocaleDateString() + '.');
+            setLoading(false);
+            return;
+        }
+        for (const ticket of dateItem.ticketTypes) {
+            if (ticket.price === '' || ticket.quantity === '' || ticket.price < 0 || ticket.quantity <= 0) {
+                setError('Inserisci prezzo (>0) e quantità (>0) validi per il biglietto "' + ticket.name + '" nella data ' + new Date(dateItem.date).toLocaleDateString() + '.');
+                setLoading(false);
+                return;
+            }
+        }
+         if (dateItem.hasTablesForDate) {
+            if (dateItem.tableTypes.length === 0) {
+                setError('Se hai selezionato "Prevede tavoli" per la data ' + new Date(dateItem.date).toLocaleDateString() + ', aggiungi almeno un tipo di tavolo.');
+                setLoading(false);
+                return;
+            }
+            for (const table of dateItem.tableTypes) {
+                if (table.price === '' || table.quantity === '' || table.seats === '' || table.price < 0 || table.quantity <= 0 || table.seats <= 0) {
+                    setError('Inserisci prezzo (>0), posti (>0) e quantità (>0) validi per il tavolo "' + table.name + '" nella data ' + new Date(dateItem.date).toLocaleDateString() + '.');
+                    setLoading(false);
+                    return;
+                }
+            }
+        }
     }
 
     try {
-      const eventRef = doc(db, 'events', event.id);
-      const eventData = {
-        ...formData,
-        totalTickets: formData.ticketTypes.reduce((acc, type) => acc + Number(type.totalTickets || 0), 0),
-        status: event.status || 'active',
-        updatedAt: new Date().toISOString(),
-        isRecurring: formData.isRecurring,
-        dates: formData.isRecurring ? formData.dates : [{ 
-          date: formData.date, 
-          availableTickets: formData.ticketTypes.reduce((acc, type) => acc + Number(type.totalTickets || 0), 0)
-        }],
-        hasTables: formData.hasTables,
-        tableTypes: formData.hasTables ? (Array.isArray(formData.tableTypes) ? formData.tableTypes : []) : []
-      };
+      let finalPosterImageUrl = formData.posterImageUrl;
 
-      await updateDoc(eventRef, eventData);
-      onEventUpdated();
+      if (formData.posterImageFile) {
+        try {
+          finalPosterImageUrl = await uploadImage(formData.posterImageFile);
+        } catch (uploadError) {
+          console.error("Errore durante l'upload della nuova immagine:", uploadError);
+          setError('Errore durante l\'upload della nuova locandina: ' + uploadError.message);
+          setLoading(false);
+          return;
+        }
+      }
+
+      const updatedEventData = {
+        name: formData.name,
+        location: formData.location,
+        description: formData.description,
+        posterImageUrl: finalPosterImageUrl,
+        eventDates: formData.eventDates.map(d => ({
+          date: d.date,
+          ticketTypes: d.ticketTypes.map(t => ({ id: t.id, name: t.name, price: t.price, quantity: t.quantity })),
+          hasTablesForDate: d.hasTablesForDate,
+          tableTypes: d.tableTypes.map(tb => ({ id: tb.id, name: tb.name, price: tb.price, seats: tb.seats, quantity: tb.quantity }))
+        })),
+        updatedAt: new Date().toISOString(),
+      };
+        updatedEventData.eventDates = updatedEventData.eventDates.map(d => {
+            const totalTicketsForDate = d.ticketTypes.reduce((sum, t) => sum + t.quantity, 0);
+            const totalTablesForDate = d.tableTypes.reduce((sum, t) => sum + t.quantity, 0);
+            return { ...d, totalTicketsForDate, totalTablesForDate };
+          });
+
+      const eventRef = doc(db, 'events', event.id);
+      await updateDoc(eventRef, updatedEventData);
+
+      console.log("Evento aggiornato con successo:", { id: event.id, ...updatedEventData });
+      onEventUpdated({ id: event.id, ...updatedEventData });
       onClose();
+
     } catch (error) {
-      setError('Errore nella modifica dell\'evento: ' + error.message);
+      console.error("Errore nell'aggiornamento dell'evento:", error);
+      setError('Si è verificato un errore durante l\'aggiornamento: ' + error.message);
     } finally {
       setLoading(false);
     }
@@ -261,274 +288,199 @@ function EditEventModal({ event, onClose, onEventUpdated }) {
 
   return (
     <div className="modal-overlay">
-      <div className="modal-content">
+      <div className="modal-content edit-event-modal">
         <h2>Modifica Evento</h2>
-        {error && <div className="error-message">{error}</div>}
-        
-        <form onSubmit={handleSubmit}>
+        <button onClick={onClose} className="close-modal-btn">&times;</button>
+
+        {error && <p className="error-message">{error}</p>}
+
+        <form onSubmit={handleSubmit} className="admin-form">
           <div className="form-group">
-            <label>Nome Evento:</label>
-            <input
-              type="text"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              required
-            />
+            <label htmlFor="name">Nome Evento:</label>
+            <input type="text" id="name" name="name" value={formData.name} onChange={handleChange} required />
+          </div>
+          <div className="form-group">
+            <label htmlFor="location">Località:</label>
+            <input type="text" id="location" name="location" value={formData.location} onChange={handleChange} required />
+          </div>
+          <div className="form-group">
+            <label htmlFor="description">Descrizione:</label>
+            <textarea id="description" name="description" value={formData.description} onChange={handleChange}></textarea>
+          </div>
+          <div className="form-group">
+            <label htmlFor="posterImageFile">Locandina:</label>
+            <input type="file" id="posterImageFile" name="posterImageFile" onChange={handleChange} accept="image/*" />
+            {formData.posterImageUrl && !formData.posterImageFile && 
+              <div className="image-preview">
+                <img src={formData.posterImageUrl} alt="Locandina Attuale" style={{ maxWidth: '100px', marginTop: '10px' }} />
+                <span>Locandina attuale</span>
+             </div>
+             }
+            {formData.posterImageFile && 
+              <div className="image-preview">
+                 <img src={URL.createObjectURL(formData.posterImageFile)} alt="Anteprima Nuova Locandina" style={{ maxWidth: '100px', marginTop: '10px' }} />
+                <span>Nuova locandina (sostituirà l'attuale al salvataggio)</span>
+              </div>
+             }
+            {!formData.posterImageUrl && !formData.posterImageFile && <p>Nessuna locandina caricata.</p>}
           </div>
 
-          <div className="form-group">
-            <label>Evento Ricorrente:</label>
-            <div className="checkbox-container">
-              <input
-                type="checkbox"
-                name="isRecurring"
-                checked={formData.isRecurring}
-                onChange={handleChange}
-              />
-              <span>Questo evento si svolge in più date</span>
-            </div>
-          </div>
+          <div className="event-dates-section">
+            <h3>Date dell'Evento</h3>
+            <button type="button" onClick={addEventDate} className="add-date-btn">Aggiungi Data</button>
 
-          {formData.isRecurring ? (
-            <>
-              <div className="sub-events-section">
-                <h3>Date dell'Evento</h3>
-                
-                <div className="add-sub-event">
-                  <div className="form-group">
-                    <label htmlFor="eventDate">Data</label>
-                    <input
-                      type="date"
-                      id="eventDate"
-                      name="date"
-                      value={newDate.date}
-                      onChange={handleNewDateChange}
-                    />
-                  </div>
-                  
-                  <div className="form-group">
-                    <label htmlFor="eventTickets">Biglietti Disponibili</label>
-                    <input
-                      type="number"
-                      id="eventTickets"
-                      name="availableTickets"
-                      value={newDate.availableTickets}
-                      onChange={handleNewDateChange}
-                      min="1"
-                    />
-                  </div>
-                  
-                  <button 
-                    type="button" 
-                    className="add-date-button"
-                    onClick={addDate}
-                  >
-                    Aggiungi Data
-                  </button>
+            {formData.eventDates.map((dateItem, index) => (
+              <div key={dateItem.id || index} className="event-date-item">
+                <h4>Data {index + 1}</h4>
+                <div className="form-group">
+                  <label htmlFor={`date-${index}`}>Data e Ora:</label>
+                  <input
+                    type="datetime-local" 
+                    id={`date-${index}`}
+                    name="date"
+                    value={dateItem.date}
+                    onChange={(e) => handleDateChange(index, 'date', e.target.value)}
+                    required
+                  />
+                   <button type="button" onClick={() => removeEventDate(index)} className="remove-date-btn">Rimuovi Data</button>
                 </div>
-                
-                {formData.dates.length > 0 ? (
-                  <div className="sub-events-list">
-                    <h4>Date Aggiunte:</h4>
-                    <ul>
-                      {formData.dates.map((date, index) => (
-                        <li key={index} className="sub-event-item">
-                          <span>Data: {new Date(date.date).toLocaleDateString()}</span>
-                          <span>Biglietti: {date.availableTickets}</span>
-                          <button 
-                            type="button" 
-                            className="remove-button"
-                            onClick={() => removeDate(index)}
-                          >
-                            Rimuovi
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ) : (
-                  <p className="no-dates-message">Nessuna data aggiunta. Aggiungi almeno una data per l'evento.</p>
-                )}
-              </div>
-            </>
-          ) : (
-            <div className="form-group">
-              <label>Data:</label>
-              <input
-                type="datetime-local"
-                name="date"
-                value={formData.date}
-                onChange={handleChange}
-                required
-              />
-            </div>
-          )}
 
-          <div className="form-group">
-            <label>Luogo:</label>
-            <input
-              type="text"
-              name="location"
-              value={formData.location}
-              onChange={handleChange}
-              required
-            />
-          </div>
+                <div className="tickets-for-date-section">
+                   <h5>Biglietti per questa data</h5>
+                   {TICKET_TYPES.map(ticketType => {
+                     const isSelected = dateItem.ticketTypes.some(t => t.id === ticketType.id);
+                     const currentTicket = dateItem.ticketTypes.find(t => t.id === ticketType.id);
+                     return (
+                       <div key={ticketType.id} className="ticket-type-config">
+                         <label className="checkbox-label">
+                           <input
+                             type="checkbox"
+                             checked={isSelected}
+                             onChange={() => toggleTicketTypeForDate(index, ticketType)}
+                           />
+                           {ticketType.name} ({ticketType.description})
+                         </label>
+                         {isSelected && (
+                           <div className="ticket-details">
+                             <div className="form-group inline">
+                               <label htmlFor={`ticket-price-${index}-${ticketType.id}`}>Prezzo:</label>
+                               <input
+                                 type="number"
+                                 id={`ticket-price-${index}-${ticketType.id}`}
+                                 value={currentTicket?.price ?? ''}
+                                 onChange={(e) => handleTicketChangeForDate(index, ticketType.id, 'price', e.target.value)}
+                                 placeholder="0.00"
+                                 step="0.01"
+                                 min="0"
+                                 required
+                               />
+                             </div>
+                             <div className="form-group inline">
+                               <label htmlFor={`ticket-quantity-${index}-${ticketType.id}`}>Quantità:</label>
+                               <input
+                                 type="number"
+                                 id={`ticket-quantity-${index}-${ticketType.id}`}
+                                 value={currentTicket?.quantity ?? ''}
+                                 onChange={(e) => handleTicketChangeForDate(index, ticketType.id, 'quantity', e.target.value)}
+                                 placeholder="0"
+                                 step="1"
+                                 min="1"
+                                 required
+                               />
+                             </div>
+                           </div>
+                         )}
+                       </div>
+                     );
+                   })}
+                 </div> 
 
-          <div className="form-section">
-            <h3>Tipi di Biglietti</h3>
-            <div className="ticket-types-grid">
-              {TICKET_TYPES.map(type => {
-                const isSelected = formData.ticketTypes.some(t => t.id === type.id);
-                const currentType = formData.ticketTypes.find(t => t.id === type.id) || {};
-
-                return (
-                  <div key={type.id} className={`ticket-type ${isSelected ? 'selected' : ''}`}>
-                    <div className="ticket-type-header">
-                      <label>
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={() => handleTicketTypeToggle(type)}
-                        />
-                        {type.name}
-                      </label>
-                      <p className="ticket-type-description">{type.description}</p>
-                    </div>
-                    
-                    {isSelected && (
-                      <div className="ticket-type-details">
-                        <div className="ticket-type-input">
-                          <label>Prezzo (€):</label>
-                          <input
-                            type="number"
-                            value={currentType.price || 0}
-                            onChange={(e) => handleTicketTypeUpdate(type.id, 'price', e.target.value)}
-                            min="0"
-                            step="0.01"
-                            required
-                          />
-                        </div>
-                        <div className="ticket-type-input">
-                          <label>Quantità:</label>
-                          <input
-                            type="number"
-                            value={currentType.totalTickets || 0}
-                            onChange={(e) => handleTicketTypeUpdate(type.id, 'totalTickets', e.target.value)}
-                            min="0"
-                            required
-                          />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="form-section">
-            <div className="form-group">
-              <label>
-                <input
-                  type="checkbox"
-                  name="hasTables"
-                  checked={formData.hasTables}
-                  onChange={handleChange}
-                />
-                Questo evento ha tavoli disponibili
-              </label>
-            </div>
-
-            {formData.hasTables && (
-              <div className="table-types-grid">
-                {TABLE_TYPES.map((type) => {
-                  const tableTypesArray = Array.isArray(formData.tableTypes) ? formData.tableTypes : [];
-                  const isSelected = tableTypesArray.some(t => t.id === type.id);
-                  const currentType = tableTypesArray.find(t => t.id === type.id) || {};
-
-                  return (
-                    <div key={type.id} className={`table-type ${isSelected ? 'selected' : ''}`}>
-                      <div className="table-type-header">
-                        <label>
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            onChange={() => handleTableTypeToggle(type)}
-                          />
-                          {type.name}
+                 <div className="tables-for-date-section">
+                    <div className="form-group">
+                       <label className="checkbox-label">
+                           <input
+                               type="checkbox"
+                               checked={dateItem.hasTablesForDate}
+                               onChange={(e) => handleHasTablesToggle(index, e.target.checked)}
+                            />
+                             Prevede tavoli per questa data?
                         </label>
-                        <p>{type.description}</p>
-                      </div>
-                      
-                      {isSelected && (
-                        <div className="table-type-details">
-                          <div className="table-type-input">
-                            <label>Prezzo (€):</label>
-                            <input
-                              type="number"
-                              value={currentType.price || 0}
-                              onChange={(e) => handleTableTypeUpdate(type.id, 'price', e.target.value)}
-                              min="0"
-                              step="0.01"
-                              required
-                            />
-                          </div>
-                          <div className="table-type-input">
-                            <label>Posti:</label>
-                            <input
-                              type="number"
-                              value={currentType.seats || type.defaultSeats}
-                              onChange={(e) => handleTableTypeUpdate(type.id, 'seats', e.target.value)}
-                              min="1"
-                              required
-                            />
-                          </div>
-                          <div className="table-type-input">
-                            <label>Quantità:</label>
-                            <input
-                              type="number"
-                              value={currentType.totalTables || 0}
-                              onChange={(e) => handleTableTypeUpdate(type.id, 'totalTables', e.target.value)}
-                              min="0"
-                              required
-                            />
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+                     </div>
+                    {dateItem.hasTablesForDate && (
+                         <>
+                            <h5>Tavoli per questa data</h5>
+                             {TABLE_TYPES.map(tableType => {
+                                const isSelected = dateItem.tableTypes.some(t => t.id === tableType.id);
+                                 const currentTable = dateItem.tableTypes.find(t => t.id === tableType.id);
+                                 return (
+                                     <div key={tableType.id} className="table-type-config">
+                                         <label className="checkbox-label">
+                                             <input
+                                                 type="checkbox"
+                                                 checked={isSelected}
+                                                 onChange={() => toggleTableTypeForDate(index, tableType)}
+                                             />
+                                             {tableType.name} ({tableType.description})
+                                         </label>
+                                         {isSelected && (
+                                             <div className="table-details">
+                                                 <div className="form-group inline">
+                                                     <label htmlFor={`table-price-${index}-${tableType.id}`}>Prezzo:</label>
+                                                     <input
+                                                         type="number"
+                                                         id={`table-price-${index}-${tableType.id}`}
+                                                         value={currentTable?.price ?? ''}
+                                                         onChange={(e) => handleTableChangeForDate(index, tableType.id, 'price', e.target.value)}
+                                                         placeholder="0.00"
+                                                         step="0.01"
+                                                         min="0"
+                                                         required
+                                                     />
+                                                 </div>
+                                                  <div className="form-group inline">
+                                                     <label htmlFor={`table-seats-${index}-${tableType.id}`}>Posti:</label>
+                                                     <input
+                                                         type="number"
+                                                         id={`table-seats-${index}-${tableType.id}`}
+                                                         value={currentTable?.seats ?? tableType.defaultSeats}
+                                                         onChange={(e) => handleTableChangeForDate(index, tableType.id, 'seats', e.target.value)}
+                                                         placeholder={tableType.defaultSeats}
+                                                         step="1"
+                                                         min="1"
+                                                         required
+                                                     />
+                                                 </div>
+                                                 <div className="form-group inline">
+                                                     <label htmlFor={`table-quantity-${index}-${tableType.id}`}>Quantità Tavoli:</label>
+                                                     <input
+                                                         type="number"
+                                                         id={`table-quantity-${index}-${tableType.id}`}
+                                                         value={currentTable?.quantity ?? ''}
+                                                         onChange={(e) => handleTableChangeForDate(index, tableType.id, 'quantity', e.target.value)}
+                                                         placeholder="0"
+                                                         step="1"
+                                                         min="1"
+                                                         required
+                                                     />
+                                                 </div>
+                                             </div>
+                                         )}
+                                     </div>
+                                 );
+                             })}
+                         </>
+                     )}
+                 </div> 
 
-          <div className="form-group">
-            <label>Descrizione Evento:</label>
-            <textarea
-              name="description"
-              value={formData.description}
-              onChange={handleChange}
-              rows="4"
-              placeholder="Inserisci una descrizione dettagliata dell'evento..."
-            />
+              </div>
+            ))}
           </div>
 
           <div className="modal-actions">
-            <button 
-              type="submit" 
-              className="btn-primary"
-              disabled={loading}
-            >
+            <button type="submit" disabled={loading} className="save-btn">
               {loading ? 'Salvataggio...' : 'Salva Modifiche'}
             </button>
-            <button 
-              type="button" 
-              className="btn-secondary"
-              onClick={onClose}
-              disabled={loading}
-            >
+            <button type="button" onClick={onClose} disabled={loading} className="cancel-btn">
               Annulla
             </button>
           </div>

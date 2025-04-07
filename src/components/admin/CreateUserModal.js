@@ -12,8 +12,21 @@ function CreateUserModal({ onClose, onUserCreated, userType, teamLeaders, manage
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  // Funzione per validare l'email
+  const validateEmail = (email) => {
+    const emailRegex = /^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/;
+    return emailRegex.test(email);
+  };
+
   async function handleSubmit(e) {
     e.preventDefault();
+    
+    // Validazione Frontend dell'Email
+    if (!validateEmail(email)) {
+      setError('Inserisci un indirizzo email valido (es. nome@dominio.com).');
+      return; // Interrompi se l'email non è valida
+    }
+
     setLoading(true);
     setError('');
 
@@ -54,7 +67,14 @@ function CreateUserModal({ onClose, onUserCreated, userType, teamLeaders, manage
       onClose();
     } catch (error) {
       console.error('Error creating user:', error);
-      setError('Errore nella creazione dell\'utente: ' + error.message);
+      // Personalizza messaggio di errore Firebase se necessario
+      if (error.code === 'auth/email-already-in-use') {
+          setError('Questo indirizzo email è già in uso da un altro account.');
+      } else if (error.code === 'auth/weak-password') {
+          setError('La password è troppo debole. Deve essere lunga almeno 6 caratteri.');
+      } else {
+         setError('Errore nella creazione dell\'utente: ' + error.message);
+      }
     } finally {
       setLoading(false);
     }

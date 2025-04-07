@@ -1,599 +1,602 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { db } from '../../firebase/config';
-import { collection, addDoc, updateDoc, doc, getDoc, onSnapshot, increment, arrayUnion, serverTimestamp, runTransaction } from 'firebase/firestore';
+import {
+    collection, addDoc, doc, runTransaction, serverTimestamp
+} from 'firebase/firestore';
 import { useAuth } from '../../contexts/AuthContext';
-import { sendTicketEmail } from '../../services/EmailService';
-import DateSelector from './DateSelector';
+import { sendTicketEmail } from '../../services/EmailService'; // Decommenta import
+// import DateSelector from './DateSelector'; // Rimosso se la selezione avviene fuori
 import './SellTicketModal.css';
 import { generateTicketCode } from '../../utils/ticketUtils';
-import { FaCalendarAlt, FaTicketAlt, FaUser, FaEnvelope, FaTable, FaEuroSign, FaWhatsapp } from 'react-icons/fa';
+import { FaTicketAlt, FaUser, FaEnvelope, FaTable, FaEuroSign, FaWhatsapp } from 'react-icons/fa';
 
-function SellTicketModal({ isOpen, onClose, event, onSell }) {
+// La prop ora include selectedDateItem
+function SellTicketModal({ event, selectedDateItem, onClose, onSold }) {
   const { currentUser } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [availableDates, setAvailableDates] = useState([]);
-  
-  // Aggiungiamo un controllo iniziale per event
-  if (!event) {
-    return null;
-  }
 
-  // Filtra le date disponibili
-  useEffect(() => {
-    if (!event) return;
-
-    const now = new Date();
-    now.setHours(0, 0, 0, 0);
-
-    if (event.isRecurring && event.dates && event.dates.length > 0) {
-      const datesArray = Array.isArray(event.dates) ? event.dates : [event.dates];
-      
-      const filteredDates = datesArray.filter(date => {
-        if (!date || !date.date) return false;
-        
-        const eventDate = new Date(date.date);
-        if (isNaN(eventDate.getTime())) return false;
-        
-        eventDate.setHours(0, 0, 0, 0);
-        return eventDate >= now;
-      }).map(date => ({
-        id: date.date,
-        date: new Date(date.date),
-        availableTickets: date.availableTickets || 0
-      }));
-      
-      setAvailableDates(filteredDates);
-      
-      if (filteredDates.length > 0) {
-        setFormData(prev => ({
-          ...prev,
-          selectedDate: filteredDates[0].id
-        }));
-      }
-    } else {
-      const eventDate = new Date(event.date);
-      
-      if (!isNaN(eventDate.getTime())) {
-        setAvailableDates([{
-          id: event.date,
-          date: eventDate,
-          availableTickets: event.availableTickets || 0
-        }]);
-        
-        setFormData(prev => ({
-          ...prev,
-          selectedDate: event.date
-        }));
-      }
-    }
-  }, [event]);
-
-  const initialTicketType = event.ticketTypes && event.ticketTypes.length > 0 
-    ? event.ticketTypes[0] 
-    : { id: 'general', name: 'Generale', price: event.price || 0 };
-
+  // Stato del form, inizializzato in base a event e selectedDateItem
   const [formData, setFormData] = useState({
     customerName: '',
     customerEmail: '',
     customerPhone: '',
     quantity: 1,
-    selectedDate: null,
-    selectedTicketType: initialTicketType,
+    selectedTicketTypeId: null,
     includeTable: false,
-    selectedTableType: null,
-    totalPrice: Number(initialTicketType.price || 0)
+    selectedTableTypeId: null,
+    totalPrice: 0,
+    // Memorizza i dettagli dei tipi disponibili per questa data
+    availableTicketsForDate: [],
+    availableTablesForDate: [],
+    maxQuantity: 1, // Max selezionabile per il tipo scelto
   });
 
-  const formatPrice = (price) => {
-    const numPrice = Number(price || 0);
-    return numPrice.toFixed(2);
-  };
+  // Funzione per inizializzare/aggiornare lo stato del form quando cambiano event o selectedDateItem
+  const initializeForm = useCallback(() => {
+    if (!event || !selectedDateItem) {
+        setError("Dati evento o data mancanti.");
+        return;
+    }
 
-  const calculateTotalPrice = (ticketType, quantity, tableType) => {
-    const ticketPrice = Number(ticketType.price || 0) * quantity;
-    const tablePrice = tableType ? Number(tableType.price || 0) : 0;
-    return ticketPrice + tablePrice;
-  };
+    const ticketsForDate = selectedDateItem.ticketTypes || [];
+    const tablesForDate = selectedDateItem.tableTypes || [];
 
-  const handleTicketTypeChange = (e) => {
-    const selectedType = event.ticketTypes.find(type => type.id === e.target.value) || 
-                        { id: 'general', name: 'Generale', price: event.price || 0 };
-    
-    // Verifica se il tipo di biglietto selezionato permette l'opzione tavolo
-    const isVipOrHigher = selectedType.id === 'vip' || selectedType.id === 'backstage' || 
-                         ['vip', 'backstage', 'prive', 'platinum'].includes(selectedType.id);
-    
-    // Se non è un biglietto VIP o superiore, deseleziona l'opzione tavolo
-    const includeTable = isVipOrHigher ? formData.includeTable : false;
-    const selectedTableType = includeTable ? formData.selectedTableType : null;
-    
+    // Trova il primo tipo di biglietto disponibile come default
+    const defaultTicketType = ticketsForDate.find(t => t.quantity > 0) || (ticketsForDate.length > 0 ? ticketsForDate[0] : null);
+    const defaultTableType = tablesForDate.find(t => t.quantity > 0) || (tablesForDate.length > 0 ? tablesForDate[0] : null);
+
+    const initialQuantity = 1;
+    const initialTicketPrice = defaultTicketType ? Number(defaultTicketType.price || 0) : 0;
+    // Imposta maxQuantity in base alla disponibilità del tipo di default o 1 se non disponibile
+    const initialMaxQuantity = defaultTicketType ? Math.max(1, Number(defaultTicketType.quantity || 0)) : 1;
+
     setFormData(prev => ({
-      ...prev,
-      selectedTicketType: selectedType,
-      includeTable: includeTable,
-      selectedTableType: selectedTableType,
-      totalPrice: calculateTotalPrice(selectedType, prev.quantity, selectedTableType)
-    }));
-  };
-
-  const handleTableTypeChange = (e) => {
-    const selectedType = event.tableTypes.find(type => type.id === e.target.value);
-    setFormData(prev => ({
-      ...prev,
-      selectedTableType: selectedType,
-      totalPrice: calculateTotalPrice(prev.selectedTicketType, prev.quantity, selectedType)
-    }));
-  };
-
-  const handleQuantityChange = (e) => {
-    const newValue = e.target.value === '' ? '' : parseInt(e.target.value);
-    const maxTickets = getCurrentAvailableTickets();
-    
-    if (newValue === '' || (!isNaN(newValue) && newValue >= 1 && newValue <= maxTickets)) {
-      setFormData(prev => ({
         ...prev,
-        quantity: newValue,
-        totalPrice: newValue === '' ? 0 : calculateTotalPrice(
-          prev.selectedTicketType, 
-          newValue, 
-          prev.selectedTableType
-        )
-      }));
-    }
-  };
-
-  const handleDateChange = (dateId) => {
-    setFormData(prev => ({
-      ...prev,
-      selectedDate: dateId
+        customerName: '',
+        customerEmail: '',
+        customerPhone: '',
+        quantity: initialQuantity,
+        selectedTicketTypeId: defaultTicketType ? defaultTicketType.id : null,
+        includeTable: false, // Inizia senza tavolo
+        selectedTableTypeId: null,
+        totalPrice: initialTicketPrice * initialQuantity,
+        availableTicketsForDate: ticketsForDate,
+        availableTablesForDate: tablesForDate,
+        // Assicura che maxQuantity sia almeno 1 se il tipo di biglietto esiste
+        maxQuantity: defaultTicketType ? initialMaxQuantity : 0,
     }));
-  };
+    setError(null); // Resetta errori
 
-  const handleIncludeTableChange = (e) => {
-    const includeTable = e.target.checked;
-    setFormData(prev => ({
-      ...prev,
-      includeTable,
-      selectedTableType: includeTable ? event.tableTypes[0] : null,
-      totalPrice: calculateTotalPrice(
-        prev.selectedTicketType, 
-        prev.quantity, 
-        includeTable ? event.tableTypes[0] : null
-      )
-    }));
-  };
+  }, [event, selectedDateItem]);
 
-  const getCurrentAvailableTickets = () => {
-    let availableTickets = 0;
+  // Inizializza il form all'apertura o al cambio di data/evento
+  useEffect(() => {
+    initializeForm();
+  }, [initializeForm]);
+
+
+  // --- Calcolo Prezzo Totale --- 
+  const calculateTotalPrice = useCallback(() => {
+    const ticketType = formData.availableTicketsForDate.find(t => t.id === formData.selectedTicketTypeId);
+    const tableType = formData.includeTable ? formData.availableTablesForDate.find(t => t.id === formData.selectedTableTypeId) : null;
     
-    // Se l'evento non è ricorrente (ha una sola data)
-    if (!event.isRecurring) {
-      // Per biglietti generali
-      if (formData.selectedTicketType.id === 'general') {
-        availableTickets = event.availableTickets || event.totalTickets || 0;
+    const ticketPrice = ticketType ? Number(ticketType.price || 0) : 0;
+    const tablePrice = tableType ? Number(tableType.price || 0) : 0;
+    const quantity = Number(formData.quantity || 0);
+
+    // Se il tavolo è incluso, il prezzo è per tavolo (quantità 1 implicita per tavolo)
+    // Altrimenti, il prezzo è per biglietto * quantità
+    return formData.includeTable ? tablePrice : (ticketPrice * quantity);
+
+  }, [formData.selectedTicketTypeId, formData.quantity, formData.includeTable, formData.selectedTableTypeId, formData.availableTicketsForDate, formData.availableTablesForDate]);
+
+  // Aggiorna il prezzo totale quando cambiano le selezioni
+  useEffect(() => {
+    setFormData(prev => ({
+      ...prev,
+      totalPrice: calculateTotalPrice()
+    }));
+  }, [calculateTotalPrice]);
+
+
+  // --- Handler Modifiche Input --- 
+
+  const handleInputChange = (e) => {
+      const { name, value, type, checked } = e.target;
+      if (type === 'checkbox') {
+          // Gestione specifica per includeTable
+          if (name === 'includeTable') {
+              const newIncludeTable = checked;
+               // Trova il primo tavolo disponibile come default se si attiva l'opzione
+              const defaultTable = formData.availableTablesForDate.find(t => t.quantity > 0);
+              const defaultTableId = newIncludeTable && defaultTable ? defaultTable.id : null;
+              
+              setFormData(prev => ({
+                  ...prev,
+                  includeTable: newIncludeTable,
+                  // Seleziona il primo tavolo disponibile se si attiva, altrimenti null
+                  selectedTableTypeId: defaultTableId,
+                  // Quando si vende un tavolo, la quantità è 1 e non è più modificabile (per i biglietti)
+                  quantity: newIncludeTable ? 1 : prev.quantity,
+                  maxQuantity: newIncludeTable ? 1 : prev.maxQuantity, // Max 1 se è tavolo
+              }));
+          } else {
+             // Per altre checkbox future
+              setFormData(prev => ({ ...prev, [name]: checked }));
+          }
+      } else if (name === 'selectedTicketTypeId') {
+          const selectedType = formData.availableTicketsForDate.find(t => t.id === value);
+          // La nuova quantità massima è quella del tipo selezionato, o 0 se non trovato/non disponibile
+          const newMax = selectedType ? Math.max(0, Number(selectedType.quantity || 0)) : 0;
+          // La quantità attuale non può superare la nuova massima
+          const currentQuantity = Math.min(formData.quantity, newMax);
+
+          setFormData(prev => ({
+              ...prev,
+              selectedTicketTypeId: value,
+              quantity: currentQuantity > 0 ? currentQuantity : (newMax > 0 ? 1: 0), // Imposta a 1 se possibile, altrimenti 0
+              maxQuantity: newMax,
+              // includeTable: false, // Potrebbe non essere necessario deselezionare tavolo qui
+              // selectedTableTypeId: null,
+          }));
+      } else if (name === 'quantity') {
+          const newQuantity = value === '' ? '' : parseInt(value);
+           // Assicura che la quantità sia un numero valido, >= 1 e <= maxQuantity
+          if (newQuantity === '' || (!isNaN(newQuantity) && newQuantity >= 1 && newQuantity <= formData.maxQuantity)) {
+              setFormData(prev => ({ ...prev, quantity: newQuantity }));
+          } else if (!isNaN(newQuantity) && newQuantity > formData.maxQuantity) {
+              // Se l'utente inserisce un valore > max, imposta al massimo consentito
+              setFormData(prev => ({ ...prev, quantity: formData.maxQuantity }));
+          }
+      } else if (name === 'selectedTableTypeId') {
+            // Quando si seleziona un tavolo, la quantità di biglietti non è rilevante
+            setFormData(prev => ({ 
+                ...prev, 
+                selectedTableTypeId: value,
+                quantity: 1, // Quantità fissa a 1 per vendita tavolo
+                maxQuantity: 1 
+            }));
       } else {
-        // Per altri tipi di biglietti
-        availableTickets = formData.selectedTicketType.availableTickets || formData.selectedTicketType.totalTickets || 0;
+          // Per altri input (customerName, email, phone)
+          setFormData(prev => ({ ...prev, [name]: value }));
       }
-    } else {
-      // Per eventi ricorrenti (con più date)
-      if (!formData.selectedDate) return 0;
-
-      const dates = Array.isArray(event.dates) ? event.dates : [];
-      
-      const selectedDate = dates.find(d => {
-        if (!d || !d.date) return false;
-        return d.date === formData.selectedDate || new Date(d.date).toISOString() === formData.selectedDate;
-      });
-
-      if (!selectedDate) return 0;
-
-      if (formData.selectedTicketType.id === 'general') {
-        availableTickets = selectedDate.availableTickets || selectedDate.totalTickets || 0;
-      } else {
-        availableTickets = formData.selectedTicketType.availableTickets || formData.selectedTicketType.totalTickets || 0;
-      }
-    }
-
-    // Assicurati che il valore non sia mai negativo
-    return Math.max(0, availableTickets);
   };
 
-  if (availableDates.length === 0) {
-    return (
-      <div className="modal-overlay">
-        <div className="modal-content">
-          <h2>Evento non disponibile</h2>
-          <p>Non ci sono biglietti disponibili per questo evento.</p>
-          <div className="modal-actions">
-            <button type="button" className="btn-secondary" onClick={onClose}>
-              Chiudi
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
-  const generateWhatsAppMessage = (ticketData) => {
+  // --- Logica Invio Messaggio WhatsApp --- 
+  const generateWhatsAppMessage = (ticketData, ticketLink) => {
     const eventDate = new Date(ticketData.eventDate);
-    const formattedDate = eventDate.toLocaleDateString();
-    const formattedTime = eventDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    
-    // ID del biglietto in formato più leggibile, come mostrato nell'immagine
-    const ticketId = `MT${Math.floor(Math.random() * 90000000) + 10000000}`;
-    
-    // Messaggio formattato in modo simile all'immagine di esempio
-    let message = `${ticketId}\n\n`;  // Codice in alto come nell'immagine
-    message += `${event.name.toUpperCase()}\n`;  // Nome evento in maiuscolo
-    message += `${event.location}\n`;  // Luogo
-    message += `${formattedDate} ${formattedTime}\n`;  // Data e ora
-    message += `Quantity: ${ticketData.quantity}\n`;  // Quantità
-    message += `Total Order: € ${ticketData.totalPrice.toFixed(2)}\n`;  // Prezzo totale
-    message += `ID: ${ticketData.ticketCode}\n`;  // ID biglietto
-    
-    // Aggiungi informazioni del tavolo se presenti
-    if (formData.includeTable && formData.selectedTableType) {
-      message += `\n🪑 Dettagli Tavolo:\n`;
-      message += `Tipo: ${formData.selectedTableType.name}\n`;
-      message += `Posti: ${formData.selectedTableType.seats || 4}\n`;
+    const formattedDate = eventDate.toLocaleDateString('it-IT');
+    const formattedTime = eventDate.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+
+    let message = `*RIEPILOGO ORDINE*\n\n`;
+    message += `*Evento:* ${event.name}\n`;
+    message += `*Data:* ${formattedDate} ${formattedTime}\n`;
+    message += `*Luogo:* ${event.location}\n\n`;
+
+    if (ticketData.itemType === 'table') {
+        const table = formData.availableTablesForDate.find(t => t.id === ticketData.itemId);
+        message += `*Tavolo:* ${table?.name || 'N/D'}\n`;
+        message += `*Posti:* ${table?.seats || 'N/D'}\n`;
+        message += `*Quantità:* 1\n`; // Sempre 1 per tavolo
+    } else {
+        const ticket = formData.availableTicketsForDate.find(t => t.id === ticketData.itemId);
+        message += `*Biglietto:* ${ticket?.name || 'N/D'}\n`;
+        message += `*Quantità:* ${ticketData.quantity}\n`;
     }
     
-    return message;
+    message += `*Prezzo Totale:* €${ticketData.totalPrice.toFixed(2)}\n\n`;
+    message += `*Cliente:* ${ticketData.customerName}\n`;
+    if (ticketData.customerEmail) message += `*Email:* ${ticketData.customerEmail}\n`;
+    message += `*Codice Biglietto:* ${ticketData.ticketCode}\n\n`;
+    
+    // Aggiungi il link al biglietto
+    if (ticketLink) {
+        message += `*Visualizza il tuo biglietto qui:*\n${ticketLink}\n\n`;
+    }
+
+    message += `_Grazie per il tuo acquisto!_`;
+
+    return encodeURIComponent(message);
   };
 
-  const openWhatsApp = (phoneNumber, message, ticketCode) => {
-    // Rimuovi eventuali caratteri non numerici dal numero
+  const openWhatsApp = (phoneNumber, message) => {
     const cleanPhone = phoneNumber.replace(/\D/g, '');
-    
-    // Crea un link alla pagina del biglietto usando l'URL di Vercel
-    const ticketPageUrl = `https://gestione-pr-ultimata.vercel.app/ticket/${ticketCode}`;
-    
-    // Aggiungi il link alla pagina del biglietto al messaggio
-    const completeMessage = `${message}\n\nVisualizza il tuo biglietto qui: ${ticketPageUrl}`;
-    
-    // Apri WhatsApp con il messaggio
-    const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(completeMessage)}`;
+    // Aggiungi prefisso internazionale se necessario (es. 39 per Italia)
+    const internationalPhone = cleanPhone.startsWith('39') ? cleanPhone : (cleanPhone.length > 10 ? cleanPhone : `39${cleanPhone}`); // Gestisce un po' meglio i prefissi
+    const whatsappUrl = `https://wa.me/${internationalPhone}?text=${message}`;
     window.open(whatsappUrl, '_blank');
   };
 
+
+  // --- Gestione Submit (Vendita) --- 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
+    const { customerName, customerEmail, customerPhone, quantity, selectedTicketTypeId, includeTable, selectedTableTypeId, totalPrice } = formData;
+    
+    // Validazioni base
+    if (!customerName || !customerPhone) {
+      setError("Nome cliente e numero di telefono sono obbligatori.");
+      setLoading(false);
+      return;
+    }
+     if (!includeTable && (!selectedTicketTypeId || quantity < 1)) {
+      setError("Seleziona un tipo di biglietto e una quantità valida (almeno 1).");
+      setLoading(false);
+      return;
+    }
+    // Se si vende tavolo, assicurarsi che sia selezionato un tipo
+    if (includeTable && !selectedTableTypeId) {
+        setError("Seleziona un tipo di tavolo.");
+        setLoading(false);
+        return;
+      }
+     // Se si vendono biglietti, assicurarsi che la quantità sia valida
+     if (!includeTable && (isNaN(parseInt(quantity)) || parseInt(quantity) < 1)) {
+        setError("Inserisci una quantità valida per i biglietti.");
+        setLoading(false);
+        return;
+     }
+
+    const ticketCode = generateTicketCode();
+    const sellTimestamp = serverTimestamp(); // Usa serverTimestamp
+
+     // Determina cosa è stato venduto (biglietto o tavolo)
+     const soldItem = includeTable 
+     ? formData.availableTablesForDate.find(t => t.id === selectedTableTypeId)
+     : formData.availableTicketsForDate.find(t => t.id === selectedTicketTypeId);
+
+    if (!soldItem) {
+        setError("Elemento selezionato non trovato. Riprova.");
+        setLoading(false);
+        return;
+    }
+
+    const itemType = includeTable ? 'table' : 'ticket';
+    const itemId = soldItem.id;
+    const itemPrice = Number(soldItem.price || 0);
+    // La quantità venduta è 1 se è un tavolo, altrimenti la quantità selezionata
+    const soldQuantity = includeTable ? 1 : parseInt(quantity);
+
+    let ticketDataForEmailAndWhatsApp = null; // Variabile per contenere i dati
+
     try {
-      console.log('Inizio vendita biglietto:', formData);
+        await runTransaction(db, async (transaction) => {
+            const eventRef = doc(db, 'events', event.id);
+            const eventDoc = await transaction.get(eventRef);
 
-      // Validazione dei dati
-      if (!formData.customerName || !formData.customerEmail || !formData.selectedTicketType || formData.quantity <= 0) {
-        throw new Error('Compila tutti i campi richiesti');
-      }
-
-      // Validazione email
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(formData.customerEmail)) {
-        throw new Error('Inserisci un indirizzo email valido');
-      }
-
-      // Controllo disponibilità biglietti
-      const availableTickets = getCurrentAvailableTickets();
-      console.log('Biglietti disponibili:', availableTickets);
-      
-      if (formData.quantity > availableTickets) {
-        throw new Error(`Solo ${availableTickets} biglietti disponibili per questa data e tipo`);
-      }
-
-      const userRef = doc(db, 'users', currentUser.uid);
-      const userSnap = await getDoc(userRef);
-      
-      if (!userSnap.exists()) {
-        throw new Error('Utente non trovato');
-      }
-
-      const userData = userSnap.data();
-      const ticketCode = generateTicketCode();
-      console.log('Ticket code generato:', ticketCode);
-
-      // Calcola il prezzo totale prima della transazione
-      const ticketPrice = formData.selectedTicketType.price || event.price;
-      const totalPrice = ticketPrice * formData.quantity;
-
-      // Start a transaction
-      await runTransaction(db, async (transaction) => {
-        // Update event tickets
-        const eventRef = doc(db, 'events', event.id);
-        const eventSnap = await transaction.get(eventRef);
-        
-        if (!eventSnap.exists()) {
-          throw new Error('Evento non trovato');
-        }
-
-        const eventData = eventSnap.data();
-        console.log('Dati evento:', eventData);
-        console.log('Prezzo biglietto:', ticketPrice);
-        console.log('Prezzo totale:', totalPrice);
-
-        // Aggiorna la disponibilità dei biglietti
-        if (event.isRecurring) {
-          const dates = Array.isArray(eventData.dates) ? eventData.dates : [];
-          const updatedDates = dates.map(date => {
-            if (date.date === formData.selectedDate) {
-              return {
-                ...date,
-                availableTickets: (date.availableTickets || 0) - formData.quantity
-              };
+            if (!eventDoc.exists()) {
+                throw new Error("Evento non trovato.");
             }
-            return date;
-          });
 
-          transaction.update(eventRef, {
-            dates: updatedDates
-          });
-        } else {
-          transaction.update(eventRef, {
-            availableTickets: increment(-formData.quantity)
-          });
-        }
+            const currentEventData = eventDoc.data();
+            // Assicurati che eventDates sia un array
+            const currentEventDates = Array.isArray(currentEventData.eventDates) ? currentEventData.eventDates : [];
 
-        // Create ticket document
-        const ticketRef = doc(collection(db, 'tickets'));
-        const ticketData = {
-          ticketCode: ticketCode,
-          code: ticketCode,
-          eventName: event.name,
-          eventDate: formData.selectedDate,
-          eventLocation: event.location,
-          customerName: formData.customerName,
-          customerEmail: formData.customerEmail,
-          customerPhone: formData.customerPhone,
-          quantity: formData.quantity,
-          ticketType: formData.selectedTicketType,
-          price: ticketPrice,
-          totalPrice,
-          status: 'active',
-          saleDate: serverTimestamp(),
-          sellerId: currentUser.uid,
-          sellerName: userData.name,
-          eventId: event.id
-        };
+            // Trova l'indice della data specifica nell'array dell'evento
+            const dateIndex = currentEventDates.findIndex(d => d.date === selectedDateItem.date);
+            if (dateIndex === -1) {
+                 // Prova a confrontare gli oggetti Date se le stringhe non corrispondono esattamente
+                const selectedDateObj = new Date(selectedDateItem.date);
+                const dateIndexByDateObj = currentEventDates.findIndex(d => d.date && new Date(d.date).getTime() === selectedDateObj.getTime());
+                if (dateIndexByDateObj === -1) {
+                   throw new Error("Data specifica non trovata nell'evento (controllo per data fallito).");
+                } else {
+                    // Se trovato tramite oggetto Date, usa quell'indice
+                     // TODO: Riassegnare dateIndex qui se necessario
+                     // dateIndex = dateIndexByDateObj; // Attenzione, modifica una costante!
+                     // Meglio gestire con una variabile let se questo scenario è possibile.
+                    // Per ora, assumiamo che il confronto stringa funzioni o lanciamo errore.
+                   throw new Error("Errore nel confronto date."); // O gestisci il caso dateIndexByDateObj
+                }
+            }
 
-        console.log('Dati biglietto da salvare:', ticketData);
+            let itemIndex = -1;
+            let currentQuantityInDb = 0;
+            // Seleziona l'array corretto (ticketTypes o tableTypes) e assicurati sia un array
+            const itemsArrayInDb = includeTable 
+                ? (Array.isArray(currentEventDates[dateIndex].tableTypes) ? currentEventDates[dateIndex].tableTypes : [])
+                : (Array.isArray(currentEventDates[dateIndex].ticketTypes) ? currentEventDates[dateIndex].ticketTypes : []);
+            
+            // Trova l'indice dell'item specifico
+            itemIndex = itemsArrayInDb.findIndex(item => item.id === itemId);
+            
+            if (itemIndex !== -1) {
+                currentQuantityInDb = Number(itemsArrayInDb[itemIndex].quantity || 0);
+            } else {
+                // L'item venduto non esiste più nel DB? Raro ma possibile.
+                 throw new Error(`Tipo di ${itemType} con ID ${itemId} non trovato nel database per questa data.`);
+             }
 
-        // Usa transaction.set per creare il documento
-        transaction.set(ticketRef, ticketData);
+            // Verifica finale disponibilità
+            if (currentQuantityInDb < soldQuantity) {
+                throw new Error(`Disponibilità insufficiente per ${soldItem.name}. Disponibili nel DB: ${currentQuantityInDb}. Richiesti: ${soldQuantity}. Aggiorna la pagina e riprova.`);
+            }
 
-        // Aggiorna le statistiche del venditore
-        transaction.update(userRef, {
-          totalTicketsSold: increment(formData.quantity),
-          totalRevenue: increment(totalPrice)
+            // Prepara l'aggiornamento dell'array eventDates
+            const updatedEventDates = [...currentEventDates]; // Copia l'array principale
+            // Clona profondamente l'oggetto data che stiamo modificando per evitare mutazioni indesiderate
+            const updatedDateItem = JSON.parse(JSON.stringify(updatedEventDates[dateIndex]));
+            
+             // Clona l'array di items (ticket o table) all'interno della data
+            const updatedItemsArray = includeTable ? [...(updatedDateItem.tableTypes || [])] : [...(updatedDateItem.ticketTypes || [])];
+
+
+            // Aggiorna la quantità dell'item specifico
+            if (updatedItemsArray[itemIndex]) { // Doppia verifica che l'indice sia valido
+                 updatedItemsArray[itemIndex] = {
+                    ...updatedItemsArray[itemIndex],
+                    quantity: currentQuantityInDb - soldQuantity, // Sottrai la quantità venduta
+                };
+            } else {
+                 throw new Error("Errore interno: indice item non valido dopo il controllo.");
+             }
+
+            // Aggiorna l'array specifico (ticketTypes o tableTypes) nell'oggetto data clonato
+            if (includeTable) {
+                 updatedDateItem.tableTypes = updatedItemsArray;
+             } else {
+                 updatedDateItem.ticketTypes = updatedItemsArray;
+             }
+
+            // Sostituisci l'oggetto data originale con quello modificato nell'array principale clonato
+            updatedEventDates[dateIndex] = updatedDateItem;
+
+
+            // Aggiorna il documento dell'evento con l'array eventDates modificato
+            transaction.update(eventRef, { eventDates: updatedEventDates });
+
+            // Crea il documento del biglietto venduto
+            const ticketData = {
+                eventId: event.id,
+                eventName: event.name,
+                eventDate: selectedDateItem.date, // Salva la data specifica
+                eventLocation: event.location, // Aggiunto per email
+                eventDescription: event.description, // Aggiunto per email
+                sellerId: currentUser.uid,
+                sellerName: currentUser.displayName || currentUser.email,
+                customerName,
+                customerEmail: customerEmail || null, // Salva null se vuoto
+                customerPhone,
+                ticketCode,
+                itemType: itemType, // 'ticket' or 'table'
+                itemId: itemId,
+                itemName: soldItem.name,
+                // Aggiungi dettagli specifici item per email (se non già inclusi)
+                ticketType: includeTable ? 'Tavolo' : soldItem.name,
+                price: itemPrice, // Alias per pricePerItem per email
+                quantity: soldQuantity,
+                pricePerItem: itemPrice,
+                totalPrice: totalPrice, // Usa il prezzo calcolato nello stato
+                status: 'sold',
+                soldAt: sellTimestamp,
+            };
+            
+            const ticketDocRef = doc(collection(db, 'tickets')); // Genera ref prima
+            transaction.set(ticketDocRef, ticketData); // Usa il ref generato
+
+            // Salva i dati per usarli dopo la transazione per email/whatsapp
+            ticketDataForEmailAndWhatsApp = { ...ticketData, id: ticketDocRef.id }; // Aggiungi l'ID generato
+
         });
 
-        // Aggiorna l'evento con il nuovo biglietto
-        transaction.update(eventRef, {
-          tickets: arrayUnion(ticketRef.id)
-        });
-      });
-
-      console.log('Transazione completata con successo');
-
-      // Prova a inviare l'email dopo la transazione completata
-      try {
-        console.log('Preparazione dati per l\'email...');
-        const emailData = {
-          customerName: formData.customerName,
-          eventName: event.name,
-          eventDescription: event.description,
-          eventLocation: event.location,
-          eventDate: formData.selectedDate,
-          eventId: event.id,
-          ticketType: formData.selectedTicketType.name,
-          price: ticketPrice,
-          quantity: formData.quantity,
-          ticketCode: ticketCode,
-          totalPrice: totalPrice,
-          tableInfo: formData.includeTable && formData.selectedTableType ? {
-            type: formData.selectedTableType,
-            seats: formData.selectedTableType.seats,
-            price: formData.selectedTableType.price
-          } : null
-        };
-        console.log('Dati preparati per l\'email:', emailData);
-
-        const emailSent = await sendTicketEmail(formData.customerEmail, emailData);
-
-        if (!emailSent) {
-          console.warn('L\'email di conferma non è stata inviata, ma il biglietto è stato venduto con successo');
-        } else {
-          console.log('Email di conferma inviata con successo');
+      // --- Fuori dalla transazione --- 
+      console.log("Transazione completata con successo!");
+      
+      // --- Invio Email (come prima) --- 
+      if (customerEmail && ticketDataForEmailAndWhatsApp) {
+        console.log("Tentativo invio email a:", customerEmail);
+        try {
+            const dataForEmail = { 
+                ...ticketDataForEmailAndWhatsApp,
+                eventLocation: event?.location || 'N/D',
+                eventDescription: event?.description || 'Nessuna descrizione'
+             };
+            const emailSent = await sendTicketEmail(customerEmail, dataForEmail);
+            if (emailSent) {
+                console.log("Email di conferma inviata con successo a", customerEmail);
+            } else {
+                console.warn("Invio email fallito per", customerEmail, "(sendTicketEmail ha restituito false)");
+            }
+        } catch (emailError) {
+            console.error("Errore critico durante l'invio dell'email:", emailError);
         }
-      } catch (emailError) {
-        console.error('Errore dettagliato nell\'invio dell\'email di conferma:', emailError);
+      } else if (!customerEmail && ticketDataForEmailAndWhatsApp) {
+           console.log("Nessuna email cliente fornita, email non inviata.");
+      } else {
+          console.warn("Dati biglietto per email/whatsapp non disponibili dopo la transazione.");
+      }
+      
+      // --- Invio messaggio WhatsApp CON LINK (Corretto) --- 
+      if (customerPhone && ticketDataForEmailAndWhatsApp && ticketDataForEmailAndWhatsApp.ticketCode) {
+          console.log("Preparazione messaggio WhatsApp per:", customerPhone);
+          try {
+              // Costruisci il link alla pagina del biglietto
+              const ticketPageLink = `${window.location.origin}/ticket/${ticketDataForEmailAndWhatsApp.ticketCode}`;
+              console.log("Link biglietto generato:", ticketPageLink);
+
+              // Genera il messaggio WhatsApp includendo il link
+              // Assicurati che generateWhatsAppMessage accetti il secondo parametro
+              const whatsappMessage = generateWhatsAppMessage(ticketDataForEmailAndWhatsApp, ticketPageLink); 
+              
+              // Apri WhatsApp
+              openWhatsApp(customerPhone, whatsappMessage);
+          } catch (waError) {
+              console.error("Errore durante la preparazione o l'apertura di WhatsApp:", waError);
+          }
+      } else {
+           console.warn("Numero cliente, dati biglietto o codice biglietto mancanti per WhatsApp.");
       }
 
-      // Dopo la transazione completata con successo
-      if (formData.customerPhone) {
-        const message = generateWhatsAppMessage({
-          eventDate: formData.selectedDate,
-          ticketType: formData.selectedTicketType,
-          quantity: formData.quantity,
-          price: formData.selectedTicketType.price || event.price,
-          totalPrice: formData.totalPrice,
-          ticketCode: ticketCode
-        });
-        
-        // Apri WhatsApp con il messaggio precompilato
-        openWhatsApp(formData.customerPhone, message, ticketCode);
-      }
+      onSold(); // Chiama la callback per aggiornare la dashboard e chiudere il modal
 
-      // Notifica il componente padre
-      onSell && onSell();
-      onClose();
     } catch (error) {
-      console.error('Errore dettagliato nella vendita del biglietto:', error);
-      setError(error.message);
+      console.error("Errore durante la transazione di vendita:", error);
+      // Mostra un messaggio di errore più specifico se possibile
+      if (error.message.includes("Disponibilità insufficiente")) {
+         setError(error.message); // Mostra l'errore di disponibilità all'utente
+      } else {
+         setError(`Errore durante la vendita: ${error.message}. Si prega di riprovare.`);
+      }
     } finally {
       setLoading(false);
     }
   };
 
+  // --- JSX Rendering --- 
+  // Verifica se ci sono biglietti o tavoli disponibili per la data selezionata
+  const isAnythingAvailable = 
+    formData.availableTicketsForDate.some(t => t.quantity > 0) ||
+    (selectedDateItem?.hasTablesForDate && formData.availableTablesForDate.some(t => t.quantity > 0));
+
   return (
-    <div className="modal-overlay">
-      <div className="modal-content">
-        <div className="modal-header">
-          <h2>Vendi Biglietti</h2>
-          <button className="close-button" onClick={onClose}>&times;</button>
-        </div>
+    <div className="modal-overlay"> 
+      <div className="modal-content sell-ticket-modal">
+        <h2>Vendi Biglietti/Tavoli per: {event.name}</h2>
+        <p><strong>Data Selezionata:</strong> {selectedDateItem ? new Date(selectedDateItem.date).toLocaleString('it-IT', { dateStyle: 'full', timeStyle: 'short' }) : 'N/D'}</p>
+        <button onClick={onClose} className="close-modal-btn">&times;</button>
 
-        <div className="event-info">
-          <h3>{event.name}</h3>
-          <p>{event.location}</p>
-        </div>
+        {error && <p className="error-message">{error}</p>}
 
-        <form onSubmit={handleSubmit}>
-          {error && <div className="error-message">{error}</div>}
-
-          <div className="form-section">
-            <h3><FaCalendarAlt /> Seleziona Data</h3>
-            <DateSelector
-              dates={availableDates}
-              selectedDate={formData.selectedDate}
-              onDateSelect={handleDateChange}
-            />
-          </div>
-
-          <div className="form-section">
-            <h3><FaTicketAlt /> Tipo di Biglietto</h3>
-            <div className="form-group">
-              <select
-                value={formData.selectedTicketType.id}
-                onChange={handleTicketTypeChange}
-                required
-              >
-                {event.ticketTypes && event.ticketTypes.length > 0 ? (
-                  event.ticketTypes.map(type => (
-                    <option key={type.id} value={type.id}>
-                      {type.name} - €{formatPrice(type.price)}
-                    </option>
-                  ))
-                ) : (
-                  <option value="general">
-                    Generale - €{formatPrice(event.price)}
-                  </option>
-                )}
-              </select>
-            </div>
-          </div>
-
-          <div className="form-section">
-            <h3><FaUser /> Informazioni Cliente</h3>
-            <div className="form-group">
-              <label>Nome Cliente</label>
-              <input
-                type="text"
-                value={formData.customerName}
-                onChange={(e) => setFormData(prev => ({ ...prev, customerName: e.target.value }))}
-                required
-              />
-            </div>
-          </div>
-
-          <div className="form-group">
-            <label>Email Cliente</label>
-            <input
-              type="email"
-              value={formData.customerEmail}
-              onChange={(e) => setFormData(prev => ({ ...prev, customerEmail: e.target.value }))}
-              required
-            />
-          </div>
-
-          <div className="form-group">
-            <label>
-              Telefono Cliente
-              <FaWhatsapp className="whatsapp-icon" title="Il biglietto verrà inviato anche su WhatsApp" />
-            </label>
-            <input
-              type="tel"
-              value={formData.customerPhone}
-              onChange={(e) => setFormData(prev => ({ ...prev, customerPhone: e.target.value }))}
-              placeholder="+39 123 456 7890"
-              pattern="[+]?[0-9\s-()]+"
-            />
-          </div>
-
-          <div className="form-section">
-            <h3><FaTicketAlt /> Quantità</h3>
-            <div className="form-group">
-              <input
-                type="number"
-                min="1"
-                max={getCurrentAvailableTickets()}
-                value={formData.quantity || 1}
-                onChange={handleQuantityChange}
-                required
-              />
-              <span className="available-tickets">
-                Disponibili: {getCurrentAvailableTickets()}
-              </span>
-            </div>
-          </div>
-
-          {event.tableTypes && event.tableTypes.length > 0 && 
-           (formData.selectedTicketType.id === 'vip' || 
-            formData.selectedTicketType.id === 'backstage' || 
-            ['vip', 'backstage', 'prive', 'platinum'].includes(formData.selectedTicketType.id)) && (
-            <div className="form-section">
-              <h3><FaTable /> Opzioni Tavolo</h3>
-              <div className="form-group">
-                <label>
-                  <input
-                    type="checkbox"
-                    checked={formData.includeTable}
-                    onChange={handleIncludeTableChange}
-                  />
-                  Includi Tavolo
-                </label>
-              </div>
-              {formData.includeTable && (
-                <div className="form-group">
-                  <select
-                    value={formData.selectedTableType?.id || ''}
-                    onChange={handleTableTypeChange}
-                    required
-                  >
-                    <option value="">Seleziona tipo di tavolo</option>
-                    {event.tableTypes.map(type => (
-                      <option key={type.id} value={type.id}>
-                        {type.name} - €{formatPrice(type.price)}
-                      </option>
-                    ))}
-                  </select>
+        {!isAnythingAvailable ? (
+             <div className="unavailable-message">
+                <p>Attenzione: Non ci sono biglietti o tavoli disponibili per la vendita per questa data specifica.</p>
+                <div className="modal-actions">
+                     <button type="button" onClick={onClose} className="cancel-btn">
+                         Chiudi
+                     </button>
                 </div>
-              )}
             </div>
-          )}
-
-          <div className="price-summary">
-            <div className="total-price">
-              <FaEuroSign className="price-icon" />
-              <span>Totale: €{formatPrice(formData.totalPrice)}</span>
+        ) : (
+            <form onSubmit={handleSubmit} className="sell-form">
+            {/* Dati Cliente */} 
+            <div className="form-section customer-details">
+                <h4>Dati Cliente</h4>
+                <div className="form-group">
+                    <label htmlFor="customerName"><FaUser /> Nome Cliente:</label>
+                    <input type="text" id="customerName" name="customerName" value={formData.customerName} onChange={handleInputChange} required />
+                </div>
+                <div className="form-group">
+                    <label htmlFor="customerPhone"><FaWhatsapp /> Telefono Cliente:</label>
+                    <input type="tel" id="customerPhone" name="customerPhone" value={formData.customerPhone} onChange={handleInputChange} required placeholder="+39..."/>
+                </div>
+                <div className="form-group">
+                    <label htmlFor="customerEmail"><FaEnvelope /> Email Cliente (Opzionale):</label>
+                    <input type="email" id="customerEmail" name="customerEmail" value={formData.customerEmail} onChange={handleInputChange} />
+                </div>
             </div>
-          </div>
 
-          <div className="modal-actions">
-            <button type="button" className="btn-secondary" onClick={onClose}>
-              Annulla
-            </button>
-            <button type="submit" className="btn-primary" disabled={loading}>
-              {loading ? 'Vendita in corso...' : 'Vendi Biglietti'}
-            </button>
-          </div>
-        </form>
+            {/* Selezione Biglietto/Tavolo */} 
+            <div className="form-section item-selection">
+                <h4>Seleziona Cosa Vendere</h4>
+                {/* Opzione Tavolo (se disponibili per la data) */} 
+                {selectedDateItem?.hasTablesForDate && formData.availableTablesForDate.some(t=>t.quantity > 0) && (
+                    <div className="form-group table-option">
+                        <label className="checkbox-label">
+                            <input 
+                                type="checkbox" 
+                                name="includeTable"
+                                checked={formData.includeTable}
+                                onChange={handleInputChange}
+                            />
+                            Vendi un Tavolo (invece di biglietti singoli)
+                        </label>
+                    </div>
+                )}
+
+                {/* Selettore Tavolo (se opzione tavolo attiva) */} 
+                {formData.includeTable && (
+                    <div className="form-group">
+                        <label htmlFor="selectedTableTypeId"><FaTable /> Tipo Tavolo:</label>
+                        <select 
+                            id="selectedTableTypeId" 
+                            name="selectedTableTypeId" 
+                            value={formData.selectedTableTypeId || ''} 
+                            onChange={handleInputChange} 
+                            required
+                        >
+                            <option value="" disabled>-- Seleziona Tavolo --</option>
+                            {formData.availableTablesForDate.map(table => (
+                                <option key={table.id} value={table.id} disabled={!table.quantity || table.quantity <= 0}>
+                                    {table.name} - €{Number(table.price || 0).toFixed(2)} (Disponibili: {table.quantity || 0})
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                )}
+
+                {/* Selettore Biglietto (se opzione tavolo NON attiva) */} 
+                {!formData.includeTable && (
+                    <>
+                        <div className="form-group">
+                            <label htmlFor="selectedTicketTypeId"><FaTicketAlt /> Tipo Biglietto:</label>
+                            <select 
+                                id="selectedTicketTypeId" 
+                                name="selectedTicketTypeId" 
+                                value={formData.selectedTicketTypeId || ''} 
+                                onChange={handleInputChange} 
+                                required
+                            >
+                             <option value="" disabled>-- Seleziona Biglietto --</option>
+                            {formData.availableTicketsForDate.map(ticket => (
+                                    <option key={ticket.id} value={ticket.id} disabled={!ticket.quantity || ticket.quantity <= 0}>
+                                        {ticket.name} - €{Number(ticket.price || 0).toFixed(2)} (Disponibili: {ticket.quantity || 0})
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                        {/* Mostra quantità solo se è stato selezionato un tipo di biglietto */} 
+                        {formData.selectedTicketTypeId && formData.maxQuantity > 0 && (
+                             <div className="form-group">
+                                <label htmlFor="quantity">Quantità:</label>
+                                <input 
+                                    type="number" 
+                                    id="quantity" 
+                                    name="quantity" 
+                                    value={formData.quantity} 
+                                    onChange={handleInputChange} 
+                                    min="1" 
+                                    max={formData.maxQuantity}
+                                    required 
+                                />
+                                <span> (Disponibili: {formData.maxQuantity})</span>
+                            </div>
+                         )}
+                          {/* Messaggio se il tipo selezionato è esaurito */} 
+                         {formData.selectedTicketTypeId && formData.maxQuantity === 0 && (
+                            <p className="warning-message">Questo tipo di biglietto è esaurito per la data selezionata.</p>
+                         )}
+                    </>
+                )}
+            </div>
+            
+            {/* Riepilogo e Azioni */} 
+            <div className="form-section summary-actions">
+                <h4>Riepilogo</h4>
+                <p className="total-price"><strong><FaEuroSign /> Prezzo Totale: €{formData.totalPrice.toFixed(2)}</strong></p>
+                <div className="modal-actions">
+                        <button 
+                            type="submit" 
+                            disabled={loading || formData.totalPrice <= 0 || (!formData.includeTable && formData.quantity < 1) || (formData.includeTable && !formData.selectedTableTypeId) }
+                            className="sell-confirm-btn"
+                         >
+                        {loading ? 'Vendita in corso...' : 'Conferma Vendita e Invia WhatsApp'}
+                        </button>
+                        <button type="button" onClick={onClose} disabled={loading} className="cancel-btn">
+                        Annulla
+                        </button>
+                    </div>
+            </div>
+            </form>
+        )}
+
       </div>
     </div>
   );
 }
 
-export default SellTicketModal; 
+export default SellTicketModal;

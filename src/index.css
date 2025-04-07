@@ -3,9 +3,38 @@
   --primary-light: #64b5f6;
   --primary-dark: #1976d2;
   --secondary-color: #2c3e50;
-  --background-light: #ffffff;
+  --accent-color: #3498db;
+  --success-color: #2ecc71;
+  --warning-color: #f1c40f;
+  --danger-color: #e74c3c;
+  
+  /* Light Theme Defaults */
+  --background-light: #ffffff; /* Alias for clarity */
+  --bg-color: var(--background-light);
   --text-primary: #333333;
   --text-secondary: #666666;
+  --border-color: #e0e0e0;
+  --card-bg: var(--background-light);
+  --input-bg: var(--background-light);
+  --surface-color: #f8f9fa; /* e.g., for table headers */
+  --hover-bg: #f5f8ff;
+  --selected-bg: #f0f4ff;
+  --selected-text: var(--primary-color);
+
+  --ion-color-primary: var(--primary-color);
+  --ion-color-secondary: var(--secondary-color);
+  --ion-color-success: var(--success-color);
+  --ion-color-danger: var(--danger-color);
+  --ion-color-warning: var(--warning-color);
+  --ion-color-info: var(--accent-color); 
+  --ion-color-light: #f8f9fa;
+  --ion-color-dark: #343a40; /* Used for text on light bg? */
+  --ion-color-medium: #6c757d;
+  --ion-color-white: #ffffff;
+  --ion-color-black: #000000;
+  --ion-color-transparent: transparent;
+
+  /* Shared Layout/Style Variables */
   --border-radius: 8px;
   --border-radius-lg: 12px;
   --spacing-xs: 0.25rem;
@@ -13,10 +42,10 @@
   --spacing-md: 1rem;
   --spacing-lg: 1.5rem;
   --spacing-xl: 2rem;
-  --shadow-sm: 0 2px 4px rgba(0,0,0,0.1);
+  --shadow-sm: 0 2px 4px rgba(0,0,0,0.08);
   --shadow-md: 0 4px 6px rgba(0,0,0,0.1);
   --shadow-lg: 0 10px 15px rgba(0,0,0,0.1);
-  --transition-speed: 0.3s;
+  --transition-speed: 0.2s;
   --card-min-width: 280px;
   --card-max-width: 400px;
   --card-height: auto;
@@ -34,38 +63,6 @@
   --input-height-mobile: 48px;
   --button-height: 44px;
   --button-height-mobile: 48px;
-  --ion-color-primary: #435bcc;
-  --ion-color-secondary: #2c3e50;
-  --ion-color-success: #2ecc71;
-  --ion-color-danger: #e74c3c;
-  --ion-color-warning: #f1c40f;
-  --ion-color-info: #3498db;
-  --ion-color-light: #f8f9fa;
-  --ion-color-dark: #343a40;
-  --ion-color-medium: #6c757d;
-  --ion-color-white: #ffffff;
-  --ion-color-black: #000000;
-  --ion-color-transparent: transparent;
-  --accent-color: #3498db;
-  --success-color: #2ecc71;
-  --warning-color: #f1c40f;
-  --danger-color: #e74c3c;
-  --border-color: #e0e0e0;
-  --selected-bg: #f0f4ff;
-  --selected-text: #435bcc;
-  --hover-bg: #f5f8ff;
-  
-  /* Dark mode variables */
-  --dark-bg: #121212;
-  --dark-surface: #1e1e1e;
-  --dark-card: #2d2d2d;
-  --dark-border: #404040;
-  --dark-text: #f5f5f5;
-  --dark-text-secondary: #b0b0b0;
-  --dark-input: #2c2c2c;
-  --dark-hover: #3a3a3a;
-  --dark-selected: #2c3e50;
-  --dark-shadow: rgba(0, 0, 0, 0.3);
 }
 
 * {
@@ -573,84 +570,6 @@ input, select {
 label {
   display: block;
   margin-bottom: 5px;
-}
-
-/* Supporto per dark mode */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background-light: var(--dark-bg);
-    --text-primary: var(--dark-text);
-    --text-secondary: var(--dark-text-secondary);
-    --border-color: var(--dark-border);
-    --selected-bg: var(--dark-selected);
-    --hover-bg: var(--dark-hover);
-  }
-
-  body {
-    background-color: var(--dark-bg);
-    color: var(--dark-text);
-  }
-
-  /* Migliora la leggibilità degli input nel tema scuro */
-  input, select, textarea {
-    background-color: var(--dark-input);
-    color: var(--dark-text);
-    border-color: var(--dark-border);
-  }
-
-  input:focus, select:focus, textarea:focus {
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 2px rgba(67, 91, 204, 0.3);
-  }
-
-  /* Card e contenitori */
-  .card {
-    background-color: var(--dark-surface);
-    border-color: var(--dark-border);
-    box-shadow: 0 2px 4px var(--dark-shadow);
-  }
-
-  .card:hover {
-    box-shadow: 0 4px 8px var(--dark-shadow);
-  }
-
-  /* Tabelle */
-  table {
-    background-color: var(--dark-surface);
-    color: var(--dark-text);
-  }
-
-  th {
-    background-color: var(--dark-selected);
-    color: var(--dark-text);
-  }
-
-  td {
-    border-color: var(--dark-border);
-  }
-
-  tr:hover {
-    background-color: var(--dark-hover);
-  }
-
-  /* Bottoni */
-  button {
-    background-color: var(--primary-color);
-    color: var(--dark-text);
-  }
-
-  button:hover {
-    background-color: var(--primary-dark);
-  }
-
-  /* Link */
-  a {
-    color: var(--primary-light);
-  }
-
-  a:hover {
-    color: var(--primary-color);
-  }
 }
 
 /* Ottimizzazioni per iOS */

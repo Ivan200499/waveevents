@@ -1,120 +1,140 @@
-import React from 'react';
+import React, { useState } from 'react';
 import './EventCard.css';
 
 function EventCard({ event, onSell }) {
-  // Controlla che event sia definito
-  if (!event) {
+  const [selectedDate, setSelectedDate] = useState('');
+  const [showDateSelector, setShowDateSelector] = useState(false);
+
+  if (!event || !event.eventDates || event.eventDates.length === 0) {
+    // Se non ci sono dati validi o date, non mostrare la card
     return null;
   }
 
-  // Formatta la data in modo leggibile
+  // Formattatore data (riutilizzabile)
   const formatDate = (dateString) => {
-    if (!dateString) return "Data non disponibile";
-    
-    const dateObj = new Date(dateString);
-    if (isNaN(dateObj.getTime())) return "Data non valida";
-    
-    const options = { 
-      weekday: 'long', 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    };
-    return dateObj.toLocaleDateString('it-IT', options);
-  };
-
-  // Verifica se l'evento ha date ricorrenti valide
-  const hasValidRecurringDates = event.isRecurring && 
-                               Array.isArray(event.dates) && 
-                               event.dates.length > 0 &&
-                               event.dates[0].date;
-
-  // Calcola il prezzo minimo e massimo dai tipi di biglietti
-  const getTicketPriceRange = () => {
-    if (!event.ticketTypes || !Array.isArray(event.ticketTypes) || event.ticketTypes.length === 0) {
-      return { min: Number(event.price || 0), max: Number(event.price || 0) };
+    if (!dateString) return "Data non specificata";
+    try {
+      const dateObj = new Date(dateString);
+      if (isNaN(dateObj.getTime())) return "Data non valida";
+      const options = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' };
+      return dateObj.toLocaleDateString('it-IT', options);
+    } catch (e) {
+        return "Data non valida";
     }
-    
-    const prices = event.ticketTypes.map(t => Number(t.price || 0)).filter(p => !isNaN(p));
-    if (prices.length === 0) return { min: 0, max: 0 };
-    
-    return {
-      min: Math.min(...prices),
-      max: Math.max(...prices)
-    };
   };
 
-  const priceRange = getTicketPriceRange();
+  // Calcola il range di prezzo generale tra tutte le date e tipi
+  const getOverallPriceRange = () => {
+    let minPrice = Infinity;
+    let maxPrice = 0;
+    let hasAnyTickets = false;
+
+    event.eventDates.forEach(dateItem => {
+      dateItem.ticketTypes?.forEach(ticket => {
+        const price = Number(ticket.price);
+        if (!isNaN(price)) {
+          hasAnyTickets = true;
+          minPrice = Math.min(minPrice, price);
+          maxPrice = Math.max(maxPrice, price);
+        }
+      });
+      // Considera anche i tavoli se presenti nel calcolo del range
+      if (dateItem.hasTablesForDate) {
+          dateItem.tableTypes?.forEach(table => {
+            const price = Number(table.price);
+            if (!isNaN(price)) {
+              hasAnyTickets = true;
+              minPrice = Math.min(minPrice, price);
+              maxPrice = Math.max(maxPrice, price);
+            }
+          });
+      }
+    });
+
+    if (!hasAnyTickets) return { min: 0, max: 0, text: "N/D" };
+    if (minPrice === maxPrice) return { min: minPrice, max: maxPrice, text: `€${minPrice.toFixed(2)}` };
+    return { min: minPrice, max: maxPrice, text: `da €${minPrice.toFixed(2)} a €${maxPrice.toFixed(2)}` };
+  };
+
+  const priceInfo = getOverallPriceRange();
+
+  // Gestore per il pulsante "Vendi"
+  const handleSellClick = () => {
+    if (event.eventDates.length === 1) {
+      // Se c'è solo una data, vendi direttamente per quella
+      onSell(event, event.eventDates[0]);
+    } else {
+      // Altrimenti mostra il selettore date
+      setShowDateSelector(true);
+    }
+  };
+
+  // Gestore per la selezione della data
+  const handleDateSelection = (dateItem) => {
+    setSelectedDate(dateItem.date);
+    setShowDateSelector(false);
+    onSell(event, dateItem); // Chiama onSell con l'evento e la data selezionata
+  };
 
   return (
     <div className="event-card">
-      {event.imageUrl && (
+      {/* Mostra locandina se disponibile */} 
+      {event.posterImageUrl && (
         <div className="event-image">
-          <img src={event.imageUrl} alt={event.name} />
+          <img src={event.posterImageUrl} alt={event.name} />
         </div>
       )}
       <div className="event-content">
         <h3>{event.name}</h3>
-        
-        {hasValidRecurringDates ? (
-          <div className="event-dates">
-            <p className="next-date">Prossima data: {formatDate(event.date || event.dates[0].date)}</p>
-            <p className="total-dates">
-              {event.dates.length > 1 
-                ? `+${event.dates.length - 1} altre date disponibili` 
-                : 'Ultima data disponibile'}
-            </p>
-          </div>
-        ) : (
-          <p className="event-date">Data: {formatDate(event.date)}</p>
-        )}
-        
-        <p className="event-location">Luogo: {event.location || "Luogo non specificato"}</p>
-        
-        <div className="ticket-info">
-          {event.ticketTypes && Array.isArray(event.ticketTypes) && event.ticketTypes.length > 0 ? (
-            <>
-              <p className="ticket-types">
-                Tipi di biglietti: {event.ticketTypes.length}
-              </p>
-              <p className="price-range">
-                Prezzo: da €{priceRange.min.toFixed(2)} 
-                {priceRange.min !== priceRange.max ? ` a €${priceRange.max.toFixed(2)}` : ''}
-              </p>
-            </>
-          ) : (
-            <p className="event-price">Prezzo: €{Number(event.price || 0).toFixed(2)}</p>
-          )}
-          
-          <p className="tickets-available">
-            Biglietti disponibili: {event.availableTickets || 0}
-          </p>
+        <p className="event-location">Luogo: {event.location || "N/D"}</p>
+
+        {/* Elenco Date */} 
+        <div className="event-dates-list">
+          <h5>Date Disponibili:</h5>
+          <ul>
+            {event.eventDates.map((dateItem, index) => (
+              <li key={dateItem.id || index}>{formatDate(dateItem.date)}</li>
+            ))}
+          </ul>
         </div>
-        
-        {event.hasTables && (
-          <div className="table-info">
-            <p>Tavoli disponibili</p>
-            {event.tableTypes && Array.isArray(event.tableTypes) && event.tableTypes.length > 0 && (
-              <p className="table-types-count">{event.tableTypes.length} tipi di tavoli</p>
-            )}
+
+         {/* Info Generali (Prezzo Range, Descrizione) */} 
+        <div className="event-general-info">
+             <p className="price-range">Prezzo: {priceInfo.text}</p>
+            <p className="availability-note">Disponibilità e tipi biglietti/tavoli variano per data.</p>
+            {event.description && (
+             <div className="event-description">
+                <p>{event.description}</p>
+              </div>
+             )}
+        </div>
+
+
+        {/* Pulsante Vendi / Selettore Data */} 
+        {!showDateSelector ? (
+          <button 
+            onClick={handleSellClick}
+            className="sell-button"
+            // Disabilita se non ci sono date? O la logica di vendita gestirà date senza biglietti?
+            // disabled={event.eventDates.length === 0} 
+          >
+            {event.eventDates.length === 1 ? 'Vendi Ticket' : 'Seleziona Data per Vendere'}
+          </button>
+        ) : (
+          <div className="date-selector">
+            <h5>Seleziona la data per la vendita:</h5>
+            <ul>
+              {event.eventDates.map((dateItem, index) => (
+                <li key={dateItem.id || index}>
+                  <button onClick={() => handleDateSelection(dateItem)} className="date-select-button">
+                    {formatDate(dateItem.date)}
+                  </button>
+                </li>
+              ))}
+            </ul>
+            <button onClick={() => setShowDateSelector(false)} className="cancel-date-select">Annulla</button>
           </div>
         )}
-        
-        {event.description && (
-          <div className="event-description">
-            <p>{event.description}</p>
-          </div>
-        )}
-        
-        <button 
-          onClick={() => onSell(event)}
-          className="sell-button"
-          disabled={event.availableTickets === 0}
-        >
-          Vendi Ticket
-        </button>
       </div>
     </div>
   );

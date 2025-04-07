@@ -5,7 +5,8 @@ import { useAuth } from '../../contexts/AuthContext';
 import Header from '../common/Header';
 import TicketHistory from '../tickets/TicketHistory';
 import SellTicketModal from '../tickets/SellTicketModal';
-import { FaTicketAlt, FaEuroSign, FaCalendarAlt, FaMapMarkerAlt, FaClock, FaShoppingCart } from 'react-icons/fa';
+import EventCard from './EventCard';
+import { FaTicketAlt, FaEuroSign } from 'react-icons/fa';
 import './PromoterDashboard.css';
 
 function PromoterDashboard() {
@@ -17,26 +18,20 @@ function PromoterDashboard() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [events, setEvents] = useState([]);
   const [selectedEvent, setSelectedEvent] = useState(null);
-  const [showSellModal, setShowSellModal] = useState(false);
+  const [selectedDateItem, setSelectedDateItem] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const formatDate = (date) => {
-    if (!date) return 'Data non disponibile';
-    return new Date(date).toLocaleDateString('it-IT', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    });
-  };
-
-  const handleSellTicket = (event) => {
+  const handleSellTicket = (event, dateItem) => {
+    if (!event || !dateItem) return;
     setSelectedEvent(event);
-    setShowSellModal(true);
+    setSelectedDateItem(dateItem);
   };
 
   useEffect(() => {
-    fetchStats();
-    fetchEvents();
+    setLoading(true);
+    Promise.all([fetchStats(), fetchEvents()])
+        .catch(error => console.error("Errore durante il caricamento iniziale:", error))
+        .finally(() => setLoading(false));
   }, [currentUser]);
 
   async function fetchStats() {
@@ -57,26 +52,38 @@ function PromoterDashboard() {
       }, { totalTickets: 0, totalRevenue: 0 });
       
       setStats(statistics);
-      setLoading(false);
     } catch (error) {
       console.error('Errore nel recupero delle statistiche:', error);
-      setLoading(false);
+      throw error;
     }
   }
 
   async function fetchEvents() {
     try {
       const eventsRef = collection(db, 'events');
-      const snapshot = await getDocs(eventsRef);
+      const q = query(eventsRef /*, where('status', '==', 'active') */);
+      const snapshot = await getDocs(q);
       const eventsData = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
-      }));
+      })).filter(event => event.eventDates && event.eventDates.length > 0);
+      
       setEvents(eventsData);
     } catch (error) {
       console.error('Errore nel recupero degli eventi:', error);
+      throw error;
     }
   }
+
+  const handleModalClose = () => {
+      setSelectedEvent(null);
+      setSelectedDateItem(null);
+  };
+
+  const handleSold = () => {
+      fetchStats();
+      handleModalClose();
+  };
 
   if (loading) {
     return (
@@ -138,58 +145,33 @@ function PromoterDashboard() {
             </div>
           </div>
 
-          <TicketHistory />
+          <TicketHistory userId={currentUser.uid} />
         </div>
       ) : (
         <div className="sell-tickets-container">
-          <h2>Seleziona un Evento</h2>
-          <div className="events-grid grid">
-            {events.map((event) => (
-              <div key={event.id} className="card">
-                <div className="card-image" style={{ backgroundImage: `url(${event.imageUrl})` }} />
-                <div className="card-content">
-                  <h3 className="card-title">{event.name}</h3>
-                  <div className="card-text">
-                    <div className="event-date">
-                      <FaCalendarAlt />
-                      <span>{formatDate(event.date)}</span>
-                    </div>
-                    <div className="event-location">
-                      <FaMapMarkerAlt />
-                      <span>{event.location}</span>
-                    </div>
-                    <div className={`tickets-info ${event.availableTickets === 0 ? 'text-secondary' : ''}`}>
-                      <FaTicketAlt className="ticket-icon" />
-                      {event.availableTickets > 0 && (
-                        <span>Disponibili: {event.availableTickets}</span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="card-footer">
-                    <button
-                      className={`action-button ${event.availableTickets === 0 ? 'disabled' : ''}`}
-                      onClick={() => handleSellTicket(event)}
-                      disabled={event.availableTickets === 0}
-                    >
-                      <FaShoppingCart />
-                      <span>Vendi Biglietto</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
+          <h2>Seleziona un Evento e una Data per la Vendita</h2>
+          <div className="events-grid">
+            {events.length > 0 ? (
+                events.map((event) => (
+                <EventCard 
+                    key={event.id} 
+                    event={event} 
+                    onSell={handleSellTicket}
+                />
+                ))
+            ) : (
+                <p>Nessun evento disponibile al momento.</p>
+            )}
           </div>
         </div>
       )}
 
-      {selectedEvent && (
+      {selectedEvent && selectedDateItem && (
         <SellTicketModal
           event={selectedEvent}
-          onClose={() => setSelectedEvent(null)}
-          onSold={() => {
-            fetchStats();
-            setSelectedEvent(null);
-          }}
+          selectedDateItem={selectedDateItem}
+          onClose={handleModalClose}
+          onSold={handleSold}
         />
       )}
     </div>
