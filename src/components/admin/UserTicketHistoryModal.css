@@ -1,0 +1,146 @@
+/* Stili per UserTicketHistoryModal.css */
+
+.user-ticket-history-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.7); /* Overlay più scuro */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1050; /* Assicura sia sopra altri elementi */
+    padding: var(--spacing-sm, 15px);
+  }
+  
+  .user-ticket-history-modal-content {
+    background: var(--card-bg);
+    border-radius: var(--border-radius-lg);
+    width: 100%;
+    max-width: 900px; /* Larghezza massima modale */
+    max-height: 85vh; /* Altezza massima */
+    overflow: hidden; /* Nasconde overflow generale */
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    box-shadow: var(--box-shadow-lg);
+    border: 1px solid var(--border-color);
+  }
+  
+  .user-ticket-history-modal-content h2 {
+    font-size: 1.4rem;
+    color: var(--text-color);
+    padding: var(--spacing-md, 1rem) var(--spacing-lg, 1.5rem);
+    margin: 0;
+    border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0; /* Non far restringere l'header */
+  }
+  
+  .user-ticket-history-modal-content .close-button {
+    position: absolute;
+    top: calc(var(--spacing-md, 1rem) / 2); /* Allinea verticalmente nell'header */
+    right: var(--spacing-lg, 1.5rem);
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: var(--text-light);
+    cursor: pointer;
+    padding: 5px;
+    line-height: 1;
+    transition: color 0.3s ease;
+  }
+  
+  .user-ticket-history-modal-content .close-button:hover {
+    color: var(--error-color);
+  }
+  
+  .user-ticket-history-modal-content .loading-container,
+  .user-ticket-history-modal-content .error-message,
+  .user-ticket-history-modal-content .no-results {
+    padding: var(--spacing-xl, 2rem);
+    text-align: center;
+    flex-grow: 1; /* Occupa spazio se non c'è tabella */
+  }
+  
+  .modal-table-container {
+    overflow-y: auto; /* Scroll solo sulla tabella */
+    flex-grow: 1; /* Fa espandere la tabella */
+    padding: var(--spacing-lg, 1.5rem);
+    padding-top: var(--spacing-md, 1rem); /* Padding sopra tabella */
+  }
+  
+  /* Riusa stili tabella da TicketHistory.css o definisci qui */
+  .modal-table-container .tickets-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem; /* Leggermente più piccolo */
+  }
+  
+  .modal-table-container .tickets-table th,
+  .modal-table-container .tickets-table td {
+    padding: var(--spacing-sm, 0.75rem) var(--spacing-md, 1rem);
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+    white-space: nowrap; /* Evita wrap testo celle */
+  }
+  
+  .modal-table-container .tickets-table th {
+    background-color: var(--table-header-bg);
+    color: var(--text-light);
+    font-weight: 600;
+    position: sticky; /* Header tabella sticky */
+    top: 0;
+    z-index: 10;
+  }
+  
+  .modal-table-container .tickets-table tbody tr:hover {
+    background-color: var(--table-row-hover);
+  }
+  
+  .modal-table-container .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 3px 8px;
+    border-radius: var(--border-radius);
+    font-size: 0.8rem;
+    font-weight: 500;
+  }
+  
+  /* Colori per badge (se non definiti globalmente) */
+  .status-badge.active { background-color: rgba(var(--success-color-rgb, 76, 175, 80), 0.15); color: var(--success-color); }
+  .status-badge.validated { background-color: rgba(var(--primary-color-rgb, 25, 118, 210), 0.15); color: var(--primary-color); }
+  .status-badge.disabled { background-color: rgba(var(--text-light-rgb, 108, 117, 125), 0.15); color: var(--text-light); }
+  .status-badge.cancelled { background-color: rgba(var(--error-color-rgb, 244, 67, 54), 0.15); color: var(--error-color); }
+  
+  .status-badge .status-icon {
+    font-size: 0.9em; /* Leggermente più piccola del testo */
+  }
+  
+  
+  /* Responsive Modale */
+  @media (max-width: 768px) {
+    .user-ticket-history-modal-content {
+      max-width: 95%;
+      max-height: 90vh;
+    }
+    .user-ticket-history-modal-content h2 {
+      font-size: 1.2rem;
+      padding: var(--spacing-sm, 0.8rem) var(--spacing-md, 1rem);
+    }
+     .user-ticket-history-modal-content .close-button {
+       top: calc(var(--spacing-sm, 0.8rem) / 2);
+       right: var(--spacing-md, 1rem);
+       font-size: 1.3rem;
+     }
+     .modal-table-container {
+       padding: var(--spacing-md, 1rem);
+       padding-top: var(--spacing-sm, 0.5rem);
+     }
+     .modal-table-container .tickets-table th,
+     .modal-table-container .tickets-table td {
+       padding: var(--spacing-xs, 0.5rem) var(--spacing-sm, 0.75rem);
+       font-size: 0.85rem;
+     }
+  }

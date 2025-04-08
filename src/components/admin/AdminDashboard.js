@@ -11,6 +11,7 @@ import { generateGlobalStatisticsPDF } from '../../services/ReportService';
 import AssignmentModal from './AssignmentModal';
 import { generateOptimizedReport } from '../../services/OptimizedReportService';
 import TicketHistory from './TicketHistory';
+import TeamOverview from './TeamOverview';
 
 function AdminDashboard() {
   const [users, setUsers] = useState([]);
@@ -197,6 +198,12 @@ function AdminDashboard() {
             Gestione Eventi
           </button>
           <button 
+            className={`tab-button ${activeTab === 'team' ? 'active' : ''}`}
+            onClick={() => setActiveTab('team')}
+          >
+            <FaUsers /> Gestione Team
+          </button>
+          <button 
             className={`tab-button ${activeTab === 'tickets' ? 'active' : ''}`}
             onClick={() => setActiveTab('tickets')}
           >
@@ -306,6 +313,8 @@ function AdminDashboard() {
           </>
         ) : activeTab === 'events' ? (
           <EventManagement />
+        ) : activeTab === 'team' ? (
+          <TeamOverview />
         ) : activeTab === 'tickets' ? (
           <TicketHistory />
         ) : null}
@@ -380,6 +389,13 @@ function AdminDashboard() {
         >
           <FaTicketAlt className="bottom-nav-icon" />
           <span>Eventi</span>
+        </button>
+        <button 
+          className={`bottom-nav-item ${activeTab === 'team' ? 'active' : ''}`}
+          onClick={() => setActiveTab('team')}
+        >
+          <FaUsers className="bottom-nav-icon" />
+          <span>Team</span>
         </button>
         <button 
           className={`bottom-nav-item ${activeTab === 'tickets' ? 'active' : ''}`}

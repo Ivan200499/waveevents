@@ -2,13 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { db } from '../../firebase/config';
 import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
 import { useAuth } from '../../contexts/AuthContext';
-import { FaUser, FaTicketAlt, FaEuroSign, FaQrcode, FaUsers, FaCalendarAlt, FaMapMarkerAlt, FaSearch } from 'react-icons/fa';
+import { FaUser, FaTicketAlt, FaEuroSign, FaQrcode, FaUsers, FaCalendarAlt, FaMapMarkerAlt, FaSearch, FaCogs, FaBullhorn } from 'react-icons/fa';
 import Header from '../common/Header';
 import TicketValidator from '../tickets/TicketValidator';
 import './ManagerDashboard.css';
 import TeamLeaderStats from '../statistics/TeamLeaderStats';
 import SellTicketModal from '../tickets/SellTicketModal';
 import TicketHistory from '../tickets/TicketHistory';
+import EventCard from '../promoter/EventCard';
 import { 
   getMemoryCache, 
   setMemoryCache, 
@@ -31,10 +32,12 @@ function ManagerDashboard() {
   const [stats, setStats] = useState({
     totalSales: 0,
     totalRevenue: 0,
-    averageTicketPrice: 0
+    teamLeaderCount: 0,
+    promoterCount: 0
   });
   const [events, setEvents] = useState([]);
   const [selectedEvent, setSelectedEvent] = useState(null);
+  const [selectedDateItem, setSelectedDateItem] = useState(null);
   const [showSellModal, setShowSellModal] = useState(false);
   const [error, setError] = useState(null);
   const [showValidator, setShowValidator] = useState(false);
@@ -294,37 +297,25 @@ function ManagerDashboard() {
     }
   };
 
-  const handleSellTicket = (event) => {
+  const handleSellTicket = (event, dateItem) => {
+    if (!event || !dateItem) {
+        console.error("Tentativo di vendita Manager senza evento o data valida", event, dateItem);
+        setError("Errore interno: evento o data non validi per la vendita.");
+        return;
+    }
     setSelectedEvent(event);
-    setShowSellModal(true);
+    setSelectedDateItem(dateItem);
+  };
+
+  const handleModalClose = () => {
+    setSelectedEvent(null);
+    setSelectedDateItem(null);
   };
 
   const handleTicketSold = () => {
-    fetchEvents();
     fetchStatistics();
-    setShowSellModal(false);
+    handleModalClose();
   };
-
-  const TicketCard = ({ ticket }) => (
-    <div className="ticket-card">
-      <div className="ticket-info">
-        <h3>{ticket.eventName}</h3>
-        <p>Data: {formatDate(ticket.date)}</p>
-        <p>Luogo: {ticket.location}</p>
-        <p>Prezzo: €{ticket.price}</p>
-        <p>Biglietti disponibili: {ticket.availableQuantity}</p>
-      </div>
-      <div className="ticket-actions">
-        <button 
-          className="button button-primary"
-          onClick={() => handleSellTicket(ticket)}
-          disabled={ticket.availableQuantity <= 0}
-        >
-          Vendi Biglietto
-        </button>
-      </div>
-    </div>
-  );
 
   if (loading) {
     return (
@@ -386,7 +377,7 @@ function ManagerDashboard() {
                   <FaTicketAlt />
                 </div>
                 <div className="stat-info">
-                  <h3>Vendite Totali</h3>
+                  <h3>Biglietti Totali (Gerarchia)</h3>
                   <div className="value">{stats.totalSales}</div>
                 </div>
               </div>
@@ -398,7 +389,7 @@ function ManagerDashboard() {
                   <FaEuroSign />
                 </div>
                 <div className="stat-info">
-                  <h3>Ricavi Totali</h3>
+                  <h3>Incasso Totale (Gerarchia)</h3>
                   <div className="value">€{stats.totalRevenue.toFixed(2)}</div>
                 </div>
               </div>
@@ -407,11 +398,23 @@ function ManagerDashboard() {
             <div className="stat-card">
               <div className="stat-header">
                 <div className="stat-icon">
-                  <FaEuroSign />
+                  <FaUsers />
                 </div>
                 <div className="stat-info">
-                  <h3>Prezzo Medio Biglietto</h3>
-                  <div className="value">€{stats.averageTicketPrice.toFixed(2)}</div>
+                  <h3>Team Leaders Gestiti</h3>
+                  <div className="value">{stats.teamLeaderCount}</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="stat-card">
+              <div className="stat-header">
+                <div className="stat-icon">
+                  <FaBullhorn />
+                </div>
+                <div className="stat-info">
+                  <h3>Promoters nel Team</h3>
+                  <div className="value">{stats.promoterCount}</div>
                 </div>
               </div>
             </div>
@@ -423,73 +426,23 @@ function ManagerDashboard() {
 
       {activeTab === 'sell' && (
         <div className="sell-tickets-container">
-          <h2>Seleziona un Evento</h2>
+          <h2>Seleziona un Evento e una Data per la Vendita</h2>
           
-          {events.length === 0 ? (
+          {loading ? (
+             <div className="loading-container"><div className="loading-spinner"></div>Caricamento eventi...</div>
+          ) : events.length === 0 ? (
             <div className="no-events-message">
-              <p>Nessun evento disponibile. Aggiungi eventi dalla dashboard di amministrazione.</p>
+              <p>Nessun evento disponibile per la vendita.</p>
             </div>
           ) : (
-          <div className="events-grid">
-              {events.map(event => {
-                // Gestisce diversi possibili nomi dei campi degli eventi
-                const eventName = event.name || event.nome || event.eventName || 'Evento';
-                const eventDate = event.date || event.data || event.eventDate || new Date();
-                const eventLocation = event.location || event.luogo || event.posto || 'Localizzazione non specificata';
-                const eventPrice = event.ticketPrice || event.price || event.prezzo || 0;
-                
-                // Calcolo corretto dei biglietti disponibili
-                let eventAvailableTickets = 0;
-                if (event.subEvents && event.subEvents.length > 0) {
-                    // Se ci sono sotto-eventi, somma i biglietti disponibili di tutti
-                    eventAvailableTickets = event.subEvents.reduce((total, subEvent) => {
-                        return total + (subEvent.availableTickets || subEvent.bigliettiDisponibili || 0);
-                    }, 0);
-                } else {
-                    // Se è un evento singolo, usa direttamente il campo dei biglietti disponibili
-                    eventAvailableTickets = event.availableTickets || event.bigliettiDisponibili || event.totalTickets || 0;
-                }
-                
-                const eventDescription = event.description || event.descrizione || '';
-                const eventImage = event.imageUrl || event.immagine || '';
-                
-                return (
-              <div key={event.id} className="event-card">
-                    {eventImage && (
-                  <div className="event-image">
-                        <img src={eventImage} alt={eventName} />
-                  </div>
-                )}
-                <div className="event-content">
-                      <h3>{eventName}</h3>
-                  <p>
-                    <FaCalendarAlt />
-                        {new Date(eventDate).toLocaleDateString()}
-                  </p>
-                  <p>
-                    <FaMapMarkerAlt />
-                        {eventLocation}
-                      </p>
-                      <div className="event-price">€{typeof eventPrice === 'number' ? eventPrice.toFixed(2) : eventPrice}</div>
-                      <div className="tickets-available">
-                        {eventAvailableTickets > 0 && `Disponibili: ${eventAvailableTickets}`}
-                      </div>
-                      {eventDescription && (
-                    <div className="event-description">
-                          <p>{eventDescription}</p>
-                    </div>
-                  )}
-                  <button 
-                    onClick={() => handleSellTicket(event)}
-                    className="sell-button"
-                        disabled={eventAvailableTickets === 0}
-                  >
-                    Vendi Ticket
-                  </button>
-                </div>
-              </div>
-                );
-              })}
+          <div className="events-grid promoter-events-grid">
+              {events.map(event => (
+                <EventCard 
+                    key={event.id} 
+                    event={event} 
+                    onSell={handleSellTicket}
+                />
+              ))}
           </div>
           )}
         </div>
@@ -573,10 +526,11 @@ function ManagerDashboard() {
         </div>
       )}
 
-      {showSellModal && (
+      {selectedEvent && selectedDateItem && (
         <SellTicketModal
           event={selectedEvent}
-          onClose={() => setShowSellModal(false)}
+          selectedDateItem={selectedDateItem}
+          onClose={handleModalClose}
           onSold={handleTicketSold}
         />
       )}

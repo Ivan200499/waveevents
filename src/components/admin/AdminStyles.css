@@ -323,47 +323,49 @@
   font-weight: 500;
 }
 
-.user-grid {
+.users-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 1.5rem;
+  margin-top: 1.5rem;
 }
 
 .user-card {
+  background-color: var(--card-bg);
+  border-radius: var(--border-radius-lg);
   padding: 1.5rem;
+  box-shadow: var(--box-shadow);
+  border: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-}
-
-.user-card-header {
-  display: flex;
   justify-content: space-between;
-  align-items: center;
 }
 
 .user-info h3 {
-  margin-bottom: 0.25rem;
+  margin: 0 0 0.5rem 0;
   font-size: 1.1rem;
+  color: var(--text-color);
 }
 
 .user-info p {
+  margin: 0.3rem 0;
   font-size: 0.9rem;
   color: var(--text-light);
-  margin-bottom: 0;
 }
 
 .user-actions {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-color);
   display: flex;
-  gap: 0.5rem;
-  margin-top: auto;
+  gap: 0.8rem;
+  flex-wrap: wrap;
 }
 
 .user-actions button {
-  padding: 0.4rem 0.8rem;
+  padding: 0.5rem 1rem;
   font-size: 0.85rem;
-  height: auto;
-  min-width: 80px;
+  flex-grow: 1;
 }
 
 .status-badge {
@@ -443,6 +445,30 @@
   .btn-stats {
     padding: 8px 16px;
     font-size: 0.85rem;
+  }
+
+  .users-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .user-card {
+    padding: 1rem;
+  }
+
+  .user-actions {
+    gap: 0.5rem;
+  }
+
+  .user-actions button {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.8rem;
+    min-width: 100px;
+    flex-grow: 0;
+  }
+  
+  .modal-content .form-group {
+    margin-bottom: 1rem;
   }
 }
 

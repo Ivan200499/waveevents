@@ -145,4 +145,77 @@
   position: absolute;
   left: 15px;
   color: #9e9e9e;
+}
+
+/* Media Queries for Responsiveness */
+
+@media (max-width: 768px) {
+  .promoter-card {
+    padding: 1rem;
+  }
+
+  .promoter-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .promoter-stats {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .stat-item .icon {
+      font-size: 1rem; /* Riduci icona stat */
+  }
+
+  .event-stat {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.3rem;
+    padding: 0.6rem;
+  }
+
+  .promoters-container h3 {
+      font-size: 1.3rem;
+  }
+  
+  .promoter-info h4 {
+      font-size: 1.1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .promoters-container {
+    padding: 0.5rem;
+  }
+
+  .promoter-card {
+    padding: 0.8rem;
+  }
+
+  .promoter-info {
+      gap: 0.5rem;
+  }
+  
+  .promoter-info .icon {
+      font-size: 1.5rem;
+  }
+  
+  .promoter-info h4 {
+      font-size: 1rem;
+  }
+  
+  .promoter-info p {
+      font-size: 0.8rem;
+  }
+
+  .promoter-events h5 {
+      font-size: 1rem;
+  }
+
+  .event-stat {
+      font-size: 0.9rem;
+  }
 } 

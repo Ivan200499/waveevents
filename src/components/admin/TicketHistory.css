@@ -578,4 +578,36 @@ tr.status-cancelled {
   .btn-action.whatsapp::after {
     display: none;
   }
+}
+
+/* Nuovi stili per bottoni Abilita/Disabilita - Aumento specificità */
+.btn-action.btn-action-disable {
+  /* Forza il colore di sfondo */
+  background-color: var(--error-color) !important;
+  color: var(--btn-primary-text) !important; /* O bianco puro #fff */
+}
+
+.btn-action.btn-action-disable:hover:not(:disabled) {
+  /* Forza il colore hover */
+  background-color: var(--error-hover-color, #d32f2f) !important;
+}
+
+.btn-action.btn-action-enable {
+  /* Forza il colore di sfondo */
+  background-color: var(--success-color) !important;
+  color: var(--btn-primary-text) !important;
+}
+
+.btn-action.btn-action-enable:hover:not(:disabled) {
+  /* Forza il colore hover */
+  background-color: var(--success-hover-color, #388e3c) !important;
+}
+
+/* Assicurati che gli stili :disabled siano coerenti */
+.btn-action.btn-action-disable:disabled,
+.btn-action.btn-action-enable:disabled {
+  opacity: 0.65 !important; /* Usa opacità globale */
+  cursor: not-allowed !important;
+  background-color: grey !important; /* O un colore neutro disabilitato */
+  color: #ccc !important;
 } 

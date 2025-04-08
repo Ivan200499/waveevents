@@ -1,656 +1,265 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { db } from '../firebase/config';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, getDocs } from 'firebase/firestore';
+
+// Funzione helper per formattare timestamp per PDF (DD/MM/YYYY HH:MM)
+function formatTimestampForPDF(timestamp) {
+  if (!timestamp) return '';
+  try {
+    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+    if (isNaN(date.getTime())) return '';
+    // Formato italiano più leggibile
+    return date.toLocaleString('it-IT', {
+      day: '2-digit', month: '2-digit', year: 'numeric',
+      hour: '2-digit', minute: '2-digit'
+    });
+  } catch (e) {
+    console.error("Errore formattazione timestamp:", timestamp, e);
+    return '';
+  }
+}
+
+// Funzione helper per troncare testo lungo nel PDF
+const truncateText = (text, maxLength = 30) => { // Aumenta un po' maxLength
+  if (!text) return '';
+  // Tronca solo se la lunghezza supera maxLength
+  return text.length > maxLength ? text.substring(0, maxLength - 3) + '...' : text;
+};
+
+// Funzione helper per formattare valute
+const formatCurrency = (value) => {
+    return (parseFloat(value) || 0).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+};
 
 export async function generateOptimizedReport() {
   try {
-    console.log('Inizio generazione report ottimizzato...');
-    const doc = new jsPDF();
-    const pageWidth = doc.internal.pageSize.width;
-    
-    // Colori
+    console.log('Inizio generazione report PDF per Utente...');
+    const doc = new jsPDF({
+      orientation: 'portrait', // Portrait dovrebbe andare bene per la struttura per utente
+      unit: 'mm', 
+      format: 'a4' 
+    });
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    let yPosition = 15; // Posizione Y iniziale
+    const leftMargin = 14;
+    const contentWidth = pageWidth - (leftMargin * 2); // Larghezza utile contenuto
+
+    // Colori definiti
     const colors = {
-      primary: [41, 128, 185], // Blu
-      secondary: [39, 174, 96], // Verde
-      accent: [155, 89, 182], // Viola
-      headerBg: [52, 73, 94], // Blu scuro
-      tableBg: [236, 240, 241], // Grigio chiaro
-      eventColor: [230, 126, 34], // Arancione
-      promoterColor: [231, 76, 60], // Rosso
+      primary: [41, 128, 185],    // Blu Wave
+      headerBg: [52, 73, 94],     // Blu Scuro Intestazione
+      tableHeader: [220, 220, 220], // Grigio Chiaro per Header Tabella
+      tableAltRow: [245, 245, 245], // Grigio Molto Chiaro per Righe Alternate
+      textPrimary: [0, 0, 0],        // Nero per testo principale
+      textSecondary: [100, 100, 100], // Grigio per testo secondario
+      sectionHeader: [70, 130, 180] // Blu più chiaro per sezioni utente
     };
 
-    // Funzione helper per aggiungere testo centrato
-    const addCenteredText = (text, y, fontSize = 12, color = [0, 0, 0]) => {
-      doc.setFontSize(fontSize);
-      doc.setTextColor(color[0], color[1], color[2]);
-      const textWidth = doc.getStringUnitWidth(text) * doc.internal.getFontSize() / doc.internal.scaleFactor;
-      const x = (pageWidth - textWidth) / 2;
-      doc.text(text, x, y);
-      return y + fontSize / 2;
-    };
+    // --- Intestazione Report ---
+    doc.setFontSize(18); 
+    doc.setTextColor(colors.headerBg[0], colors.headerBg[1], colors.headerBg[2]);
+    doc.text('Report Dettagliato per Utente', pageWidth / 2, yPosition, { align: 'center' });
+    yPosition += 7;
+    doc.setFontSize(10);
+    doc.setTextColor(colors.textSecondary[0], colors.textSecondary[1], colors.textSecondary[2]);
+    doc.text(`Generato il: ${new Date().toLocaleString('it-IT')}`, pageWidth / 2, yPosition, { align: 'center' });
+    yPosition += 10; // Spazio dopo intestazione
 
-    // Funzione helper per aggiungere una sezione
-    const addSection = (title, y, color = colors.primary) => {
-      doc.setFontSize(16);
-      doc.setTextColor(255, 255, 255);
-      doc.setFillColor(color[0], color[1], color[2]);
-      doc.rect(10, y, pageWidth - 20, 10, 'F');
-      doc.text(title, 15, y + 7);
-      doc.setTextColor(0, 0, 0);
-      return y + 15;
-    };
+    // --- Recupero Dati ---
+    console.log('Recupero dati...');
+    const usersSnapshot = await getDocs(collection(db, 'users'));
+    const usersData = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const userMap = new Map(usersData.map(u => [u.id, u]));
 
-    // Funzione per aggiungere nuova pagina se necessario
-    const checkNewPage = (yPosition, threshold = 230) => {
-      if (yPosition > threshold) {
+    const ticketsSnapshot = await getDocs(collection(db, 'tickets'));
+    const ticketsData = ticketsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+    const eventsSnapshot = await getDocs(collection(db, 'events'));
+    const eventMap = new Map(eventsSnapshot.docs.map(doc => [doc.id, { id: doc.id, ...doc.data() }]));
+    console.log('Dati recuperati.');
+
+    // Funzione helper per aggiungere pagina e piè di pagina
+    const checkAddPage = (currentY, margin = 20) => {
+      if (currentY > pageHeight - margin) { // Controlla se supera il margine inferiore
+        addFooter(); // Aggiungi footer prima di cambiare pagina
         doc.addPage();
-        return 20; // Reset della posizione Y
+        return 15; // Ritorna la y iniziale per la nuova pagina
       }
-      return yPosition;
+      return currentY;
+    };
+    
+    // Funzione per aggiungere il piè di pagina
+    const addFooter = () => {
+        const pageCount = doc.internal.getNumberOfPages();
+        doc.setFontSize(8);
+        doc.setTextColor(colors.textSecondary[0], colors.textSecondary[1], colors.textSecondary[2]);
+        // Posiziona il numero di pagina in basso a destra
+        doc.text('Pagina ' + pageCount, pageWidth - leftMargin, pageHeight - 10, { align: 'right'});
     };
 
-    // Funzione per troncare testo lungo
-    const truncateText = (text, maxLength = 25) => {
-      if (!text) return 'N/A';
-      return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
-    };
+    // --- 1. Riepilogo Generale (Opzionale, ma utile) ---
+    console.log('Creazione Riepilogo Generale...');
+    yPosition = checkAddPage(yPosition);
+    doc.setFontSize(14);
+    doc.setTextColor(colors.primary[0], colors.primary[1], colors.primary[2]);
+    doc.text('1. Riepilogo Generale', leftMargin, yPosition);
+    yPosition += 7;
 
-    // Intestazione con stile
-    doc.setFillColor(colors.headerBg[0], colors.headerBg[1], colors.headerBg[2]);
-    doc.rect(0, 0, pageWidth, 40, 'F');
+    const totalTicketsSold = ticketsData.reduce((sum, t) => sum + (parseInt(t.quantity, 10) || 1), 0);
+    const totalRevenue = ticketsData.reduce((sum, t) => sum + (parseFloat(t.totalPrice) || 0), 0);
+    const uniqueEventIds = new Set(ticketsData.map(t => t.eventId).filter(id => id));
+    const totalEventsWithSales = uniqueEventIds.size;
 
-    let yPosition = addCenteredText('Report Statistiche Dettagliato', 20, 24, [255, 255, 255]);
-    yPosition = addCenteredText(`Generato il ${new Date().toLocaleDateString()}`, 30, 12, [255, 255, 255]);
-    yPosition = 50;
-
-    // 1. Riepilogo Generale
-    console.log('Generazione riepilogo generale...');
-    yPosition = addSection('1. Riepilogo Generale', yPosition);
-    
-    // Recupera tutti i biglietti
-    const ticketsQuery = query(collection(db, 'tickets'));
-    const ticketsSnapshot = await getDocs(ticketsQuery);
-    let tickets = ticketsSnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    }));
-    
-    // Calcola statistiche generali
-    let totalTickets = tickets.reduce((acc, ticket) => acc + (ticket.quantity || 0), 0);
-    let totalRevenue = tickets.reduce((acc, ticket) => acc + (ticket.totalPrice || 0), 0);
-    let totalEvents = new Set(tickets.map(ticket => ticket.eventId)).size;
-    let totalSellers = new Set(tickets.map(ticket => ticket.sellerId)).size;
-
-    // Statistiche generali in tabella
-    const generalStatsData = [
-      ['Metrica', 'Valore'],
-      ['Totale Biglietti Venduti', totalTickets.toString()],
-      ['Ricavo Totale', `€${totalRevenue.toFixed(2)}`],
-      ['Media Prezzo per Biglietto', `€${(totalRevenue / totalTickets).toFixed(2)}`],
-      ['Numero Eventi', totalEvents.toString()],
-      ['Numero Venditori', totalSellers.toString()],
-      ['Numero Transazioni', `${tickets.length}`]
+    const summaryBody = [
+      ['Totale Biglietti Venduti', totalTicketsSold.toString()],
+      ['Ricavo Totale Lordo', `€ ${formatCurrency(totalRevenue)}`],
+      ['Numero Utenti Registrati', usersData.length.toString()],
+      ['Eventi con Vendite', totalEventsWithSales.toString()],
     ];
 
     autoTable(doc, {
       startY: yPosition,
-      head: [generalStatsData[0]],
-      body: generalStatsData.slice(1),
+      head: [['Metrica', 'Valore']],
+      body: summaryBody,
       theme: 'grid',
-      headStyles: {
-        fillColor: colors.primary,
-        textColor: [255, 255, 255],
-        fontStyle: 'bold'
-      },
-      alternateRowStyles: {
-        fillColor: colors.tableBg
-      },
-      margin: { left: 20, right: 20 },
+      headStyles: { fillColor: colors.primary, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 10 },
+      styles: { fontSize: 9, cellPadding: 2, textColor: colors.textPrimary },
+      columnStyles: { 0: { fontStyle: 'bold' } },
+      margin: { left: leftMargin, right: leftMargin },
+      tableWidth: 'auto',
+      didDrawPage: (data) => { addFooter(); } // Aggiungi footer se la tabella crea nuove pagine
     });
+    yPosition = doc.lastAutoTable.finalY + 10;
 
-    yPosition = doc.lastAutoTable.finalY + 15;
-    yPosition = checkNewPage(yPosition);
+    // --- 2. Dettaglio per Utente ---
+    console.log('Inizio ciclo Dettaglio per Utente...');
+    let userIndex = 0;
+    // Ordina gli utenti per nome per un report consistente
+    const sortedUsers = usersData.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
-    // 1.1 Statistiche per Evento
-    console.log('Generazione statistiche per evento...');
-    yPosition = addSection('1.1 Statistiche per Evento', yPosition, colors.eventColor);
-
-    // Raggruppa le vendite per evento
-    const eventStats = tickets.reduce((acc, ticket) => {
-      const eventId = ticket.eventId;
-      if (!eventId) return acc;
+    for (const user of sortedUsers) {
+      userIndex++;
+      console.log(`Processing user ${userIndex}/${sortedUsers.length}: ${user.name || user.id}`);
       
-      if (!acc[eventId]) {
-        acc[eventId] = {
-          eventId,
-          eventName: ticket.eventName || 'Evento senza nome',
-          totalTickets: 0,
-          totalRevenue: 0,
-          transactions: 0,
-          sellerId: new Set(),
-          dates: new Set()
-        };
-      }
+      yPosition = checkAddPage(yPosition, 40); // Aumenta il margine richiesto prima di iniziare un nuovo utente
+
+      // Intestazione Sezione Utente
+      doc.setFontSize(14);
+      doc.setTextColor(colors.sectionHeader[0], colors.sectionHeader[1], colors.sectionHeader[2]);
+      doc.text(`2.${userIndex} Utente: ${user.name || '-'} (${user.role || 'N/D'})`, leftMargin, yPosition);
+      yPosition += 6;
+
+      // Info Utente (più strutturate)
+      doc.setFontSize(9);
+      doc.setTextColor(colors.textPrimary[0], colors.textPrimary[1], colors.textPrimary[2]);
+      const assignedToUser = user.role === 'promoter' ? userMap.get(user.assignedTeamLeaderId) :
+                             user.role === 'teamLeader' ? userMap.get(user.assignedManagerId) : null;
+      doc.text(`ID:`, leftMargin, yPosition);
+      doc.text(`${user.id}`, leftMargin + 25, yPosition);
+      doc.text(`Email:`, leftMargin + contentWidth / 2, yPosition);
+      doc.text(`${user.email || '-'}`, leftMargin + contentWidth / 2 + 15, yPosition);
+      yPosition += 5;
+      doc.text(`Ruolo:`, leftMargin, yPosition);
+      doc.text(`${user.role || '-'}`, leftMargin + 25, yPosition);
+      doc.text(`Assegnato a:`, leftMargin + contentWidth / 2, yPosition);
+      doc.text(`${assignedToUser ? assignedToUser.name || '-' : '-'}`, leftMargin + contentWidth / 2 + 25, yPosition);
+      yPosition += 8; // Spazio prima delle stats
+
+      // Statistiche Totali Utente
+      const userTickets = ticketsData.filter(t => t.sellerId === user.id);
+      const userTotalTickets = userTickets.reduce((sum, t) => sum + (parseInt(t.quantity, 10) || 1), 0);
+      const userTotalRevenue = userTickets.reduce((sum, t) => sum + (parseFloat(t.totalPrice) || 0), 0);
       
-      acc[eventId].totalTickets += ticket.quantity || 0;
-      acc[eventId].totalRevenue += ticket.totalPrice || 0;
-      acc[eventId].transactions += 1;
-      acc[eventId].sellerId.add(ticket.sellerId);
-      if (ticket.createdAt) {
-        acc[eventId].dates.add(new Date(ticket.createdAt).toLocaleDateString());
-      }
-      
-      return acc;
-    }, {});
-
-    // Converti in array e ordina per ricavo
-    const eventStatsArray = Object.values(eventStats)
-      .map(event => ({
-        ...event,
-        sellerCount: event.sellerId.size,
-        dateCount: event.dates.size
-      }))
-      .sort((a, b) => b.totalRevenue - a.totalRevenue);
-
-    // Crea tabella per eventi
-    const eventTableHead = [['Evento', 'Biglietti', 'Ricavo', 'Venditori', '% Totale']];
-    const eventTableBody = eventStatsArray.map(event => [
-      truncateText(event.eventName, 20),
-      event.totalTickets.toString(),
-      `€${event.totalRevenue.toFixed(2)}`,
-      event.sellerCount.toString(),
-      `${((event.totalRevenue / totalRevenue) * 100).toFixed(1)}%`
-    ]);
-
-    autoTable(doc, {
-      startY: yPosition,
-      head: eventTableHead,
-      body: eventTableBody,
-      theme: 'grid',
-      headStyles: {
-        fillColor: colors.eventColor,
-        textColor: [255, 255, 255],
-        fontStyle: 'bold'
-      },
-      alternateRowStyles: {
-        fillColor: [255, 248, 240] // Arancione chiaro
-      },
-      margin: { left: 20, right: 20 },
-      columnStyles: {
-        0: { cellWidth: 60 }, // Evento
-        1: { cellWidth: 25 }, // Biglietti
-        2: { cellWidth: 30 }, // Ricavo
-        3: { cellWidth: 25 }, // Venditori
-        4: { cellWidth: 25 }, // % Totale
-      },
-    });
-
-    // 2. Statistiche per Manager con dettagli più estesi
-    console.log('Generazione statistiche gerarchiche dettagliate...');
-    doc.addPage();
-    yPosition = 20;
-    yPosition = addSection('2. Struttura Gerarchica', yPosition);
-    
-    // Recupera tutti i manager
-    const managersQuery = query(collection(db, 'users'), where('role', '==', 'manager'));
-    const managersSnapshot = await getDocs(managersQuery);
-    const managers = managersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-    if (managers.length === 0) {
-      doc.text('Nessun manager trovato nel sistema.', 15, yPosition);
-      yPosition += 10;
-    } else {
-      // Crea tabella riassuntiva manager
-      const managerSummaryHead = [['Manager', 'Team Leader', 'Promoter', 'Biglietti', 'Ricavo']];
-      const managerSummaryRows = [];
-      
-      // Per ogni manager
-      for (const manager of managers) {
-        // Recupera i team leader del manager
-        const teamLeadersQuery = query(
-          collection(db, 'users'),
-          where('managerId', '==', manager.id),
-          where('role', '==', 'teamLeader')
-        );
-        const teamLeadersSnapshot = await getDocs(teamLeadersQuery);
-        const teamLeaders = teamLeadersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-        // Raccoglie dati per il riepilogo manager
-        let managerTotalTickets = 0;
-        let managerTotalRevenue = 0;
-        let managerTotalPromoters = 0;
-        
-        // Per ogni team leader
-        for (const leader of teamLeaders) {
-          // Recupera i promoter del team leader
-          const promotersQuery = query(
-            collection(db, 'users'),
-            where('teamLeaderId', '==', leader.id),
-            where('role', '==', 'promoter')
-          );
-          const promotersSnapshot = await getDocs(promotersQuery);
-          const promoters = promotersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-          managerTotalPromoters += promoters.length;
-          
-          // Calcola le vendite del team
-          let leaderTotalTickets = 0;
-          let leaderTotalRevenue = 0;
-          
-          // Vendite dirette del team leader
-          const leaderTicketsQuery = query(
-            collection(db, 'tickets'),
-            where('sellerId', '==', leader.id)
-          );
-          const leaderTicketsSnapshot = await getDocs(leaderTicketsQuery);
-          
-          leaderTicketsSnapshot.docs.forEach(doc => {
-            const ticket = doc.data();
-            leaderTotalTickets += ticket.quantity || 0;
-            leaderTotalRevenue += ticket.totalPrice || 0;
-          });
-          
-          // Vendite dei promoter
-          for (const promoter of promoters) {
-            const promoterTicketsQuery = query(
-              collection(db, 'tickets'),
-              where('sellerId', '==', promoter.id)
-            );
-            const promoterTicketsSnapshot = await getDocs(promoterTicketsQuery);
-            
-            promoterTicketsSnapshot.docs.forEach(doc => {
-              const ticket = doc.data();
-              leaderTotalTickets += ticket.quantity || 0;
-              leaderTotalRevenue += ticket.totalPrice || 0;
-            });
-          }
-          
-          managerTotalTickets += leaderTotalTickets;
-          managerTotalRevenue += leaderTotalRevenue;
-        }
-        
-        // Aggiungi riga alla tabella manager
-        managerSummaryRows.push([
-          truncateText(manager.name || manager.email || 'Senza nome', 15),
-          teamLeaders.length.toString(),
-          managerTotalPromoters.toString(),
-          managerTotalTickets.toString(),
-          `€${managerTotalRevenue.toFixed(2)}`
-        ]);
-      }
-      
-      // Tabella riassuntiva manager
-      autoTable(doc, {
-        startY: yPosition,
-        head: managerSummaryHead,
-        body: managerSummaryRows,
-        theme: 'grid',
-        headStyles: {
-          fillColor: colors.primary,
-          textColor: [255, 255, 255],
-          fontStyle: 'bold'
-        },
-        alternateRowStyles: {
-          fillColor: colors.tableBg
-        },
-        margin: { left: 15, right: 15 },
-      });
-      
-      yPosition = doc.lastAutoTable.finalY + 20;
-      
-      // Dettagli per ogni manager
-      for (const manager of managers) {
-        doc.addPage();
-        let managerYPos = 20;
-        
-        // Intestazione manager
-        managerYPos = addSection(`Manager: ${truncateText(manager.name || manager.email || 'Senza nome', 30)}`, managerYPos, colors.primary);
-        
-        // Recupera i team leader del manager
-        const teamLeadersQuery = query(
-          collection(db, 'users'),
-          where('managerId', '==', manager.id),
-          where('role', '==', 'teamLeader')
-        );
-        const teamLeadersSnapshot = await getDocs(teamLeadersQuery);
-        const teamLeaders = teamLeadersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        
-        // Dati del manager
-        const managerEventStats = {};
-        let managerTotalTickets = 0;
-        let managerTotalRevenue = 0;
-        let managerTotalPromoters = 0;
-        
-        // Tabella dei team leader di questo manager
-        const teamLeaderHead = [['Team Leader', 'Promoter', 'Biglietti', 'Ricavo']];
-        const teamLeaderRows = [];
-        
-        // Per ogni team leader
-        for (const leader of teamLeaders) {
-          const promotersQuery = query(
-            collection(db, 'users'),
-            where('teamLeaderId', '==', leader.id),
-            where('role', '==', 'promoter')
-          );
-          const promotersSnapshot = await getDocs(promotersQuery);
-          const promoters = promotersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-          managerTotalPromoters += promoters.length;
-          
-          // Calcola statistiche del team leader
-          let leaderTotalTickets = 0;
-          let leaderTotalRevenue = 0;
-          
-          // Vendite dirette del team leader
-          const leaderTicketsQuery = query(
-            collection(db, 'tickets'),
-            where('sellerId', '==', leader.id)
-          );
-          const leaderTicketsSnapshot = await getDocs(leaderTicketsQuery);
-          
-          leaderTicketsSnapshot.docs.forEach(doc => {
-            const ticket = doc.data();
-            const eventId = ticket.eventId;
-            const eventName = ticket.eventName || 'Evento senza nome';
-            const quantity = ticket.quantity || 0;
-            const revenue = ticket.totalPrice || 0;
-            
-            leaderTotalTickets += quantity;
-            leaderTotalRevenue += revenue;
-            
-            // Registra per evento
-            if (eventId) {
-              if (!managerEventStats[eventId]) {
-                managerEventStats[eventId] = { eventName, tickets: 0, revenue: 0 };
-              }
-              managerEventStats[eventId].tickets += quantity;
-              managerEventStats[eventId].revenue += revenue;
-            }
-          });
-          
-          // Vendite dei promoter
-          for (const promoter of promoters) {
-            const promoterTicketsQuery = query(
-              collection(db, 'tickets'),
-              where('sellerId', '==', promoter.id)
-            );
-            const promoterTicketsSnapshot = await getDocs(promoterTicketsQuery);
-            
-            promoterTicketsSnapshot.docs.forEach(doc => {
-              const ticket = doc.data();
-              const eventId = ticket.eventId;
-              const eventName = ticket.eventName || 'Evento senza nome';
-              const quantity = ticket.quantity || 0;
-              const revenue = ticket.totalPrice || 0;
-              
-              leaderTotalTickets += quantity;
-              leaderTotalRevenue += revenue;
-              
-              // Registra per evento
-              if (eventId) {
-                if (!managerEventStats[eventId]) {
-                  managerEventStats[eventId] = { eventName, tickets: 0, revenue: 0 };
-                }
-                managerEventStats[eventId].tickets += quantity;
-                managerEventStats[eventId].revenue += revenue;
-              }
-            });
-          }
-          
-          // Aggiungi riga alla tabella team leader
-          teamLeaderRows.push([
-            truncateText(leader.name || leader.email || 'Senza nome', 15),
-            promoters.length.toString(),
-            leaderTotalTickets.toString(),
-            `€${leaderTotalRevenue.toFixed(2)}`
-          ]);
-          
-          managerTotalTickets += leaderTotalTickets;
-          managerTotalRevenue += leaderTotalRevenue;
-          
-          // Pagina per ogni team leader
-          doc.addPage();
-          let leaderYPos = 20;
-          
-          // Intestazione team leader
-          leaderYPos = addSection(`Team Leader: ${truncateText(leader.name || leader.email || 'Senza nome', 30)}`, leaderYPos, colors.secondary);
-          
-          // Info team leader
-          doc.setFontSize(12);
-          doc.text(`Email: ${leader.email || 'N/A'}`, 15, leaderYPos);
-          leaderYPos += 7;
-          doc.text(`Manager: ${truncateText(manager.name || manager.email || 'Senza nome', 30)}`, 15, leaderYPos);
-          leaderYPos += 10;
-          doc.text(`Totale Promoter: ${promoters.length}`, 15, leaderYPos);
-          leaderYPos += 7;
-          doc.text(`Totale Biglietti: ${leaderTotalTickets}`, 15, leaderYPos);
-          leaderYPos += 7;
-          doc.text(`Totale Ricavi: €${leaderTotalRevenue.toFixed(2)}`, 15, leaderYPos);
-          leaderYPos += 15;
-          
-          // Tabella promoter del team leader
-          if (promoters.length > 0) {
-            const promoterSummaryHead = [['Promoter', 'Biglietti', 'Ricavo', '% del Team']];
-            const promoterSummaryRows = [];
-            
-            for (const promoter of promoters) {
-              const promoterTicketsQuery = query(
-                collection(db, 'tickets'),
-                where('sellerId', '==', promoter.id)
-              );
-              const promoterTicketsSnapshot = await getDocs(promoterTicketsQuery);
-              
-              let promoterTotalTickets = 0;
-              let promoterTotalRevenue = 0;
-              
-              promoterTicketsSnapshot.docs.forEach(doc => {
-                const ticket = doc.data();
-                promoterTotalTickets += ticket.quantity || 0;
-                promoterTotalRevenue += ticket.totalPrice || 0;
-              });
-              
-              const percentOfTeam = leaderTotalRevenue > 0 
-                ? ((promoterTotalRevenue / leaderTotalRevenue) * 100).toFixed(1) 
-                : '0.0';
-              
-              promoterSummaryRows.push([
-                truncateText(promoter.name || promoter.email || 'Senza nome', 15),
-                promoterTotalTickets.toString(),
-                `€${promoterTotalRevenue.toFixed(2)}`,
-                `${percentOfTeam}%`
-              ]);
-              
-              // Crea pagina dettagliata per ogni promoter con vendite
-              if (promoterTotalTickets > 0) {
-                // Recupera vendite per evento del promoter
-                const promoterEventStats = {};
-                
-                promoterTicketsSnapshot.docs.forEach(doc => {
-                  const ticket = doc.data();
-                  const eventId = ticket.eventId;
-                  const eventName = ticket.eventName || 'Evento senza nome';
-                  const quantity = ticket.quantity || 0;
-                  const revenue = ticket.totalPrice || 0;
-                  
-                  if (!promoterEventStats[eventId]) {
-                    promoterEventStats[eventId] = { eventName, tickets: 0, revenue: 0 };
-                  }
-                  promoterEventStats[eventId].tickets += quantity;
-                  promoterEventStats[eventId].revenue += revenue;
-                });
-                
-                // Crea pagina per promoter 
-                doc.addPage();
-                let promoterYPos = 20;
-                
-                // Intestazione promoter
-                promoterYPos = addSection(`Promoter: ${truncateText(promoter.name || promoter.email || 'Senza nome', 30)}`, promoterYPos, colors.promoterColor);
-                
-                // Info promoter
-                doc.setFontSize(12);
-                doc.text(`Email: ${promoter.email || 'N/A'}`, 15, promoterYPos);
-                promoterYPos += 7;
-                doc.text(`Team Leader: ${truncateText(leader.name || leader.email || 'Senza nome', 30)}`, 15, promoterYPos);
-                promoterYPos += 7;
-                doc.text(`Manager: ${truncateText(manager.name || manager.email || 'Senza nome', 30)}`, 15, promoterYPos);
-                promoterYPos += 10;
-                doc.text(`Totale Biglietti: ${promoterTotalTickets}`, 15, promoterYPos);
-                promoterYPos += 7;
-                doc.text(`Totale Ricavi: €${promoterTotalRevenue.toFixed(2)}`, 15, promoterYPos);
-                promoterYPos += 15;
-                
-                // Tabella eventi del promoter
-                const promoterEventList = Object.values(promoterEventStats).sort((a, b) => b.revenue - a.revenue);
-                
-                if (promoterEventList.length > 0) {
-                  const promoterEventHead = [['Evento', 'Biglietti', 'Ricavo', '% del Tot']];
-                  const promoterEventRows = promoterEventList.map(event => [
-                    truncateText(event.eventName, 20),
-                    event.tickets.toString(),
-                    `€${event.revenue.toFixed(2)}`,
-                    `${promoterTotalRevenue > 0 ? ((event.revenue / promoterTotalRevenue) * 100).toFixed(1) : '0.0'}%`
-                  ]);
-                  
-                  autoTable(doc, {
-                    startY: promoterYPos,
-                    head: promoterEventHead,
-                    body: promoterEventRows,
-                    theme: 'grid',
-                    headStyles: {
-                      fillColor: colors.promoterColor,
-                      textColor: [255, 255, 255],
-                      fontStyle: 'bold'
-                    },
-                    alternateRowStyles: {
-                      fillColor: [255, 236, 236] // Rosso chiaro
-                    },
-                    margin: { left: 15, right: 15 },
-                    columnStyles: {
-                      0: { cellWidth: 65 }, // Evento
-                      1: { cellWidth: 30 }, // Biglietti
-                      2: { cellWidth: 35 }, // Ricavo
-                      3: { cellWidth: 35 }  // % del Tot
-                    },
-                  });
-                }
-              }
-            }
-            
-            autoTable(doc, {
-              startY: leaderYPos,
-              head: promoterSummaryHead,
-              body: promoterSummaryRows,
-              theme: 'grid',
-              headStyles: {
-                fillColor: colors.secondary,
-                textColor: [255, 255, 255],
-                fontStyle: 'bold'
-              },
-              alternateRowStyles: {
-                fillColor: [232, 246, 237] // Verde chiaro
-              },
-              margin: { left: 15, right: 15 },
-              columnStyles: {
-                0: { cellWidth: 60 }, // Promoter
-                1: { cellWidth: 40 }, // Biglietti
-                2: { cellWidth: 40 }, // Ricavo
-                3: { cellWidth: 35 }  // % del Team
-              },
-            });
-          }
-        }
-        
-        // Tabella team leader
-        autoTable(doc, {
-          startY: managerYPos + 10,
-          head: teamLeaderHead,
-          body: teamLeaderRows,
-          theme: 'grid',
-          headStyles: {
-            fillColor: colors.primary,
-            textColor: [255, 255, 255],
-            fontStyle: 'bold'
-          },
-          alternateRowStyles: {
-            fillColor: colors.tableBg
-          },
-          margin: { left: 15, right: 15 },
-          columnStyles: {
-            0: { cellWidth: 65 }, // Team Leader
-            1: { cellWidth: 30 }, // Promoter
-            2: { cellWidth: 40 }, // Biglietti
-            3: { cellWidth: 40 }  // Ricavo
-          },
-        });
-        
-        managerYPos = doc.lastAutoTable.finalY + 15;
-        
-        // Info manager
-        doc.setFontSize(12);
-        doc.text(`Totale Team Leader: ${teamLeaders.length}`, 15, managerYPos);
-        managerYPos += 7;
-        doc.text(`Totale Promoter: ${managerTotalPromoters}`, 15, managerYPos);
-        managerYPos += 7;
-        doc.text(`Totale Biglietti: ${managerTotalTickets}`, 15, managerYPos);
-        managerYPos += 7;
-        doc.text(`Totale Ricavi: €${managerTotalRevenue.toFixed(2)}`, 15, managerYPos);
-        managerYPos += 15;
-        
-        // Tabella eventi del manager
-        managerYPos = checkNewPage(managerYPos);
-        managerYPos = addSection('Eventi del Manager', managerYPos, colors.primary);
-        
-        const managerEventList = Object.values(managerEventStats).sort((a, b) => b.revenue - a.revenue);
-        
-        if (managerEventList.length > 0) {
-          const managerEventHead = [['Evento', 'Biglietti', 'Ricavo', '% del Tot']];
-          const managerEventRows = managerEventList.map(event => [
-            truncateText(event.eventName, 20),
-            event.tickets.toString(),
-            `€${event.revenue.toFixed(2)}`,
-            `${managerTotalRevenue > 0 ? ((event.revenue / managerTotalRevenue) * 100).toFixed(1) : '0.0'}%`
-          ]);
-          
-          autoTable(doc, {
-            startY: managerYPos,
-            head: managerEventHead,
-            body: managerEventRows,
-            theme: 'grid',
-            headStyles: {
-              fillColor: colors.primary,
-              textColor: [255, 255, 255],
-              fontStyle: 'bold'
-            },
-            alternateRowStyles: {
-              fillColor: colors.tableBg
-            },
-            margin: { left: 15, right: 15 },
-            columnStyles: {
-              0: { cellWidth: 65 }, // Evento
-              1: { cellWidth: 35 }, // Biglietti
-              2: { cellWidth: 35 }, // Ricavo
-              3: { cellWidth: 35 }  // % del Tot
-            },
-          });
-        }
-      }
-    }
-
-    // Footer su ogni pagina
-    const totalPages = doc.internal.getNumberOfPages();
-    for (let i = 1; i <= totalPages; i++) {
-      doc.setPage(i);
       doc.setFontSize(10);
-      doc.setTextColor(100, 100, 100);
-      doc.text(`Pagina ${i} di ${totalPages}`, pageWidth - 40, doc.internal.pageSize.height - 10);
-      doc.text(`Report Statistiche - ${new Date().toLocaleDateString()}`, 15, doc.internal.pageSize.height - 10);
-    }
+      doc.setTextColor(colors.textPrimary[0], colors.textPrimary[1], colors.textPrimary[2]);
+      doc.setFont(undefined, 'bold'); // Grassetto per i totali
+      doc.text(`Statistiche Totali Utente:`, leftMargin, yPosition);
+      doc.setFont(undefined, 'normal'); // Normale
+      doc.text(`${userTotalTickets} biglietti venduti`, leftMargin + 45, yPosition);
+      doc.text(`Incasso Lordo: € ${formatCurrency(userTotalRevenue)}`, leftMargin + 90, yPosition);
+      yPosition += 7; // Spazio prima della tabella eventi
 
-    // Salva il PDF
-    doc.save('statistiche_ottimizzate.pdf');
-    console.log('Report ottimizzato generato con successo');
-    return true;
+      // Tabella Dettaglio Vendite per Evento (solo se l'utente ha venduto biglietti)
+      if (userTickets.length > 0) {
+        doc.setFontSize(9);
+        doc.setTextColor(colors.textSecondary[0], colors.textSecondary[1], colors.textSecondary[2]);
+        doc.text('Dettaglio vendite per evento:', leftMargin, yPosition);
+        yPosition += 5;
+        
+        // Raggruppa le vendite dell'utente per evento
+        const eventStats = userTickets.reduce((acc, ticket) => {
+          const eventId = ticket.eventId || 'evento_sconosciuto';
+          if (!acc[eventId]) {
+            acc[eventId] = {
+              eventId: eventId,
+              eventName: eventMap.get(eventId)?.name || ticket.eventName || 'Evento Sconosciuto',
+              ticketsSold: 0,
+              revenue: 0
+            };
+          }
+          acc[eventId].ticketsSold += (parseInt(ticket.quantity, 10) || 1);
+          acc[eventId].revenue += (parseFloat(ticket.totalPrice) || 0);
+          return acc;
+        }, {});
+
+        // Converti in array e ordina per incasso decrescente per quell'evento
+        const eventStatsArray = Object.values(eventStats).sort((a,b) => b.revenue - a.revenue);
+
+        // Prepara i dati per la tabella
+        const eventTableBody = eventStatsArray.map(stat => [
+          truncateText(stat.eventName, 45), // Nome evento più lungo
+          stat.ticketsSold.toString(),
+          formatCurrency(stat.revenue)
+        ]);
+
+        autoTable(doc, {
+          startY: yPosition,
+          head: [['Evento Specifico', 'Biglietti Venduti', 'Incasso Lordo (€)']],
+          body: eventTableBody,
+          theme: 'grid',
+          headStyles: { fillColor: colors.tableHeader, textColor: colors.textPrimary, fontStyle: 'bold', fontSize: 9 },
+          styles: { fontSize: 8, cellPadding: 1.5, textColor: colors.textPrimary },
+          alternateRowStyles: { fillColor: colors.tableAltRow },
+          margin: { left: leftMargin, right: leftMargin }, // Allinea con margine principale
+          columnStyles: {
+             0: { cellWidth: contentWidth * 0.5 }, // Evento (50%)
+             1: { cellWidth: contentWidth * 0.2, halign: 'right' }, // Biglietti (20%)
+             2: { cellWidth: contentWidth * 0.3, halign: 'right' }  // Incasso (30%)
+           },
+          didDrawPage: (data) => { addFooter(); } // Assicura piè pagina su ogni pagina
+        });
+        yPosition = doc.lastAutoTable.finalY + 10; // Spazio dopo la tabella evento
+
+      } else {
+        // Messaggio se l'utente non ha vendite
+        doc.setFontSize(9);
+        doc.setTextColor(colors.textSecondary[0], colors.textSecondary[1], colors.textSecondary[2]);
+        doc.text('Nessuna vendita registrata per questo utente.', leftMargin, yPosition);
+        yPosition += 8;
+      }
+      
+      // Linea separatrice tra utenti (opzionale)
+      // doc.setDrawColor(colors.tableHeader[0], colors.tableHeader[1], colors.tableHeader[2]);
+      // doc.line(leftMargin, yPosition, pageWidth - leftMargin, yPosition);
+      // yPosition += 5;
+
+    } // Fine ciclo for users
+
+    // Aggiungi piè di pagina all'ultima pagina generata
+    addFooter();
+
+    // --- Salvataggio PDF ---
+    console.log('Salvataggio PDF...');
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    doc.save(`report_utente_dettagliato_${timestamp}.pdf`);
+
+    console.log('Report PDF per Utente generato con successo.');
+    alert('Report PDF per Utente generato e scaricato con successo!');
+
   } catch (error) {
-    console.error('Errore nella generazione del report:', error);
-    throw error;
+    console.error('Errore FATALE durante la generazione del report PDF per Utente:', error);
+    alert(`Errore GRAVE nella generazione del report PDF: ${error.message}. Controlla la console.`);
   }
 } 

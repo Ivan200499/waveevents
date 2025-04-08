@@ -6,6 +6,7 @@ import Header from '../common/Header';
 import SellTicketModal from '../tickets/SellTicketModal';
 import TicketHistory from '../tickets/TicketHistory';
 import PromoterStats from './PromoterStats';
+import EventCard from '../promoter/EventCard';
 import { FaTicketAlt, FaEuroSign, FaUsers, FaCalendarAlt, FaMapMarkerAlt } from 'react-icons/fa';
 import './TeamLeaderDashboard.css';
 
@@ -13,6 +14,7 @@ function TeamLeaderDashboard() {
   const { currentUser } = useAuth();
   const [events, setEvents] = useState([]);
   const [selectedEvent, setSelectedEvent] = useState(null);
+  const [selectedDateItem, setSelectedDateItem] = useState(null);
   const [showSellModal, setShowSellModal] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -27,73 +29,80 @@ function TeamLeaderDashboard() {
   const [selectedPromoter, setSelectedPromoter] = useState(null);
 
   useEffect(() => {
-    fetchEvents();
-    fetchStats();
-    fetchPromoters();
-  }, []);
+    setLoading(true);
+    Promise.all([
+      fetchEvents(), 
+      fetchStats(), 
+      fetchPromoters()
+    ]).catch(error => {
+        console.error("Errore caricamento dati Team Leader:", error);
+        setError('Errore nel caricamento dei dati.');
+    }).finally(() => {
+        setLoading(false);
+    });
+  }, [currentUser]);
 
   const fetchEvents = async () => {
     try {
       const eventsRef = collection(db, 'events');
-      const q = query(eventsRef, orderBy('date', 'desc'));
-      const querySnapshot = await getDocs(q);
-      
-      const eventsData = querySnapshot.docs.map(doc => ({
+      const q = query(eventsRef);
+      const snapshot = await getDocs(q);
+      const eventsData = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
-      }));
+      }))
+      .filter(event => event.eventDates && event.eventDates.length > 0);
       
       setEvents(eventsData);
     } catch (error) {
       console.error('Errore nel caricamento degli eventi:', error);
       setError('Errore nel caricamento degli eventi');
-    } finally {
-      setLoading(false);
+      throw error;
     }
   };
 
   const fetchStats = async () => {
     try {
-      // Recupera le vendite del team leader
-      const ticketsRef = collection(db, 'tickets');
-      const teamLeaderQuery = query(
-        ticketsRef,
+      const leaderTicketsQuery = query(
+        collection(db, 'tickets'),
         where('sellerId', '==', currentUser.uid)
       );
-      
-      const teamLeaderSnapshot = await getDocs(teamLeaderQuery);
-      let totalSales = 0;
-      let totalRevenue = 0;
-      
-      teamLeaderSnapshot.forEach(doc => {
+      const leaderSnapshot = await getDocs(leaderTicketsQuery);
+      let leaderSales = 0;
+      let leaderRevenue = 0;
+      leaderSnapshot.forEach(doc => {
         const ticket = doc.data();
-        totalSales += ticket.quantity;
-        totalRevenue += ticket.totalPrice;
+        leaderSales += ticket.quantity || 0;
+        leaderRevenue += ticket.totalPrice || 0;
       });
 
-      // Recupera le vendite dei promoter sotto il team leader
-      const promoterQuery = query(
-        ticketsRef,
-        where('sellerRole', '==', 'promoter'),
-        where('teamLeaderId', '==', currentUser.uid)
-      );
-      
-      const promoterSnapshot = await getDocs(promoterQuery);
-      let promoterSales = 0;
-      
-      promoterSnapshot.forEach(doc => {
-        const ticket = doc.data();
-        promoterSales += ticket.quantity || 0;
-      });
-      
+      const promotersSnapshot = await getDocs(query(collection(db, 'users'), where('teamLeaderId', '==', currentUser.uid)));
+      const promoterIds = promotersSnapshot.docs.map(doc => doc.id);
+
+      let teamSales = 0;
+      let teamRevenue = 0;
+      if (promoterIds.length > 0) {
+        const teamTicketsQuery = query(
+          collection(db, 'tickets'),
+          where('sellerId', 'in', promoterIds)
+        );
+        const teamSnapshot = await getDocs(teamTicketsQuery);
+        teamSnapshot.forEach(doc => {
+          const ticket = doc.data();
+          teamSales += ticket.quantity || 0;
+          teamRevenue += ticket.totalPrice || 0;
+        });
+      }
+
       setStats({
-        totalSales,
-        totalRevenue,
-        averageTicketPrice: totalSales > 0 ? totalRevenue / totalSales : 0,
-        promoterSales
+        totalSales: leaderSales + teamSales,
+        totalRevenue: leaderRevenue + teamRevenue,
+        promoterSales: teamSales,
       });
     } catch (error) {
-      console.error('Errore nel caricamento delle statistiche:', error);
+      console.error('Errore nel recupero delle statistiche TL:', error);
+      setError('Errore nel calcolo delle statistiche.');
+      throw error;
     }
   };
 
@@ -110,7 +119,6 @@ function TeamLeaderDashboard() {
       const promotersData = await Promise.all(querySnapshot.docs.map(async (doc) => {
         const promoterData = doc.data();
         
-        // Recupera le statistiche del promoter
         const ticketsRef = collection(db, 'tickets');
         const promoterTicketsQuery = query(
           ticketsRef,
@@ -138,18 +146,29 @@ function TeamLeaderDashboard() {
       setPromoters(promotersData);
     } catch (error) {
       console.error('Errore nel caricamento dei promoter:', error);
+      setError("Errore caricamento promoter.");
+      throw error;
     }
   };
 
-  const handleSellTicket = (event) => {
+  const handleSellTicket = (event, dateItem) => {
+    if (!event || !dateItem) {
+        console.error("Tentativo di vendita senza evento o data valida", event, dateItem);
+        setError("Errore interno: evento o data non validi per la vendita.");
+        return;
+    }
     setSelectedEvent(event);
-    setShowSellModal(true);
+    setSelectedDateItem(dateItem);
+  };
+
+  const handleModalClose = () => {
+    setSelectedEvent(null);
+    setSelectedDateItem(null);
   };
 
   const handleTicketSold = () => {
-    fetchEvents();
     fetchStats();
-    setShowSellModal(false);
+    handleModalClose();
   };
 
   const handlePromoterClick = (promoter) => {
@@ -160,8 +179,8 @@ function TeamLeaderDashboard() {
     setSelectedPromoter(null);
   };
 
-  if (loading) return <div className="loading">Caricamento...</div>;
-  if (error) return <div className="error">{error}</div>;
+  if (loading) return <div className="loading-container"><div className="loading-spinner"></div>Caricamento dashboard...</div>;
+  if (error) return <div className="error-message">{error}</div>;
 
   return (
     <div className="team-leader-dashboard">
@@ -190,116 +209,107 @@ function TeamLeaderDashboard() {
         >
           I Miei Promoter
         </button>
+        <button
+          className={`tab-button ${activeTab === 'history' ? 'active' : ''}`}
+          onClick={() => setActiveTab('history')}
+        >
+          Storico Vendite
+        </button>
       </div>
 
-      {activeTab === 'dashboard' && (
-        <div className="dashboard-content">
-          <div className="stats-overview">
-            <div className="stat-card">
-              <h3>Le Mie Vendite</h3>
-              <p>{stats.totalSales}</p>
-            </div>
-            <div className="stat-card">
-              <h3>I Miei Ricavi</h3>
-              <p>€{stats.totalRevenue.toFixed(2)}</p>
-            </div>
-            <div className="stat-card">
-              <h3>Prezzo Medio Biglietto</h3>
-              <p>€{stats.averageTicketPrice.toFixed(2)}</p>
-            </div>
-            <div className="stat-card">
-              <h3>Vendite Promoter</h3>
-              <p>{stats.promoterSales}</p>
+      <div className="tab-content">
+        {activeTab === 'dashboard' && (
+          <div className="dashboard-overview">
+            <div className="stats-overview">
+              <div className="stat-card">
+                <FaTicketAlt />
+                <div>
+                  <h3>Biglietti Totali (Team)</h3>
+                  <p>{stats.totalSales}</p>
+                </div>
+              </div>
+              <div className="stat-card">
+                <FaEuroSign />
+                <div>
+                  <h3>Incasso Totale (Team)</h3>
+                  <p>€ {stats.totalRevenue.toFixed(2)}</p>
+                </div>
+              </div>
+              <div className="stat-card">
+                <FaUsers />
+                <div>
+                  <h3>Vendite Promoter</h3>
+                  <p>{stats.promoterSales}</p>
+                </div>
+              </div>
             </div>
           </div>
+        )}
 
-          <TicketHistory />
-        </div>
-      )}
+        {activeTab === 'sell' && (
+          <div className="sell-tickets-container">
+            <h2>Seleziona un Evento e una Data per la Vendita</h2>
+            <div className="events-grid promoter-events-grid">
+              {events.length > 0 ? (
+                events.map((event) => (
+                  <EventCard 
+                    key={event.id} 
+                    event={event} 
+                    onSell={handleSellTicket}
+                  />
+                ))
+              ) : (
+                <p>Nessun evento disponibile per la vendita al momento.</p>
+              )}
+            </div>
+          </div>
+        )}
 
-      {activeTab === 'sell' && (
-        <div className="events-section">
-          <h2>Eventi Disponibili</h2>
-          <div className="events-grid">
-            {events.map(event => (
-              <div key={event.id} className="event-card">
-                {event.imageUrl && (
-                  <div className="event-image">
-                    <img src={event.imageUrl} alt={event.name} />
-                  </div>
-                )}
-                <div className="event-content">
-                  <h3>{event.name}</h3>
-                  <p>
-                    <FaCalendarAlt />
-                    {new Date(event.date).toLocaleDateString()}
-                  </p>
-                  <p>
-                    <FaMapMarkerAlt />
-                    {event.location}
-                  </p>
-                  <div className="event-price">€{event.ticketPrice}</div>
-                  <div className={`tickets-available ${event.availableTickets === 0 ? 'tickets-unavailable' : ''}`}>
-                    {event.availableTickets === 0 && 'Esaurito'}
-                  </div>
-                  {event.description && (
-                    <div className="event-description">
-                      <p>{event.description}</p>
+        {activeTab === 'promoters' && (
+          <div className="promoters-section">
+            <h2>I Miei Promoter</h2>
+            <div className="promoters-grid">
+              {promoters.map(promoter => (
+                <div 
+                  key={promoter.id} 
+                  className="promoter-card"
+                  onClick={() => handlePromoterClick(promoter)}
+                >
+                  <div className="promoter-header">
+                    <div className="avatar-circle">
+                      {promoter.name?.charAt(0)?.toUpperCase() || 'P'}
                     </div>
-                  )}
-                  <button 
-                    onClick={() => handleSellTicket(event)}
-                    className="sell-button"
-                    disabled={event.availableTickets === 0}
-                  >
-                    Vendi Ticket
-                  </button>
+                    <div className="promoter-info">
+                      <h3>{promoter.name}</h3>
+                      <p>{promoter.email}</p>
+                    </div>
+                  </div>
+                  <div className="promoter-stats">
+                    <div className="stat-item">
+                      <div className="stat-label">Vendite Totali</div>
+                      <div className="stat-value">{promoter.totalSales}</div>
+                    </div>
+                    <div className="stat-item">
+                      <div className="stat-label">Ricavi Totali</div>
+                      <div className="stat-value">€{promoter.totalRevenue.toFixed(2)}</div>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {activeTab === 'promoters' && (
-        <div className="promoters-section">
-          <h2>I Miei Promoter</h2>
-          <div className="promoters-grid">
-            {promoters.map(promoter => (
-              <div 
-                key={promoter.id} 
-                className="promoter-card"
-                onClick={() => handlePromoterClick(promoter)}
-              >
-                <div className="promoter-header">
-                  <div className="avatar-circle">
-                    {promoter.name.charAt(0).toUpperCase()}
-                  </div>
-                  <div className="promoter-info">
-                    <h3>{promoter.name}</h3>
-                    <p>{promoter.email}</p>
-                  </div>
-                </div>
-                <div className="promoter-stats">
-                  <div className="stat-item">
-                    <div className="stat-label">Vendite Totali</div>
-                    <div className="stat-value">{promoter.totalSales}</div>
-                  </div>
-                  <div className="stat-item">
-                    <div className="stat-label">Ricavi Totali</div>
-                    <div className="stat-value">€{promoter.totalRevenue.toFixed(2)}</div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+        {activeTab === 'history' && (
+          <TicketHistory userId={currentUser.uid} showSellerFilter={true} />
+        )}
+      </div>
 
-      {showSellModal && (
+      {selectedEvent && selectedDateItem && (
         <SellTicketModal
           event={selectedEvent}
-          onClose={() => setShowSellModal(false)}
+          selectedDateItem={selectedDateItem}
+          onClose={handleModalClose}
           onSold={handleTicketSold}
         />
       )}

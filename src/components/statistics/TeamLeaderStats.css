@@ -167,4 +167,76 @@
   background: #fde8e8;
   border-radius: 4px;
   margin: 1rem 0;
+}
+
+/* Media Queries for Responsiveness */
+
+@media (max-width: 768px) {
+  .team-leader-stats {
+    padding: 1.5rem;
+  }
+
+  .stats-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .toggle-promoters-btn {
+    padding: 0.6rem 1rem;
+    font-size: 0.9rem;
+  }
+
+  .stats-summary {
+    grid-template-columns: 1fr; /* Colonna singola */
+    gap: 1rem;
+  }
+
+  .stat-card {
+    padding: 1rem;
+  }
+
+  .stat-info p {
+    font-size: 1.5rem;
+  }
+
+  .events-stats, .recent-sales {
+    padding: 1rem;
+  }
+
+  .event-stat-card .event-stat-header,
+  .sale-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+    padding: 0.8rem;
+  }
+  
+  .event-stat-card .event-totals {
+      align-self: flex-start;
+  }
+
+  .sale-info {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.3rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .team-leader-stats {
+    padding: 1rem;
+  }
+
+  .stats-header h3 {
+    font-size: 1.4rem;
+  }
+  
+  .stat-info p {
+      font-size: 1.3rem;
+  }
+
+  .events-stats h4, .recent-sales h4 {
+      font-size: 1.1rem;
+  }
 } 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../../firebase/config';
-import { collection, getDocs, doc, updateDoc, query, where, orderBy, limit } from 'firebase/firestore';
+import { collection, getDocs, doc, updateDoc, query, where, orderBy, limit, serverTimestamp } from 'firebase/firestore';
 import { FaSearch, FaTimesCircle, FaCheckCircle, FaBan, FaUndo, FaInfoCircle, FaWhatsapp } from 'react-icons/fa';
 import './TicketHistory.css';
 
@@ -48,13 +48,11 @@ function TicketHistory() {
         ticketsQuery = query(
           collection(db, 'tickets'),
           ...conditions,
-          orderBy('createdAt', 'desc'),
           limit(itemsPerPage)
         );
       } else {
         ticketsQuery = query(
           collection(db, 'tickets'),
-          orderBy('createdAt', 'desc'),
           limit(itemsPerPage)
         );
       }
@@ -66,8 +64,8 @@ function TicketHistory() {
           id: doc.id,
           ...data,
           createdAtFormatted: formatDate(data.createdAt),
-          qrCode: data.qrCode || data.qr_code || null, // Gestisce entrambe le possibili chiavi
-          code: data.code || data.ticketCode || null, // Gestisce entrambe le possibili chiavi
+          qrCode: data.qrCode || data.qr_code || null,
+          code: data.code || data.ticketCode || null,
           eventName: data.eventName || data.event_name || 'Evento non specificato',
           customerName: data.customerName || data.customer_name || 'Cliente non specificato',
           customerEmail: data.customerEmail || data.customer_email || 'Email non specificata',
@@ -87,7 +85,12 @@ function TicketHistory() {
         };
       });
 
-      console.log('Dati biglietti recuperati:', ticketsData); // Debug log
+      // Ordina i biglietti lato client
+      ticketsData.sort((a, b) => {
+        const dateA = a.createdAt?.seconds || 0;
+        const dateB = b.createdAt?.seconds || 0;
+        return dateB - dateA;
+      });
 
       setTickets(ticketsData);
       
@@ -134,34 +137,27 @@ function TicketHistory() {
     });
   }
 
-  async function handleCancelTicket(ticketId) {
-    if (!window.confirm('Sei sicuro di voler annullare questo biglietto? Questa azione non può essere annullata.')) {
+  async function handleDisableTicket(ticketId) {
+    if (!window.confirm('Sei sicuro di voler disabilitare questo biglietto? Non potrà essere validato.')) {
       return;
     }
 
     try {
       setCancellingTicket(true);
       setError(null);
-      
-      // Trova il biglietto corrente
-      const currentTicket = tickets.find(t => t.id === ticketId);
-      if (!currentTicket) {
-        throw new Error('Biglietto non trovato');
-      }
-      
-      // Aggiorna lo stato del biglietto a "cancelled"
+
+      // Aggiorna lo stato del biglietto a "disabled"
       const ticketRef = doc(db, 'tickets', ticketId);
       await updateDoc(ticketRef, {
-        status: 'cancelled',
-        cancelledAt: new Date(),
-        previousStatus: currentTicket.status
+        status: 'disabled',
+        updatedAt: serverTimestamp()
       });
 
       // Aggiorna l'UI
-      setTickets(prevTickets => 
-        prevTickets.map(ticket => 
-          ticket.id === ticketId 
-            ? {...ticket, status: 'cancelled', previousStatus: currentTicket.status} 
+      setTickets(prevTickets =>
+        prevTickets.map(ticket =>
+          ticket.id === ticketId
+            ? {...ticket, status: 'disabled'}
             : ticket
         )
       );
@@ -170,49 +166,41 @@ function TicketHistory() {
       if (selectedTicket && selectedTicket.id === ticketId) {
         setSelectedTicket({
           ...selectedTicket,
-          status: 'cancelled',
-          previousStatus: currentTicket.status
+          status: 'disabled'
         });
       }
 
-      setSuccessMessage('Biglietto annullato con successo!');
+      setSuccessMessage('Biglietto disabilitato con successo!');
       setTimeout(() => setSuccessMessage(null), 3000);
     } catch (error) {
-      console.error('Errore nell\'annullamento del biglietto:', error);
-      setError('Si è verificato un errore durante l\'annullamento del biglietto.');
+      console.error('Errore nella disabilitazione del biglietto:', error);
+      setError('Si è verificato un errore durante la disabilitazione del biglietto.');
     } finally {
       setCancellingTicket(false);
     }
   }
 
-  async function handleRestoreTicket(ticketId) {
-    if (!selectedTicket.previousStatus) {
-      setError('Impossibile ripristinare il biglietto: stato precedente non disponibile.');
-      return;
-    }
-
-    if (!window.confirm('Sei sicuro di voler ripristinare questo biglietto?')) {
+  async function handleEnableTicket(ticketId) {
+    if (!window.confirm('Sei sicuro di voler riabilitare questo biglietto? Potrà essere validato.')) {
       return;
     }
 
     try {
       setCancellingTicket(true);
       setError(null);
-      
-      // Ripristina lo stato precedente del biglietto
+
+      // Ripristina lo stato a "active"
       const ticketRef = doc(db, 'tickets', ticketId);
       await updateDoc(ticketRef, {
-        status: selectedTicket.previousStatus,
-        cancelledAt: null,
-        previousStatus: null,
-        restoredAt: new Date()
+        status: 'active',
+        updatedAt: serverTimestamp()
       });
 
       // Aggiorna l'UI
-      setTickets(prevTickets => 
-        prevTickets.map(ticket => 
-          ticket.id === ticketId 
-            ? {...ticket, status: selectedTicket.previousStatus, previousStatus: null} 
+      setTickets(prevTickets =>
+        prevTickets.map(ticket =>
+          ticket.id === ticketId
+            ? {...ticket, status: 'active'}
             : ticket
         )
       );
@@ -220,16 +208,15 @@ function TicketHistory() {
       if (selectedTicket && selectedTicket.id === ticketId) {
         setSelectedTicket({
           ...selectedTicket,
-          status: selectedTicket.previousStatus,
-          previousStatus: null
+          status: 'active'
         });
       }
 
-      setSuccessMessage('Biglietto ripristinato con successo!');
+      setSuccessMessage('Biglietto riabilitato con successo!');
       setTimeout(() => setSuccessMessage(null), 3000);
     } catch (error) {
-      console.error('Errore nel ripristino del biglietto:', error);
-      setError('Si è verificato un errore durante il ripristino del biglietto.');
+      console.error('Errore nella riabilitazione del biglietto:', error);
+      setError('Si è verificato un errore durante la riabilitazione del biglietto.');
     } finally {
       setCancellingTicket(false);
     }
@@ -254,28 +241,22 @@ function TicketHistory() {
   }
 
   function getStatusLabel(status) {
-    switch(status) {
-      case 'active':
-        return 'Attivo';
-      case 'used':
-        return 'Utilizzato';
-      case 'cancelled':
-        return 'Annullato';
-      default:
-        return status;
+    switch (status) {
+      case 'active': return 'Attivo';
+      case 'validated': return 'Validato';
+      case 'disabled': return 'Disabilitato';
+      case 'cancelled': return 'Annullato';
+      default: return status;
     }
   }
 
   function getStatusIcon(status) {
-    switch(status) {
-      case 'active':
-        return <FaCheckCircle className="status-icon active" />;
-      case 'used':
-        return <FaTimesCircle className="status-icon used" />;
-      case 'cancelled':
-        return <FaBan className="status-icon cancelled" />;
-      default:
-        return null;
+    switch (status) {
+      case 'active': return <FaCheckCircle className="status-icon active" />;
+      case 'validated': return <FaCheckCircle className="status-icon validated" />;
+      case 'disabled': return <FaBan className="status-icon disabled" />;
+      case 'cancelled': return <FaTimesCircle className="status-icon cancelled" />;
+      default: return <FaInfoCircle className="status-icon unknown" />;
     }
   }
 
@@ -390,7 +371,8 @@ function TicketHistory() {
             >
               <option value="all">Tutti</option>
               <option value="active">Attivo</option>
-              <option value="used">Utilizzato</option>
+              <option value="validated">Validato</option>
+              <option value="disabled">Disabilitato</option>
               <option value="cancelled">Annullato</option>
             </select>
           </div>
@@ -421,7 +403,7 @@ function TicketHistory() {
         </div>
       ) : (
         <>
-          <div className="tickets-table-container">
+          <div className="table-responsive-wrapper tickets-table-container">
             <table className="tickets-table">
               <thead>
                 <tr>
@@ -449,45 +431,26 @@ function TicketHistory() {
                       </div>
                     </td>
                     <td>
-                      <div className="actions">
-                        <button 
-                          className="btn-action info"
-                          onClick={() => handleViewDetails(ticket)}
-                          title="Visualizza dettagli"
-                        >
-                          <FaInfoCircle />
-                        </button>
-                        
-                        <button 
-                          className="btn-action whatsapp"
-                          onClick={() => handleShareWhatsApp(ticket)}
-                          title="Condividi su WhatsApp"
-                        >
-                          <FaWhatsapp />
-                        </button>
-                        
-                        {ticket.status !== 'cancelled' && (
+                      <div className="actions inline-actions">
+                        {ticket.status === 'active' && (
                           <button 
-                            className="btn-action cancel"
-                            onClick={() => handleCancelTicket(ticket.id)}
+                            className="btn-action disable small btn-action-disable"
+                            onClick={() => handleDisableTicket(ticket.id)}
                             disabled={cancellingTicket}
-                            title="Annulla biglietto"
+                            title="Disabilita biglietto"
                           >
                             <FaBan />
                           </button>
                         )}
                         
-                        {ticket.status === 'cancelled' && ticket.previousStatus && (
+                        {ticket.status === 'disabled' && (
                           <button 
-                            className="btn-action restore"
-                            onClick={() => {
-                              setSelectedTicket(ticket);
-                              handleRestoreTicket(ticket.id);
-                            }}
+                            className="btn-action enable small btn-action-enable"
+                            onClick={() => handleEnableTicket(ticket.id)}
                             disabled={cancellingTicket}
-                            title="Ripristina biglietto"
+                            title="Abilita biglietto"
                           >
-                            <FaUndo />
+                            <FaCheckCircle />
                           </button>
                         )}
                       </div>
@@ -655,26 +618,6 @@ function TicketHistory() {
               >
                 <FaWhatsapp /> Condividi su WhatsApp
               </button>
-              
-              {selectedTicket.status !== 'cancelled' && (
-                <button 
-                  className="btn-cancel"
-                  onClick={() => handleCancelTicket(selectedTicket.id)}
-                  disabled={cancellingTicket}
-                >
-                  {cancellingTicket ? 'Annullamento...' : 'Annulla Biglietto'}
-                </button>
-              )}
-              
-              {selectedTicket.status === 'cancelled' && selectedTicket.previousStatus && (
-                <button 
-                  className="btn-restore"
-                  onClick={() => handleRestoreTicket(selectedTicket.id)}
-                  disabled={cancellingTicket}
-                >
-                  {cancellingTicket ? 'Ripristino...' : 'Ripristina Biglietto'}
-                </button>
-              )}
             </div>
           </div>
         </div>

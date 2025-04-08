@@ -280,11 +280,11 @@
 
 @media (max-width: 480px) {
   .promoter-dashboard {
-    padding: var(--spacing-xs, 0.5rem);
+    padding: var(--spacing-xs, 8px);
   }
 
   .dashboard-header {
-    margin-bottom: var(--spacing-md, 1rem);
+    margin-bottom: var(--spacing-md, 16px);
   }
 
   .header-title {
@@ -292,19 +292,29 @@
   }
 
   .tabs-container {
-    margin-bottom: var(--spacing-md, 1rem);
-    gap: var(--spacing-xs, 4px);
+    padding-bottom: var(--spacing-xs, 6px);
+    flex-wrap: wrap;
+    justify-content: center;
+    overflow-x: hidden;
   }
 
   .tab-button {
     padding: var(--spacing-xs, 8px) var(--spacing-sm, 12px);
     font-size: 0.9rem;
+    border-bottom: none;
+  }
+
+  .tabs-container {
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .tab-button.active::after {
+    bottom: -1px;
   }
 
   .stats-overview {
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-    gap: var(--spacing-sm, 0.8rem);
-    margin-bottom: var(--spacing-md, 1rem);
+    grid-template-columns: 1fr;
+    gap: var(--spacing-sm, 12px);
   }
 
   .stat-card {

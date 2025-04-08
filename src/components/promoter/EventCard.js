@@ -1,29 +1,117 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { FaCalendarAlt, FaMapMarkerAlt, FaTicketAlt, FaEuroSign } from 'react-icons/fa';
+import DatePicker, { registerLocale } from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
+import it from 'date-fns/locale/it';
 import './EventCard.css';
 
+// Registra la localizzazione italiana
+registerLocale('it', it);
+
 function EventCard({ event, onSell }) {
-  const [selectedDate, setSelectedDate] = useState('');
-  const [showDateSelector, setShowDateSelector] = useState(false);
+  const [sortedDates, setSortedDates] = useState([]);
+  const [availableDates, setAvailableDates] = useState([]);
 
-  if (!event || !event.eventDates || event.eventDates.length === 0) {
-    // Se non ci sono dati validi o date, non mostrare la card
-    return null;
-  }
+  useEffect(() => {
+    if (event?.eventDates && Array.isArray(event.eventDates)) {
+      const validDates = event.eventDates
+        .map(dateItem => ({ ...dateItem, dateObj: new Date(dateItem.date) })) 
+        .filter(dateItem => !isNaN(dateItem.dateObj.getTime())) 
+        .sort((a, b) => a.dateObj - b.dateObj); 
+      setSortedDates(validDates);
+      
+      // Pre-calcola le date con disponibilità per il DatePicker
+      const datesWithAvailability = validDates
+        .filter(dateItem => calculateAvailabilityForDate(dateItem) > 0)
+        .map(dateItem => dateItem.dateObj); // Array di oggetti Date
+      setAvailableDates(datesWithAvailability);
+    } else {
+      setSortedDates([]);
+      setAvailableDates([]);
+    }
+  }, [event]);
 
-  // Formattatore data (riutilizzabile)
-  const formatDate = (dateString) => {
-    if (!dateString) return "Data non specificata";
-    try {
-      const dateObj = new Date(dateString);
-      if (isNaN(dateObj.getTime())) return "Data non valida";
-      const options = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' };
-      return dateObj.toLocaleDateString('it-IT', options);
-    } catch (e) {
-        return "Data non valida";
+  const handleDirectSell = () => {
+    if (hasSingleDate) {
+      // Trova l'oggetto dateItem completo per la data singola disponibile
+      const singleAvailableDateItem = sortedDates.find(d => d.dateObj.getTime() === availableDates[0].getTime());
+      if(singleAvailableDateItem) {
+        onSell(event, singleAvailableDateItem);
+      }
     }
   };
 
-  // Calcola il range di prezzo generale tra tutte le date e tipi
+  const handleDateSelectFromPicker = (selectedDateObj) => {
+    if (!selectedDateObj) return;
+    console.log(`[DatePicker onChange] Data selezionata RAW: ${selectedDateObj.toISOString()}, Time: ${selectedDateObj.getTime()}`);
+
+    // Normalizza la data selezionata a mezzanotte UTC
+    const normalizedSelectedDate = new Date(Date.UTC(selectedDateObj.getFullYear(), selectedDateObj.getMonth(), selectedDateObj.getDate()));
+    const normalizedSelectedTime = normalizedSelectedDate.getTime();
+    console.log(`[DatePicker onChange] Data selezionata NORMALIZZATA a UTC 00:00: ${normalizedSelectedDate.toISOString()}, Time: ${normalizedSelectedTime}`);
+
+    // Trova l'oggetto dateItem originale confrontando le date normalizzate
+    const selectedDateItem = sortedDates.find(item => {
+      const itemDate = item.dateObj;
+      
+      // Normalizza la data dell'item a mezzanotte UTC
+      const normalizedItemDate = new Date(Date.UTC(itemDate.getFullYear(), itemDate.getMonth(), itemDate.getDate()));
+      const normalizedItemTime = normalizedItemDate.getTime();
+
+      // Log di confronto per ogni data in sortedDates (con date normalizzate)
+      console.log(`--- Confronto Normalizzato: Item ${normalizedItemDate.toISOString()} (${normalizedItemTime}) vs Sel ${normalizedSelectedDate.toISOString()} (${normalizedSelectedTime})`);
+      
+      return normalizedItemTime === normalizedSelectedTime;
+    });
+
+    if (selectedDateItem) {
+      console.log("[DatePicker onChange] Corrispondenza TROVATA (normalizzata):", selectedDateItem);
+      onSell(event, selectedDateItem);
+    } else {
+      console.error("[DatePicker onChange] NESSUNA corrispondenza trovata (normalizzata) in sortedDates per la data selezionata!");
+      console.log("Date disponibili (sortedDates):");
+      sortedDates.forEach(d => {
+        const normalized = new Date(Date.UTC(d.dateObj.getFullYear(), d.dateObj.getMonth(), d.dateObj.getDate()));
+        console.log(`- Originale: ${d.dateObj.toISOString()}, Normalizzata UTC 00:00: ${normalized.toISOString()}, Time Norm: ${normalized.getTime()}`);
+      });
+    }
+  };
+
+  const hasSingleDate = sortedDates.length === 1 && availableDates.length === 1;
+  const hasMultipleDates = sortedDates.length > 1 && availableDates.length > 0;
+
+  const calculateAvailabilityForDate = (dateItem) => {
+    if (!dateItem || !Array.isArray(dateItem.ticketTypes)) {
+      return 0;
+    }
+    return dateItem.ticketTypes.reduce((sum, ticketType) => {
+      const qty = parseInt(ticketType.quantity, 10);
+      return sum + (isNaN(qty) ? 0 : qty);
+    }, 0);
+  };
+
+  const totalAvailableTickets = sortedDates.reduce((totalSum, dateItem) => {
+    return totalSum + calculateAvailabilityForDate(dateItem);
+  }, 0);
+  
+  const isSoldOut = totalAvailableTickets === 0 && sortedDates.length > 0;
+
+  if (!event || !event.eventDates || event.eventDates.length === 0) {
+    return null;
+  }
+
+  const formatDateTime = (dateString) => {
+    if (!dateString) return 'Data/Ora non disponibile';
+    try {
+      return new Date(dateString).toLocaleString('it-IT', {
+        day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
+      });
+    } catch (error) {
+      console.error("Errore formattazione data/ora:", dateString, error);
+      return 'Data/Ora invalida';
+    }
+  };
+
   const getOverallPriceRange = () => {
     let minPrice = Infinity;
     let maxPrice = 0;
@@ -38,16 +126,15 @@ function EventCard({ event, onSell }) {
           maxPrice = Math.max(maxPrice, price);
         }
       });
-      // Considera anche i tavoli se presenti nel calcolo del range
       if (dateItem.hasTablesForDate) {
-          dateItem.tableTypes?.forEach(table => {
-            const price = Number(table.price);
-            if (!isNaN(price)) {
-              hasAnyTickets = true;
-              minPrice = Math.min(minPrice, price);
-              maxPrice = Math.max(maxPrice, price);
-            }
-          });
+        dateItem.tableTypes?.forEach(table => {
+          const price = Number(table.price);
+          if (!isNaN(price)) {
+            hasAnyTickets = true;
+            minPrice = Math.min(minPrice, price);
+            maxPrice = Math.max(maxPrice, price);
+          }
+        });
       }
     });
 
@@ -58,83 +145,68 @@ function EventCard({ event, onSell }) {
 
   const priceInfo = getOverallPriceRange();
 
-  // Gestore per il pulsante "Vendi"
-  const handleSellClick = () => {
-    if (event.eventDates.length === 1) {
-      // Se c'è solo una data, vendi direttamente per quella
-      onSell(event, event.eventDates[0]);
-    } else {
-      // Altrimenti mostra il selettore date
-      setShowDateSelector(true);
-    }
-  };
-
-  // Gestore per la selezione della data
-  const handleDateSelection = (dateItem) => {
-    setSelectedDate(dateItem.date);
-    setShowDateSelector(false);
-    onSell(event, dateItem); // Chiama onSell con l'evento e la data selezionata
-  };
-
   return (
-    <div className="event-card">
-      {/* Mostra locandina se disponibile */} 
+    <div className={`event-card-promoter ${isSoldOut ? 'sold-out' : ''}`}>
       {event.posterImageUrl && (
-        <div className="event-image">
+        <div className="event-image-promoter">
           <img src={event.posterImageUrl} alt={event.name} />
         </div>
       )}
-      <div className="event-content">
-        <h3>{event.name}</h3>
-        <p className="event-location">Luogo: {event.location || "N/D"}</p>
+      <div className="event-content-promoter">
+        <h3>{event.name || 'Nome Evento Mancante'}</h3>
+        <p className="location"><FaMapMarkerAlt /> {event.location || 'Luogo non specificato'}</p>
+        
+        <div className="dates-info">
+          <p><FaCalendarAlt /> Date totali: {sortedDates.length}</p>
+          </div>
 
-        {/* Elenco Date */} 
-        <div className="event-dates-list">
-          <h5>Date Disponibili:</h5>
-          <ul>
-            {event.eventDates.map((dateItem, index) => (
-              <li key={dateItem.id || index}>{formatDate(dateItem.date)}</li>
-            ))}
-          </ul>
+        <div className="ticket-types-preview">
+          {event.ticketTypes?.length > 0 && (
+            <p><FaTicketAlt /> {event.ticketTypes.length} tipi di biglietto</p>
+          )}
+          {event.tableTypes?.length > 0 && (
+            <p><i className="fas fa-chair"></i> {event.tableTypes.length} tipi di tavolo</p>
+          )}
         </div>
+        
+        {isSoldOut && (
+          <p className="status-tag sold-out-tag">Esaurito</p>
+        )}
 
-         {/* Info Generali (Prezzo Range, Descrizione) */} 
-        <div className="event-general-info">
-             <p className="price-range">Prezzo: {priceInfo.text}</p>
-            <p className="availability-note">Disponibilità e tipi biglietti/tavoli variano per data.</p>
-            {event.description && (
-             <div className="event-description">
-                <p>{event.description}</p>
-              </div>
-             )}
-        </div>
+        <div className="event-actions-promoter">
+          {hasSingleDate && !isSoldOut && (
+            <button 
+              onClick={handleDirectSell} 
+              className="sell-button single-date"
+            >
+              Vendi ({availableDates[0].toLocaleDateString('it-IT', { day:'2-digit', month:'2-digit' })}) - {calculateAvailabilityForDate(sortedDates.find(d=>d.dateObj.getTime() === availableDates[0].getTime()))} disp.
+            </button>
+          )}
 
-
-        {/* Pulsante Vendi / Selettore Data */} 
-        {!showDateSelector ? (
-          <button 
-            onClick={handleSellClick}
-            className="sell-button"
-            // Disabilita se non ci sono date? O la logica di vendita gestirà date senza biglietti?
-            // disabled={event.eventDates.length === 0} 
-          >
-            {event.eventDates.length === 1 ? 'Vendi Ticket' : 'Seleziona Data per Vendere'}
-          </button>
-        ) : (
-          <div className="date-selector">
-            <h5>Seleziona la data per la vendita:</h5>
-            <ul>
-              {event.eventDates.map((dateItem, index) => (
-                <li key={dateItem.id || index}>
-                  <button onClick={() => handleDateSelection(dateItem)} className="date-select-button">
-                    {formatDate(dateItem.date)}
-                  </button>
-                </li>
-              ))}
-            </ul>
-            <button onClick={() => setShowDateSelector(false)} className="cancel-date-select">Annulla</button>
+          {hasMultipleDates && !isSoldOut && (
+            <div className="date-picker-container">
+              <DatePicker
+                selected={null}
+                onChange={handleDateSelectFromPicker}
+                includeDates={availableDates}
+                dateFormat="dd/MM/yyyy HH:mm"
+                showTimeSelect
+                timeIntervals={15}
+                placeholderText={`Seleziona data (${availableDates.length} opz.)`}
+                locale="it"
+                className="date-picker-input"
+                calendarClassName="custom-calendar"
+                minDate={new Date()}
+                inline={false}
+                popperPlacement="top-start"
+              />
           </div>
         )}
+        
+          {isSoldOut && (
+            <button className="sell-button sold-out" disabled>Esaurito</button>
+          )}
+        </div>
       </div>
     </div>
   );

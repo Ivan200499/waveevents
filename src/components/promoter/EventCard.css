@@ -17,7 +17,7 @@
 }
 
 .event-image {
-  height: var(--card-image-height);
+  height: var(--card-image-height, 180px);
   overflow: hidden;
   background-color: var(--border-color); /* Placeholder bg */
 }
@@ -30,7 +30,7 @@
 }
 
 .event-content {
-  padding: var(--card-padding);
+  padding: var(--card-padding, 1.25rem);
   flex: 1; /* Occupa spazio rimanente */
   display: flex;
   flex-direction: column;
@@ -38,9 +38,9 @@
 
 .event-content h3 {
   margin-top: 0;
-  margin-bottom: var(--spacing-sm);
-  color: var(--text-color);
-  font-size: 1.3rem; /* Leggermente ridotto */
+  margin-bottom: var(--spacing-sm, 0.75rem);
+  color: var(--text-primary);
+  font-size: 1.15rem; /* Leggermente ridotto */
   font-weight: 600;
   line-height: 1.3;
 }
@@ -71,10 +71,18 @@
   font-weight: 500;
 }
 
-.event-location {
-  margin-bottom: var(--spacing-md);
-  color: var(--text-light);
-  font-size: 0.9rem;
+.event-location, .dates-info p, .ticket-types-preview p {
+  margin-bottom: var(--spacing-xs, 0.5rem);
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.event-location svg, .dates-info svg, .ticket-types-preview svg, .ticket-types-preview i {
+  color: var(--primary-color);
+  flex-shrink: 0;
 }
 
 .ticket-info {
@@ -252,36 +260,200 @@
     color: var(--text-color);
 }
 
-/* Responsività */
+/* Stili per DatePicker input e container */
+.date-picker-container {
+  margin-top: auto; /* Spingi in fondo */
+  width: 100%;
+}
+
+.date-picker-input {
+  /* Stile simile ad altri input ma con icona calendario */
+  width: 100%;
+  padding: 0.6rem 1rem;
+  font-size: 0.9rem;
+  border-radius: var(--border-radius, 6px);
+  border: 1px solid var(--input-border, #ccc);
+  background-color: var(--input-bg, #fff);
+  color: var(--text-primary);
+  cursor: pointer;
+  text-align: center; /* Centra il placeholder */
+  transition: border-color 0.2s ease;
+}
+
+.date-picker-input:hover {
+  border-color: var(--primary-color);
+}
+
+/* Stili per il calendario popup (opzionale, per coerenza) */
+.custom-calendar .react-datepicker__header {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.custom-calendar .react-datepicker__current-month, 
+.custom-calendar .react-datepicker-time__header, 
+.custom-calendar .react-datepicker__day-name {
+    color: white;
+    font-weight: 600;
+}
+
+.custom-calendar .react-datepicker__day--selected, 
+.custom-calendar .react-datepicker__day--keyboard-selected {
+    background-color: var(--primary-dark);
+    color: white;
+}
+
+.custom-calendar .react-datepicker__day--in-range {
+    background-color: var(--primary-light);
+}
+
+.custom-calendar .react-datepicker__day:hover {
+     background-color: var(--primary-light);
+     opacity: 0.7;
+}
+
+/* Media Queries per Mobile */
 @media (max-width: 768px) {
   .event-image {
-    height: var(--card-image-height-mobile);
+    height: 150px;
   }
-  
   .event-content {
-    padding: var(--card-padding-mobile);
+    padding: 1rem;
   }
-  
   .event-content h3 {
     font-size: 1.1rem;
-  }
-  
-  .sell-button, .date-select-button {
-    padding: 0.7rem 1rem;
   }
 }
 
 @media (max-width: 480px) {
-    .event-image {
-        height: 140px; /* Ancora più piccolo */
+   .event-image {
+     height: 120px;
+   }
+    .event-content {
+      padding: 0.75rem;
     }
      .event-content h3 {
-        font-size: 1rem;
+       font-size: 1rem;
      }
-     .event-location, .event-dates-list li {
-         font-size: 0.85rem;
+     .event-location, .dates-info p, .ticket-types-preview p {
+        font-size: 0.8rem;
      }
-     .price-range, .availability-note {
-         font-size: 0.8rem;
+     .sell-button, .date-picker-input {
+        padding: 0.5rem 0.8rem;
+        font-size: 0.85rem;
      }
+}
+
+/* Stili per il Modale Selezione Data */
+.date-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1050; /* Assicura che sia sopra altri elementi */
+  opacity: 0;
+  animation: fadeIn 0.3s forwards;
+}
+
+.date-modal-content {
+  background-color: var(--card-background, #fff);
+  padding: 25px 30px;
+  border-radius: var(--border-radius-lg, 12px);
+  box-shadow: var(--shadow-lg, 0 4px 20px rgba(0,0,0,0.2));
+  width: 90%;
+  max-width: 450px;
+  max-height: 80vh;
+  overflow-y: auto;
+  position: relative;
+  transform: scale(0.95);
+  animation: scaleUp 0.3s forwards;
+}
+
+.date-modal-content h3 {
+  margin-top: 0;
+  margin-bottom: 5px;
+  color: var(--text-primary);
+  font-size: 1.3rem;
+}
+
+.date-modal-content h4 {
+  margin-top: 0;
+  margin-bottom: 20px;
+  color: var(--text-secondary);
+  font-weight: 500;
+  font-size: 1rem;
+  border-bottom: 1px solid var(--border-color, #eee);
+  padding-bottom: 10px;
+}
+
+.modal-close-button {
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  background: none;
+  border: none;
+  font-size: 2rem;
+  line-height: 1;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 5px;
+  transition: color 0.2s ease;
+}
+
+.modal-close-button:hover {
+  color: var(--text-primary);
+}
+
+.modal-dates-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px; /* Spazio tra i pulsanti data */
+}
+
+.modal-date-button {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 12px 15px;
+  border: 1px solid var(--border-color, #ddd);
+  background-color: var(--background-color, #f9f9f9);
+  color: var(--text-primary);
+  border-radius: var(--border-radius, 6px);
+  cursor: pointer;
+  text-align: left;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+  font-size: 0.95rem;
+}
+
+.modal-date-button:hover {
+  background-color: var(--background-secondary, #f0f0f0);
+  border-color: var(--primary-color, #3498db);
+}
+
+.modal-date-button .date-text {
+  font-weight: 500;
+}
+
+.modal-date-button .availability-tag {
+  background-color: var(--primary-light, #eaf4ff);
+  color: var(--primary-dark, #2980b9);
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+/* Animazioni semplici per il modale */
+@keyframes fadeIn {
+  to { opacity: 1; }
+}
+
+@keyframes scaleUp {
+  to { transform: scale(1); }
 } 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../../firebase/config';
-import { collection, query, where, getDocs, doc, getDoc, updateDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { Html5QrcodeScanner } from 'html5-qrcode';
 import { useAuth } from '../../contexts/AuthContext';
 import { Link, useNavigate } from 'react-router-dom';
@@ -90,36 +90,59 @@ function ValidateTicket() {
       const ticketData = { id: ticketDoc.id, ...ticketDoc.data() };
       setTicket(ticketData);
 
-      // Controlla se il biglietto è già stato usato
-      if (ticketData.status === 'used') {
-        setMessage('Questo biglietto è già stato utilizzato.');
-        setStatus('warning');
-        setLoading(false);
-        return;
-      }
-
-      // Controlla se il biglietto è valido
-      if (ticketData.status !== 'valid' && ticketData.status !== 'pending' && ticketData.status !== 'active') {
-        setMessage(`Biglietto non valido. Stato attuale: ${ticketData.status}`);
+      // CONTROLLO 1: Biglietto DISABILITATO
+      if (ticketData.status === 'disabled') {
+        setMessage('Questo biglietto è stato disabilitato dall\'amministratore.');
         setStatus('error');
         setLoading(false);
         return;
       }
 
-      // Controlla la data dell'evento (se è passata)
-      const eventDate = new Date(ticketData.eventDate);
-      const now = new Date();
-      if (eventDate < now && eventDate.toDateString() !== now.toDateString()) {
-        setMessage(`Attenzione: L'evento è già passato (${eventDate.toLocaleDateString()}).`);
+      // CONTROLLO 2: Biglietto GIÀ VALIDATO
+      // Usa lo stato 'validated' invece di 'used'
+      if (ticketData.status === 'validated') {
+        setMessage('Questo biglietto è già stato validato.');
         setStatus('warning');
         setLoading(false);
         return;
       }
 
-      // Aggiorna lo stato del biglietto
+      // CONTROLLO 3: Biglietto NON ATTIVO (non 'active')
+      // Solo i biglietti 'active' possono essere validati
+      if (ticketData.status !== 'active') {
+        setMessage(`Biglietto non validabile. Stato attuale: ${getStatusLabel(ticketData.status)}`);
+        setStatus('error');
+        setLoading(false);
+        return;
+      }
+
+      // CONTROLLO 4: Data evento passata (già presente, va bene)
+      // ... (codice esistente controllo data)
+      const eventDateStr = ticketData.eventDate?.seconds ? new Date(ticketData.eventDate.seconds * 1000).toISOString() : ticketData.eventDate;
+      if (!eventDateStr) {
+        setMessage('Data evento non trovata per questo biglietto.');
+        setStatus('error');
+        setLoading(false);
+        return;
+      }
+      const eventDate = new Date(eventDateStr);
+      const now = new Date();
+      // Compara solo giorno, mese, anno
+      const eventDay = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      
+      if (eventDay < today) {
+        setMessage(`Attenzione: L'evento è già passato (${eventDate.toLocaleDateString()}).`);
+        setStatus('warning');
+        // Potremmo decidere di bloccare o permettere comunque la validazione
+        // setLoading(false);
+        // return;
+      }
+
+      // Aggiorna lo stato del biglietto a 'validated'
       await updateDoc(doc(db, 'tickets', ticketDoc.id), {
-        status: 'used',
-        validatedAt: new Date().toISOString(),
+        status: 'validated', // Imposta a validated
+        validatedAt: serverTimestamp(), // Usa serverTimestamp
         validatedBy: currentUser.uid
       });
 
@@ -127,7 +150,7 @@ function ValidateTicket() {
       setStatus('success');
       
       // Aggiorna l'oggetto ticket per riflettere il nuovo stato
-      setTicket({...ticketData, status: 'used'});
+      setTicket({...ticketData, status: 'validated'}); // Aggiorna UI con validated
     } catch (error) {
       console.error('Errore durante la validazione:', error);
       setMessage('Si è verificato un errore durante la validazione. Riprova più tardi.');
@@ -311,4 +334,15 @@ function ValidateTicket() {
   );
 }
 
-export default ValidateTicket; 
+export default ValidateTicket;
+
+// Helper function (può essere importata se usata altrove)
+function getStatusLabel(status) {
+  switch (status) {
+    case 'active': return 'Attivo';
+    case 'validated': return 'Validato';
+    case 'disabled': return 'Disabilitato';
+    case 'cancelled': return 'Annullato'; // Se mantenuto
+    default: return status;
+  }
+} 

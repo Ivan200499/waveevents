@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, useCallback } from 'rea
 import { db } from '../firebase/config';
 import { collection, query, where, getDocs, orderBy, doc, updateDoc } from 'firebase/firestore';
 import { useAuth } from './AuthContext';
+import { onSnapshot } from 'firebase/firestore';
 
 const NotificationContext = createContext();
 
@@ -26,8 +27,7 @@ export function NotificationProvider({ children }) {
       const notificationsRef = collection(db, 'notifications');
       const q = query(
         notificationsRef,
-        where('userId', '==', currentUser.uid),
-        orderBy('timestamp', 'desc')
+        where('userId', '==', currentUser.uid)
       );
       
       const querySnapshot = await getDocs(q);
@@ -93,6 +93,28 @@ export function NotificationProvider({ children }) {
       fetchNotifications();
     }
   }, [currentUser, fetchNotifications]);
+
+  useEffect(() => {
+    if (!currentUser) return;
+
+    const notificationsRef = collection(db, 'notifications');
+    const q = query(
+      notificationsRef,
+      where('userId', '==', currentUser.uid)
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const notificationsData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setNotifications(notificationsData);
+    }, (error) => {
+      console.error('Errore nel recupero delle notifiche:', error);
+    });
+
+    return () => unsubscribe();
+  }, [currentUser]);
 
   const value = {
     notifications,
