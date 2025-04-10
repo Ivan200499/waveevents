@@ -73,8 +73,8 @@
 .events-grid,
 .promoters-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: var(--spacing-md, 25px);
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: var(--spacing-md, 20px);
 }
 
 .event-card,
@@ -262,12 +262,14 @@
   padding-top: var(--spacing-md, 1rem);
   border-top: 1px solid var(--border-color);
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
-  gap: var(--spacing-sm, 1rem);
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--spacing-sm, 0.8rem);
 }
 
 .stat-item {
   text-align: center;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .stat-label {
@@ -344,8 +346,8 @@
   }
 
   .promoter-stats {
+    grid-template-columns: repeat(2, 1fr);
     gap: var(--spacing-xs, 0.5rem);
-    grid-template-columns: repeat(auto-fit, minmax(60px, 1fr));
   }
 
   .stat-item {

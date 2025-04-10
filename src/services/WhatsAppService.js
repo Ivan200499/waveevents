@@ -105,8 +105,8 @@ export const sendTicketViaWhatsApp = async (ticket, phoneNumber) => {
     const whatsappUrl = `https://wa.me/${formattedPhone}?text=${encodeURIComponent(message)}`;
     console.log('URL WhatsApp generato:', whatsappUrl);
 
-    // Apri WhatsApp
-    window.open(whatsappUrl, '_blank');
+    // Apri WhatsApp usando window.location.href per maggiore compatibilità mobile
+    window.location.href = whatsappUrl;
 
     // Aggiorna il documento del biglietto
     const ticketRef = doc(db, 'tickets', ticket.id);

@@ -206,7 +206,8 @@ function SellTicketModal({ event, selectedDateItem, onClose, onSold }) {
     // Aggiungi prefisso internazionale se necessario (es. 39 per Italia)
     const internationalPhone = cleanPhone.startsWith('39') ? cleanPhone : (cleanPhone.length > 10 ? cleanPhone : `39${cleanPhone}`); // Gestisce un po' meglio i prefissi
     const whatsappUrl = `https://wa.me/${internationalPhone}?text=${message}`;
-    window.open(whatsappUrl, '_blank');
+    // window.open(whatsappUrl, '_blank'); // Vecchio metodo
+    window.location.href = whatsappUrl; // Nuovo metodo più compatibile
   };
 
 

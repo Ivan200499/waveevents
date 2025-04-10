@@ -7,9 +7,8 @@ import EditUserModal from './EditUserModal';
 import './AdminDashboard.css';
 import Header from '../common/Header';
 import { FaDownload, FaUsers, FaTicketAlt, FaEuroSign, FaHistory } from 'react-icons/fa';
-import { generateGlobalStatisticsPDF } from '../../services/ReportService';
 import AssignmentModal from './AssignmentModal';
-import { generateOptimizedReport } from '../../services/OptimizedReportService';
+import { generateDetailedPDFReport } from '../../services/ReportService';
 import TicketHistory from './TicketHistory';
 import TeamOverview from './TeamOverview';
 
@@ -34,6 +33,11 @@ function AdminDashboard() {
   const [downloadingReport, setDownloadingReport] = useState(false);
   const [downloadError, setDownloadError] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
+
+  const usersMap = users.reduce((map, user) => {
+    map[user.id] = user;
+    return map;
+  }, {});
 
   useEffect(() => {
     fetchUsers();
@@ -61,11 +65,9 @@ function AdminDashboard() {
 
   async function fetchStats() {
     try {
-      // Recupera statistiche utenti
       const usersRef = collection(db, 'users');
       const usersSnapshot = await getDocs(usersRef);
       
-      // Recupera statistiche biglietti
       const ticketsRef = collection(db, 'tickets');
       const ticketsSnapshot = await getDocs(ticketsRef);
       
@@ -88,25 +90,24 @@ function AdminDashboard() {
     }
   }
 
-  const handleCreateUser = (userType) => {
-    setCreateUserType(userType);
-    setShowCreateModal(true);
-  };
-
-  const handleDownloadReport = async () => {
+  const handleDownloadDetailedPDFReport = async () => {
+    setDownloadingReport(true);
+    setDownloadError(null);
+    console.log("Inizio generazione report PDF dettagliato...");
     try {
-      setDownloadingReport(true);
-      setDownloadError(null);
-      console.log('Avvio generazione report ottimizzato...');
-      await generateOptimizedReport();
-      console.log('Report ottimizzato generato con successo');
-      alert('Report ottimizzato generato con successo!');
+      await generateDetailedPDFReport();
+      console.log("Report PDF dettagliato generato e download avviato.");
     } catch (error) {
-      console.error('Errore nel download del report:', error);
-      setDownloadError(`Errore nella generazione del report: ${error.message}`);
+      console.error("Errore durante la generazione del report PDF:", error);
+      setDownloadError(`Errore PDF: ${error.message}`);
     } finally {
       setDownloadingReport(false);
     }
+  };
+
+  const handleCreateUser = (userType) => {
+    setCreateUserType(userType);
+    setShowCreateModal(true);
   };
 
   const filteredUsers = users.filter(user => {
@@ -170,10 +171,10 @@ function AdminDashboard() {
         <div className="header-actions">
           <button 
             className={`btn-download ${downloadingReport ? 'loading' : ''}`}
-            onClick={handleDownloadReport}
+            onClick={handleDownloadDetailedPDFReport}
             disabled={downloadingReport}
           >
-            <FaDownload /> {downloadingReport ? 'Generazione in corso...' : 'Scarica Statistiche'}
+            <FaDownload /> {downloadingReport ? 'Generazione PDF...' : 'Scarica Report Dettagliato PDF'}
           </button>
           {downloadError && (
             <div className="error-message">

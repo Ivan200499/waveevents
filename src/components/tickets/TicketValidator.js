@@ -74,7 +74,7 @@ function TicketValidator() {
                         fps: 10, 
                         qrbox: { width: 250, height: 250 },
                         videoConstraints: {
-                            facingMode: "environment"
+                            facingMode: { exact: "environment" }
                         },
                         supportedScanTypes: [/* Html5QrcodeScanType.SCAN_TYPE_CAMERA */ 0]
                     },

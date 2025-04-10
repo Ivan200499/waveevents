@@ -344,12 +344,12 @@ const handleTableChangeForDate = (dateIndex, tableId, field, value) => {
               <div key={dateItem.id || index} className="event-date-item">
                 <h4>Data {index + 1}</h4>
             <div className="form-group">
-                  <label htmlFor={`date-${index}`}>Data e Ora:</label>
+                  <label htmlFor={`date-${index}`}>Data:</label>
               <input
-                    type="datetime-local" // Usa datetime-local per data e ora
+                    type="date"
                     id={`date-${index}`}
                 name="date"
-                    value={dateItem.date}
+                    value={dateItem.date ? dateItem.date.split('T')[0] : ''}
                     onChange={(e) => handleDateChange(index, 'date', e.target.value)}
                 required
               />

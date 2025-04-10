@@ -1,96 +1,102 @@
-import React, { useState, useEffect } from 'react';
-import { db } from '../../firebase/config';
-import { collection, query, where, getDocs } from 'firebase/firestore';
-import { FaUser, FaTicketAlt, FaEuroSign, FaSearch } from 'react-icons/fa';
+import React, { useState } from 'react';
+import { FaUser, FaTicketAlt, FaEuroSign, FaAngleDown, FaAngleUp, FaSearch } from 'react-icons/fa';
 import './TeamLeaderPromoters.css';
 
-function TeamLeaderPromoters({ teamLeaderId }) {
-  const [promoters, setPromoters] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+function PromoterCard({ promoter, salesData }) {
+  const [expandedEvents, setExpandedEvents] = useState({});
+
+  const toggleEventExpansion = (eventId) => {
+    setExpandedEvents(prev => ({
+      ...prev,
+      [eventId]: !prev[eventId]
+    }));
+  };
+
+  const hasSalesData = salesData && salesData.eventSales && Object.keys(salesData.eventSales).length > 0;
+
+  return (
+    <div className="promoter-card-details">
+      <div className="promoter-header">
+        <div className="promoter-info">
+          <FaUser className="icon" />
+          <div>
+            <h4>{promoter.name}</h4>
+            <p>{promoter.email}</p>
+          </div>
+        </div>
+        <div className="promoter-stats">
+          <div className="stat-item">
+            <FaTicketAlt className="icon" />
+            <span>{salesData?.totalTickets || 0} biglietti</span>
+          </div>
+          <div className="stat-item">
+            <FaEuroSign className="icon" />
+            <span>€{(salesData?.totalRevenue || 0).toFixed(2)}</span>
+          </div>
+        </div>
+      </div>
+      
+      {hasSalesData ? (
+        <div className="promoter-events-detailed">
+          <h5>Vendite Dettagliate per Evento</h5>
+          {Object.entries(salesData.eventSales).map(([eventId, eventData]) => {
+            const isExpanded = !!expandedEvents[eventId];
+            const hasTicketDetails = eventData.ticketTypeSales && Object.keys(eventData.ticketTypeSales).length > 0;
+
+            return (
+              <div key={eventId} className="event-sale-item">
+                <div className="event-summary-header" onClick={() => hasTicketDetails && toggleEventExpansion(eventId)} style={{ cursor: hasTicketDetails ? 'pointer' : 'default' }}>
+                  <span className="event-name">{eventData.eventName}</span>
+                  <div className="event-totals">
+                    <span className="event-tickets">{eventData.totalTickets} T</span>
+                    <span className="event-revenue">€{eventData.totalRevenue.toFixed(2)}</span>
+                  </div>
+                  {hasTicketDetails && (
+                      <button className="expand-button">
+                        {isExpanded ? <FaAngleUp /> : <FaAngleDown />}
+                      </button>
+                  )}
+                </div>
+                
+                {isExpanded && hasTicketDetails && (
+                  <div className="ticket-type-details">
+                     <div className="type-sale-header">
+                        <span>Tipo Biglietto</span>
+                        <span>Quantità</span>
+                        <span>Incasso</span>
+                      </div>
+                    {Object.entries(eventData.ticketTypeSales)
+                      .sort(([, a], [, b]) => b.revenue - a.revenue)
+                      .map(([typeId, typeData]) => (
+                      <div key={typeId} className="type-sale-row">
+                        <span className="type-name">{typeData.name}</span>
+                        <span className="type-quantity">{typeData.quantity}</span>
+                        <span className="type-revenue">€{typeData.revenue.toFixed(2)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+          <p className="no-sales-message">Nessuna vendita registrata.</p>
+      )}
+    </div>
+  );
+}
+
+function TeamLeaderPromoters({ promoters, salesDetails }) {
   const [promoterSearchTerm, setPromoterSearchTerm] = useState('');
 
-  useEffect(() => {
-    fetchPromoters();
-  }, [teamLeaderId]);
-
-  async function fetchPromoters() {
-    try {
-      setLoading(true);
-      // Recupera tutti i promoter del team leader
-      const promotersQuery = query(
-        collection(db, 'users'),
-        where('teamLeaderId', '==', teamLeaderId),
-        where('role', '==', 'promoter')
+  const filteredPromoters = promoters.filter(promoter => 
+        (promoter.name?.toLowerCase() || '').includes(promoterSearchTerm.toLowerCase()) ||
+        (promoter.email?.toLowerCase() || '').includes(promoterSearchTerm.toLowerCase())
       );
-      const promotersSnapshot = await getDocs(promotersQuery);
-      
-      // Per ogni promoter, recupera le statistiche di vendita
-      const promotersData = await Promise.all(
-        promotersSnapshot.docs.map(async (doc) => {
-          const promoterData = doc.data();
-          
-          // Recupera le statistiche di vendita del promoter
-          const ticketsQuery = query(
-            collection(db, 'tickets'),
-            where('sellerId', '==', doc.id)
-          );
-          const ticketsSnapshot = await getDocs(ticketsQuery);
-          
-          let totalTickets = 0;
-          let totalRevenue = 0;
-          const eventStats = {};
-          
-          ticketsSnapshot.docs.forEach(ticketDoc => {
-            const ticket = ticketDoc.data();
-            totalTickets += ticket.quantity;
-            totalRevenue += ticket.totalPrice;
-            
-            // Statistiche per evento
-            if (!eventStats[ticket.eventId]) {
-              eventStats[ticket.eventId] = {
-                eventName: ticket.eventName,
-                tickets: 0,
-                revenue: 0
-              };
-            }
-            eventStats[ticket.eventId].tickets += ticket.quantity;
-            eventStats[ticket.eventId].revenue += ticket.totalPrice;
-          });
-
-          return {
-            id: doc.id,
-            ...promoterData,
-            stats: {
-              totalTickets,
-              totalRevenue,
-              eventStats: Object.values(eventStats)
-            }
-          };
-        })
-      );
-      
-      setPromoters(promotersData);
-    } catch (error) {
-      console.error('Errore nel recupero dei promoter:', error);
-      setError('Errore nel caricamento dei promoter');
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  if (loading) {
-    return <div className="loading">Caricamento promoter...</div>;
-  }
-
-  if (error) {
-    return <div className="error">{error}</div>;
-  }
 
   return (
     <div className="promoters-container">
-      <h3>Promoter del Team</h3>
-      
       <div className="search-container">
         <input
           type="text"
@@ -103,50 +109,20 @@ function TeamLeaderPromoters({ teamLeaderId }) {
       </div>
       
       {promoters.length === 0 ? (
-        <p>Nessun promoter assegnato a questo team leader.</p>
+        <p className="no-promoters-message">Nessun promoter trovato in questo team.</p>
+      ) : filteredPromoters.length === 0 ? (
+        <p className="no-promoters-message">Nessun promoter trovato per la ricerca.</p>
       ) : (
-        promoters
-          .filter(promoter => 
-            promoter.name.toLowerCase().includes(promoterSearchTerm.toLowerCase()) ||
-            promoter.email.toLowerCase().includes(promoterSearchTerm.toLowerCase())
-          )
-          .map(promoter => (
-            <div key={promoter.id} className="promoter-card">
-              <div className="promoter-header">
-                <div className="promoter-info">
-                  <FaUser className="icon" />
-                  <div>
-                    <h4>{promoter.name}</h4>
-                    <p>{promoter.email}</p>
-                  </div>
-                </div>
-                <div className="promoter-stats">
-                  <div className="stat-item">
-                    <FaTicketAlt className="icon" />
-                    <span>{promoter.stats.totalTickets} biglietti</span>
-                  </div>
-                  <div className="stat-item">
-                    <FaEuroSign className="icon" />
-                    <span>€{promoter.stats.totalRevenue.toFixed(2)}</span>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="promoter-events">
-                <h5>Vendite per Evento</h5>
-                {promoter.stats.eventStats.map((event, index) => (
-                  <div key={index} className="event-stat">
-                    <span className="event-name">{event.eventName}</span>
-                    <span className="event-tickets">{event.tickets} biglietti</span>
-                    <span className="event-revenue">€{event.revenue.toFixed(2)}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))
+        filteredPromoters.map(promoter => (
+          <PromoterCard 
+            key={promoter.id} 
+            promoter={promoter} 
+            salesData={salesDetails ? salesDetails[promoter.id] : null}
+          />
+        ))
       )}
     </div>
   );
 }
 
-export default TeamLeaderPromoters; 
+export default TeamLeaderPromoters;

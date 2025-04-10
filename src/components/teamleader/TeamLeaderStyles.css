@@ -245,10 +245,10 @@
 }
 
 .promoter-summary {
-  background: #f8f9fa;
-  padding: 24px;
   border-radius: 12px;
   margin-bottom: 32px;
+  background: #f8f9fa;
+  padding: 20px;
 }
 
 .promoter-summary p {
@@ -265,35 +265,77 @@
   font-weight: 600;
 }
 
+/* Stili Base Tabella (per Desktop/Tablet) */
 .events-stats-table {
   margin-top: 32px;
+  /* Rimosso display: flex, justify-content, overflow-x */
 }
 
 .events-stats-table table {
-  width: 100%;
-  border-collapse: separate;
+  width: 100%; /* Torna a 100% per layout base */
+  border-collapse: separate; 
   border-spacing: 0;
-  margin-top: 24px;
+  margin-top: 0; 
+  /* Rimuovi min-width */
+}
+
+.events-stats-table th,
+.events-stats-table td {
+  padding: 16px;
+  border-bottom: 1px solid #e0e0e0;
+  color: #333;
+  text-align: left;
+  /* Manteniamo nowrap per desktop */
+  white-space: nowrap; 
 }
 
 .events-stats-table th {
   background: var(--primary-color);
   color: white;
-  padding: 16px;
-  text-align: left;
   font-weight: 500;
   font-size: 1rem;
-}
-
-.events-stats-table td {
-  padding: 16px;
-  border-bottom: 1px solid #e0e0e0;
-  color: #333;
 }
 
 .events-stats-table tr:hover {
   background: #f8f9fa;
 }
+
+/* Stili per il contenitore della ricerca */
+.search-filter-container {
+  position: relative;
+  margin-bottom: 24px;
+}
+
+.stats-search-input {
+  width: 100%;
+  padding: 12px 12px 12px 40px; /* Padding a sinistra per icona */
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 1rem;
+  background-color: white;
+}
+
+.search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #888;
+}
+
+/* Stili per Dark Mode Search */
+@media (prefers-color-scheme: dark) {
+  .stats-search-input {
+    background-color: #2d2d2d;
+    border-color: #444;
+    color: #eee;
+  }
+  .search-icon {
+    color: #aaa;
+  }
+}
+
+/* ... (altri stili mobile) ... */
 
 .loading, .no-data {
   text-align: center;
@@ -316,11 +358,88 @@
     width: 95%;
   }
 
-  .events-stats-table {
-    overflow-x: auto;
-    margin: 0 -24px;
-    padding: 0 24px;
+  /* Nascondi header tabella */
+  .events-stats-table thead {
+    display: none;
   }
+
+  /* Righe diventano Card */
+  .events-stats-table tr {
+    display: block;
+    background: var(--card-bg-secondary, #ffffff);
+    border: 1px solid var(--border-color-light, #eaeaea);
+    border-radius: 10px;
+    padding: 1.25rem; /* 20px */
+    margin-bottom: 1rem; /* 16px */
+    box-shadow: var(--shadow-sm, 0 2px 4px rgba(0,0,0,0.04));
+  }
+  .events-stats-table tr:hover {
+      background: var(--card-bg-secondary, #ffffff); /* Rimuovi hover di riga */
+      box-shadow: var(--shadow-md, 0 4px 10px rgba(0,0,0,0.06)); /* Aggiungi effetto ombra su hover */
+      transform: translateY(-2px);
+  }
+
+  /* Celle diventano righe Label/Value */
+  .events-stats-table td {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start; /* Allinea all'inizio per testi lunghi */
+    padding: 0.6rem 0; /* ~10px */
+    border-bottom: 1px solid var(--border-color-ultralight, #f0f0f0);
+    white-space: normal; /* TESTO A CAPO! */
+    text-align: right; /* Allinea valore a destra */
+    line-height: 1.4;
+  }
+  .events-stats-table td:last-child {
+    border-bottom: none;
+  }
+
+  /* Stile Etichetta (Label) */
+  .events-stats-table td::before {
+    content: attr(data-label); /* Prende da data-label nel JSX */
+    font-weight: 500;
+    color: var(--text-light, #555);
+    margin-right: 1rem; /* Spazio tra label e valore */
+    text-align: left;
+    flex-shrink: 0;
+    width: 90px; /* Larghezza fissa per allineamento etichette */
+  }
+
+  /* Stile Valore (Contenuto originale della cella) */
+  /* Selettore generico per il valore */
+   .events-stats-table td {
+        font-weight: 500;
+        color: var(--text-color, #333);
+        font-size: 0.95rem; 
+        word-break: break-word; /* A capo se il valore è troppo lungo */
+   }
+
+   /* Stili Card Dark Mode */
+   @media (prefers-color-scheme: dark) {
+        .events-stats-table tr {
+           background: var(--card-bg-dark, #2a2a2a);
+           border-color: var(--border-color-dark, #404040);
+        }
+        .events-stats-table td {
+            color: var(--text-color-dark, #ddd);
+            border-color: var(--border-color-darker, #353535);
+        }
+        .events-stats-table td::before {
+            color: var(--text-light-dark, #aaa);
+        }
+        /* Valore in Dark mode */
+        .events-stats-table td {
+           color: var(--text-color-dark, #eee);
+           font-weight: 500;
+        }
+   }
+
+  /* Rimuovi/Commenta le vecchie regole di overflow se ancora presenti qui */
+  /* .events-stats-table {
+    overflow-x: auto; 
+    margin: 0 -24px; 
+    padding: 0 24px; 
+  } */
 }
 
 /* Dark mode support */
@@ -411,5 +530,59 @@
   .loading, .no-data {
     background: #2d2d2d;
     color: #ccc;
+  }
+}
+
+/* Nuova classe per griglia stats generali */
+.stats-grid {
+  display: grid;
+  /* Crea colonne flessibili, minimo 120px */
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); 
+  gap: 15px; 
+}
+
+.summary-stat-item {
+  background-color: white; /* Sfondo per ogni item */
+  padding: 15px;
+  border-radius: 8px;
+  border: 1px solid #eee;
+  text-align: center; /* Centra contenuto */
+  box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+}
+
+.summary-label {
+  display: block;
+  font-size: 0.8rem;
+  color: #666;
+  margin-bottom: 5px;
+  font-weight: 500;
+}
+
+.summary-value {
+  display: block;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #222;
+}
+
+.summary-value.email {
+  font-size: 0.9rem; /* Riduci dimensione per email lunga */
+  word-break: break-all; /* Forza a capo per email lunghe */
+}
+
+/* Dark Mode per Summary Grid */
+@media (prefers-color-scheme: dark) {
+  .promoter-summary {
+    background: #2d2d2d;
+  }
+  .summary-stat-item {
+    background-color: #383838;
+    border-color: #454545;
+  }
+  .summary-label {
+    color: #aaa;
+  }
+  .summary-value {
+    color: #eee;
   }
 }

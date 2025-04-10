@@ -482,4 +482,216 @@ export async function generateGlobalStatisticsPDF() {
     console.error('Errore nella generazione del report:', error);
     throw error;
   }
-} 
+}
+
+// Funzione helper per formattare le date (riutilizzabile)
+const formatDate = (timestamp) => timestamp?.seconds ? new Date(timestamp.seconds * 1000).toLocaleDateString('it-IT') : (timestamp || 'N/D');
+const formatDateTime = (timestamp) => timestamp?.seconds ? new Date(timestamp.seconds * 1000).toLocaleString('it-IT') : (timestamp || 'N/D');
+
+export const generateDetailedPDFReport = async () => {
+  console.log("Avvio recupero dati per PDF...");
+  const doc = new jsPDF();
+  let yPos = 15; // Posizione verticale iniziale
+
+  try {
+    // --- 1. Recupero Dati Completo ---
+    console.log("Recupero utenti...");
+    const usersRef = collection(db, 'users');
+    const usersSnapshot = await getDocs(usersRef);
+    const allUsers = usersSnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+    const usersMap = allUsers.reduce((map, user) => { map[user.id] = user; return map; }, {});
+    console.log(`Recuperati ${allUsers.length} utenti.`);
+
+    console.log("Recupero biglietti...");
+    const ticketsRef = collection(db, 'tickets');
+    const ticketsSnapshot = await getDocs(ticketsRef);
+    const allTickets = ticketsSnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+    console.log(`Recuperati ${allTickets.length} biglietti.`);
+
+    // --- 2. Intestazione e Riepilogo Generale ---
+    doc.setFontSize(18);
+    doc.text("Report Statistiche Dettagliato", 14, yPos);
+    yPos += 8;
+    doc.setFontSize(10);
+    doc.text(`Generato il: ${new Date().toLocaleString('it-IT')}`, 14, yPos);
+    yPos += 10;
+
+    doc.setFontSize(14);
+    doc.text("Riepilogo Generale", 14, yPos);
+    yPos += 6;
+
+    const managers = allUsers.filter(u => u.role === 'manager');
+    const teamLeaders = allUsers.filter(u => u.role === 'teamLeader');
+    const promoters = allUsers.filter(u => u.role === 'promoter');
+    const validators = allUsers.filter(u => u.role === 'validator');
+    const totalTicketsSold = allTickets.reduce((sum, t) => sum + (t.quantity || 0), 0);
+    const totalRevenue = allTickets.reduce((sum, t) => sum + (t.totalPrice || 0), 0);
+
+    const summaryBody = [
+      ["Utenti Totali", allUsers.length],
+      ["Manager", managers.length],
+      ["Team Leader", teamLeaders.length],
+      ["Promoter", promoters.length],
+      ["Validator", validators.length],
+      ["Biglietti Venduti", totalTicketsSold],
+      ["Incasso Totale", `€${totalRevenue.toFixed(2)}`],
+    ];
+
+    autoTable(doc, {
+      startY: yPos,
+      head: [['Statistica', 'Valore']],
+      body: summaryBody,
+      theme: 'grid',
+      headStyles: { fillColor: [41, 128, 185], textColor: 255, fontStyle: 'bold' },
+      margin: { left: 14, right: 14 },
+    });
+    yPos = doc.lastAutoTable.finalY + 15;
+
+    // --- 3. Dettaglio Gerarchico ---
+    console.log("Inizio elaborazione gerarchia...");
+
+    // Raggruppa TL per Manager e Promoter per TL
+    const managerHierarchy = {};
+    managers.forEach(m => managerHierarchy[m.id] = { ...m, teamLeaders: {} });
+    teamLeaders.forEach(tl => {
+      if (tl.managerId && managerHierarchy[tl.managerId]) {
+        managerHierarchy[tl.managerId].teamLeaders[tl.id] = { ...tl, promoters: {} };
+      } // TODO: Gestire TL senza manager?
+    });
+    promoters.forEach(p => {
+      if (p.teamLeaderId) {
+        const tl = usersMap[p.teamLeaderId];
+        const managerId = tl?.managerId;
+        if (managerId && managerHierarchy[managerId]?.teamLeaders[p.teamLeaderId]) {
+          managerHierarchy[managerId].teamLeaders[p.teamLeaderId].promoters[p.id] = { ...p, salesByEvent: {} };
+        }
+      } // TODO: Gestire Promoter senza TL?
+    });
+
+    // Raggruppa vendite per promoter ed evento, calcolando dettagli per tipo biglietto
+    allTickets.forEach(ticket => {
+      const promoterId = ticket.sellerId;
+      const eventId = ticket.eventId;
+      if (!promoterId || !eventId) return;
+
+      let promoterNode = null;
+      Object.values(managerHierarchy).find(mgr => 
+        Object.values(mgr.teamLeaders).find(tl => {
+           if (tl.promoters[promoterId]) {
+               promoterNode = tl.promoters[promoterId];
+               return true; // Trovato
+           }
+           return false;
+        })
+      );
+      if (!promoterNode) return; 
+
+      if (!promoterNode.salesByEvent[eventId]) {
+        promoterNode.salesByEvent[eventId] = {
+          eventName: ticket.eventName || 'N/D',
+          eventDate: formatDate(ticket.eventDate),
+          totalTickets: 0,
+          totalRevenue: 0,
+          ticketTypes: {}
+        };
+      }
+
+      const saleData = promoterNode.salesByEvent[eventId];
+      const quantity = ticket.quantity || 0;
+      const totalPrice = ticket.totalPrice || 0;
+
+      saleData.totalTickets += quantity;
+      saleData.totalRevenue += totalPrice;
+
+      let ticketTypeName = 'N/D';
+      let ticketTypeId = 'standard';
+      if (typeof ticket.ticketType === 'string') {
+          ticketTypeId = ticket.ticketType;
+          ticketTypeName = ticket.ticketType.charAt(0).toUpperCase() + ticket.ticketType.slice(1);
+      } else if (typeof ticket.ticketType === 'object' && ticket.ticketType !== null) {
+          ticketTypeId = ticket.ticketType.id || 'unknown';
+          ticketTypeName = ticket.ticketType.name || ticketTypeId;
+      }
+
+      if (!saleData.ticketTypes[ticketTypeId]) {
+        saleData.ticketTypes[ticketTypeId] = { name: ticketTypeName, quantity: 0, revenue: 0 };
+      }
+      saleData.ticketTypes[ticketTypeId].quantity += quantity;
+      saleData.ticketTypes[ticketTypeId].revenue += totalPrice;
+    });
+
+    console.log("Gerarchia elaborata. Inizio generazione sezioni PDF...");
+
+    // Itera sulla gerarchia per generare il PDF
+    for (const managerId in managerHierarchy) {
+        const manager = managerHierarchy[managerId];
+        if (yPos > 260) { doc.addPage(); yPos = 15; }
+        doc.setFontSize(14); doc.setTextColor(40); 
+        doc.text(`Manager: ${manager.name} (${manager.email || 'N/A'})`, 14, yPos); yPos += 8;
+
+        for (const tlId in manager.teamLeaders) {
+            const teamLeader = manager.teamLeaders[tlId];
+            if (yPos > 265) { doc.addPage(); yPos = 15; }
+            doc.setFontSize(12); doc.setTextColor(60);
+            doc.text(`  Team Leader: ${teamLeader.name} (${teamLeader.email || 'N/A'})`, 14, yPos); yPos += 7;
+
+            for (const pId in teamLeader.promoters) {
+                const promoter = teamLeader.promoters[pId];
+                const promoterTotalTickets = Object.values(promoter.salesByEvent).reduce((sum, ev) => sum + ev.totalTickets, 0);
+                const promoterTotalRevenue = Object.values(promoter.salesByEvent).reduce((sum, ev) => sum + ev.totalRevenue, 0);
+
+                if (yPos > 270) { doc.addPage(); yPos = 15; }
+                doc.setFontSize(11); doc.setTextColor(80);
+                doc.text(`    Promoter: ${promoter.name} (${promoter.email || 'N/A'})`, 14, yPos); yPos += 5;
+                doc.setFontSize(10);
+                doc.text(`      Totali: ${promoterTotalTickets} biglietti / €${promoterTotalRevenue.toFixed(2)}`, 14, yPos); yPos += 7;
+
+                if (Object.keys(promoter.salesByEvent).length > 0) {
+                    const promoterSalesBody = [];
+                    Object.values(promoter.salesByEvent).forEach(event => {
+                       promoterSalesBody.push([
+                          { content: event.eventName, styles: { fontStyle: 'bold'} },
+                          event.eventDate,
+                          { content: event.totalTickets, styles: { halign: 'right' } },
+                          { content: `€${event.totalRevenue.toFixed(2)}`, styles: { halign: 'right' } }
+                       ]);
+                       Object.values(event.ticketTypes).sort((a, b) => b.revenue - a.revenue).forEach(type => {
+                           promoterSalesBody.push([
+                             { content: `  └ ${type.name}`, styles: { cellPadding: {left: 5} } }, 
+                             '', 
+                             { content: type.quantity, styles: { halign: 'right' } },
+                             { content: `€${type.revenue.toFixed(2)}`, styles: { halign: 'right' } }
+                           ]);
+                       });
+                    });
+                    autoTable(doc, {
+                      startY: yPos,
+                      head: [['Evento / Tipo Biglietto', 'Data Evento', 'Quantità', 'Incasso']],
+                      body: promoterSalesBody,
+                      theme: 'striped',
+                      headStyles: { fillColor: [108, 122, 137], fontSize: 9 },
+                      bodyStyles: { fontSize: 8, cellPadding: 1.5 },
+                      columnStyles: { 0: { cellWidth: 'auto' }, 1: { cellWidth: 25 }, 2: { halign: 'right', cellWidth: 20 }, 3: { halign: 'right', cellWidth: 25 } },
+                      margin: { left: 14, right: 14 },
+                      didDrawPage: (data) => { yPos = data.cursor.y; } // Aggiorna yPos su cambio pagina
+                    });
+                    yPos = doc.lastAutoTable.finalY + 10;
+                } else {
+                    doc.setFontSize(9); doc.text("      Nessuna vendita registrata.", 14, yPos); yPos += 6;
+                }
+            } yPos += 5; 
+        } yPos += 8; 
+    }
+
+    // --- 4. Salvataggio/Download ---
+    console.log("Salvataggio PDF...");
+    const now = new Date();
+    const fileName = `Report_Dettagliato_${now.getFullYear()}${(now.getMonth() + 1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}.pdf`;
+    doc.save(fileName);
+    console.log("PDF Salvato.");
+
+  } catch (error) {
+    console.error("Errore generazione PDF:", error);
+    throw error; // Rilancia l'errore per gestirlo nel componente
+  }
+}; 

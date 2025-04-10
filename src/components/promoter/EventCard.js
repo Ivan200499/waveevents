@@ -189,9 +189,7 @@ function EventCard({ event, onSell }) {
                 selected={null}
                 onChange={handleDateSelectFromPicker}
                 includeDates={availableDates}
-                dateFormat="dd/MM/yyyy HH:mm"
-                showTimeSelect
-                timeIntervals={15}
+                dateFormat="dd/MM/yyyy"
                 placeholderText={`Seleziona data (${availableDates.length} opz.)`}
                 locale="it"
                 className="date-picker-input"

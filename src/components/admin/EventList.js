@@ -5,10 +5,10 @@ function EventList({ events, onEdit, onDelete }) {
     <div className="events-grid">
       {events.map(event => (
         <div key={event.id} className="event-card">
-          {/* Aggiungiamo la sezione immagine */}
-          {event.imageUrl && (
+          {/* Aggiungiamo la sezione immagine usando posterImageUrl */}
+          {event.posterImageUrl && (
             <div className="event-image">
-              <img src={event.imageUrl} alt={event.name} />
+              <img src={event.posterImageUrl} alt={event.name} />
             </div>
           )}
           <div className="event-content">
