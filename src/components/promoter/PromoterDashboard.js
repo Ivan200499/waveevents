@@ -13,7 +13,7 @@ function PromoterDashboard() {
   const { currentUser } = useAuth();
   const [stats, setStats] = useState({
     totalTickets: 0,
-    totalRevenue: 0
+    totalCommissions: 0
   });
   const [activeTab, setActiveTab] = useState('dashboard');
   const [events, setEvents] = useState([]);
@@ -47,9 +47,9 @@ function PromoterDashboard() {
         const ticket = doc.data();
         return {
           totalTickets: acc.totalTickets + (ticket.quantity || 0),
-          totalRevenue: acc.totalRevenue + ((ticket.price || 0) * (ticket.quantity || 0))
+          totalCommissions: (acc.totalCommissions || 0) + (ticket.commissionAmount || 0)
         };
-      }, { totalTickets: 0, totalRevenue: 0 });
+      }, { totalTickets: 0, totalCommissions: 0 });
       
       setStats(statistics);
     } catch (error) {
@@ -138,8 +138,8 @@ function PromoterDashboard() {
                   <FaEuroSign />
                 </div>
                 <div className="stat-info">
-                  <h3>Ricavo Totale</h3>
-                  <div className="value">€{stats.totalRevenue.toFixed(2)}</div>
+                  <h3>Commissioni Totali</h3>
+                  <div className="value">€{stats.totalCommissions.toFixed(2)}</div>
                 </div>
               </div>
             </div>

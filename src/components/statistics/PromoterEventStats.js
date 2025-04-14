@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { db } from '../../firebase/config';
 import { collection, query, where, getDocs } from 'firebase/firestore';
+import { useAuthorization } from '../../hooks/useAuthorization';
 
 function PromoterEventStats({ event, teamLeaderId, onClose }) {
+  const { userRole, loading: authLoading } = useAuthorization();
   const [promoterStats, setPromoterStats] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -34,9 +36,9 @@ function PromoterEventStats({ event, teamLeaderId, onClose }) {
             const ticket = doc.data();
             return {
               totalTickets: acc.totalTickets + ticket.quantity,
-              totalRevenue: acc.totalRevenue + ticket.totalPrice
+              totalCommissions: (acc.totalCommissions || 0) + (ticket.commissionAmount || 0)
             };
-          }, { totalTickets: 0, totalRevenue: 0 });
+          }, { totalTickets: 0, totalCommissions: 0 });
 
           stats.push({
             name: promoter.name,
@@ -64,7 +66,7 @@ function PromoterEventStats({ event, teamLeaderId, onClose }) {
           <button className="close-button" onClick={onClose}>&times;</button>
         </div>
 
-        {loading ? (
+        {loading || authLoading ? (
           <div className="loading">Caricamento dettagli...</div>
         ) : (
           <div className="promoter-stats">
@@ -73,8 +75,8 @@ function PromoterEventStats({ event, teamLeaderId, onClose }) {
                 <tr>
                   <th>Promoter</th>
                   <th>Email</th>
-                  <th>Biglietti Venduti</th>
-                  <th>Incasso</th>
+                  {userRole === 'admin' && <th>Biglietti Venduti</th>}
+                  {userRole === 'admin' && <th>Commissioni</th>}
                 </tr>
               </thead>
               <tbody>
@@ -82,8 +84,8 @@ function PromoterEventStats({ event, teamLeaderId, onClose }) {
                   <tr key={index}>
                     <td>{stat.name}</td>
                     <td>{stat.email}</td>
-                    <td>{stat.totalTickets}</td>
-                    <td>€{stat.totalRevenue.toFixed(2)}</td>
+                    {userRole === 'admin' && <td>{stat.totalTickets}</td>}
+                    {userRole === 'admin' && <td>€{(stat.totalCommissions || 0).toFixed(2)}</td>}
                   </tr>
                 ))}
               </tbody>

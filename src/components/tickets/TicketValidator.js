@@ -19,6 +19,7 @@ function TicketValidator() {
   const scannerRef = useRef(null); // Ref per l'istanza dello scanner
   const inputRef = useRef(null); // Ref per l'input manuale
   const messageTimeoutRef = useRef(null); // Ref per il timeout del messaggio
+  const [isScanPaused, setIsScanPaused] = useState(false); // Stato per pausa scansione
 
   useEffect(() => {
     async function checkUserRole() {
@@ -83,11 +84,19 @@ function TicketValidator() {
   
                 html5QrcodeScanner.render(
                     (decodedText) => {
-                        // Non bloccare il thread UI, valida in background
-                        // Aggiungo un piccolo delay per evitare scansioni multiple immediate dello stesso codice
-                        if (!loading) { 
-                          handleValidateTicket(decodedText);
+                        // Se loading è true o la scansione è in pausa, ignora
+                        if (loading || isScanPaused) { 
+                            return; 
                         }
+                        
+                        // Metti in pausa lo scan e valida
+                        setIsScanPaused(true);
+                        handleValidateTicket(decodedText);
+
+                        // Riattiva lo scan dopo 2 secondi
+                        setTimeout(() => {
+                            setIsScanPaused(false);
+                        }, 2000);
                     },
                     (errorMessage) => {
                         // Gestisce errori di scansione, ma non fermare
@@ -116,7 +125,7 @@ function TicketValidator() {
               scannerRef.current = null;
           }
       }
-  }, [scannerActive, loading]); // Aggiungo loading alle dipendenze per evitare scansioni multiple
+  }, [scannerActive, loading, isScanPaused]); // Aggiungi isScanPaused alle dipendenze
 
   // Funzione per mostrare messaggi temporanei
   const showTemporaryMessage = (msg, type = 'info', duration = 4000) => {

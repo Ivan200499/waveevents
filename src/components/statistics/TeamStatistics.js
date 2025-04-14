@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { db } from '../../firebase/config';
 import { collection, query, where, getDocs } from 'firebase/firestore';
+import { useAuthorization } from '../../hooks/useAuthorization';
 
 function TeamStatistics({ teamId, onClose }) {
+  const { userRole, loading: authLoading } = useAuthorization();
   const [statistics, setStatistics] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -36,14 +38,14 @@ function TeamStatistics({ teamId, onClose }) {
         return {
           promoter,
           totalSales: sales.length,
-          totalRevenue: sales.reduce((acc, sale) => acc + sale.totalPrice, 0),
+          totalCommissions: sales.reduce((acc, sale) => acc + (sale.commissionAmount || 0), 0),
           sales
         };
       }));
 
       setStatistics({
         teamTotalSales: promoterStats.reduce((acc, stat) => acc + stat.totalSales, 0),
-        teamTotalRevenue: promoterStats.reduce((acc, stat) => acc + stat.totalRevenue, 0),
+        teamTotalCommissions: promoterStats.reduce((acc, stat) => acc + stat.totalCommissions, 0),
         promoterStats
       });
 
@@ -54,7 +56,7 @@ function TeamStatistics({ teamId, onClose }) {
     }
   }
 
-  if (loading) return <div>Caricamento statistiche...</div>;
+  if (loading || authLoading) return <div>Caricamento statistiche...</div>;
 
   return (
     <div style={{
@@ -88,21 +90,29 @@ function TeamStatistics({ teamId, onClose }) {
 
       <h3>Statistiche del Team</h3>
       <div style={{ marginBottom: '20px' }}>
-        <p>Vendite totali: {statistics.teamTotalSales}</p>
-        <p>Ricavo totale: €{statistics.teamTotalRevenue}</p>
+        {/* {userRole === 'admin' && ( */} 
+          <p>Vendite totali: {statistics.teamTotalSales}</p>
+        {/* )} */} 
+        {userRole === 'admin' && ( // Mostra commissioni totali invece di ricavi
+          <p>Commissioni totali: €{statistics.teamTotalCommissions.toFixed(2)}</p>
+        )}
       </div>
 
       <h4>Statistiche per Promoter</h4>
       <div style={{ display: 'grid', gap: '1rem', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))' }}>
-        {statistics.promoterStats.map(({ promoter, totalSales, totalRevenue }) => (
+        {statistics.promoterStats.map(({ promoter, totalSales, totalCommissions }) => (
           <div key={promoter.id} style={{
             padding: '1rem',
             border: '1px solid #ddd',
             borderRadius: '4px'
           }}>
             <h5>{promoter.name}</h5>
-            <p>Vendite: {totalSales}</p>
-            <p>Ricavo: €{totalRevenue}</p>
+            {/* {userRole === 'admin' && ( */} 
+              <p>Vendite: {totalSales}</p>
+            {/* )} */} 
+            {userRole === 'admin' && ( // Mostra commissioni invece di ricavi
+              <p>Commissioni: €{totalCommissions.toFixed(2)}</p>
+            )}
           </div>
         ))}
       </div>

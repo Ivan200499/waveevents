@@ -13,11 +13,25 @@
 /* Sovrascrivi se necessario o usa classi globali */
 .sell-ticket-modal .modal-header {
   /* Rimosso se usa la struttura globale */
+  /* Aggiungere qui se necessario per dare contesto al pulsante */
+  position: relative; /* Assicura che top/right del pulsante siano relativi all'header */
+  padding: 1rem 1.5rem; /* Padding standard header modale */
+  border-bottom: 1px solid var(--border-color);
 }
 
 .sell-ticket-modal .close-button {
   /* Usa .close-modal-btn da AdminStyles */
+  /* Rimuoviamo le sovrascritture specifiche */
+  /* position: absolute; */
+  /* top: 5px; */
+  /* right: 10px; */
+  /* font-size: 1.6rem; */
+  /* ... eventuali altri stili specifici aggiunti verranno ereditati o rimossi ... */
 }
+
+/* .sell-ticket-modal .close-button:hover {
+    color: var(--error-color); 
+} */
 
 .sell-ticket-modal p strong {
     color: var(--text-light);
@@ -233,6 +247,17 @@
    .sell-form .modal-actions button {
      width: 100%;
    }
+   /* Rimuoviamo anche le regole aggiunte per mobile */
+   /* .close-button {
+     position: absolute;
+     top: 5px;
+     right: 10px;
+     z-index: 10;
+     ...
+   } */
+   /* .close-button:hover {
+       color: var(--error-color);
+   } */
 }
 
 @media (max-width: 480px) {

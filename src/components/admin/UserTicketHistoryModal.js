@@ -125,21 +125,21 @@ function UserTicketHistoryModal({ member, onClose }) {
                 <tbody>
                   {tickets.map((ticket) => (
                     <tr key={ticket.id}>
-                      <td>{ticket.eventName}</td>
-                      <td>{ticket.code}</td>
-                      <td>{ticket.customerName}</td>
-                      <td>
-                        {ticket.ticketType}
+                      <td data-label="Evento">{ticket.eventName}</td>
+                      <td data-label="Codice">{ticket.code}</td>
+                      <td data-label="Cliente">{ticket.customerName}</td>
+                      <td data-label="Tipo">
+                        {typeof ticket.ticketType === 'object' && ticket.ticketType !== null ? ticket.ticketType.name : ticket.ticketType}
                         {ticket.tableInfo && (
                           <span className="table-info-badge" title={`Tavolo: ${ticket.tableInfo.type?.name || 'N/D'}, Posti: ${ticket.tableInfo.seats || ticket.tableInfo.type?.seats || 'N/D'}`}> (Tavolo)</span>
                         )}
                       </td>
-                      <td>{ticket.eventDateFormatted}</td>
-                      <td>{ticket.eventLocation}</td>
-                      <td>{ticket.createdAtFormatted}</td>
-                      <td>{ticket.quantity}</td>
-                      <td>€ {ticket.totalPrice.toFixed(2)}</td>
-                      <td>
+                      <td data-label="Data Evento">{ticket.eventDateFormatted}</td>
+                      <td data-label="Luogo">{ticket.eventLocation}</td>
+                      <td data-label="Data Vendita">{ticket.createdAtFormatted}</td>
+                      <td data-label="Q.tà">{ticket.quantity}</td>
+                      <td data-label="Incasso">€ {ticket.totalPrice.toFixed(2)}</td>
+                      <td data-label="Stato">
                         <span className={`status-badge ${ticket.status}`}>
                            {getStatusIcon(ticket.status)} 
                            {getStatusLabel(ticket.status)}

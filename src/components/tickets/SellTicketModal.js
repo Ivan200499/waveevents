@@ -263,6 +263,21 @@ function SellTicketModal({ event, selectedDateItem, onClose, onSold }) {
     // La quantità venduta è 1 se è un tavolo, altrimenti la quantità selezionata
     const soldQuantity = includeTable ? 1 : parseInt(quantity);
 
+    // --- Recupera la commissione --- 
+    let calculatedCommission = 0;
+    if (!includeTable && selectedTicketTypeId) {
+        const selectedTypeDetails = formData.availableTicketsForDate.find(t => t.id === selectedTicketTypeId);
+        calculatedCommission = parseFloat(selectedTypeDetails?.commission || 0) * parseInt(quantity || 1);
+    } else if (includeTable && selectedTableTypeId) {
+        // Commissione Tavolo (attualmente 0, può essere modificato)
+        const selectedTableDetails = formData.availableTablesForDate.find(t => t.id === selectedTableTypeId);
+        // Potresti avere un campo commission anche per i tavoli:
+        // calculatedCommission = parseFloat(selectedTableDetails?.commission || 0); 
+        calculatedCommission = 0; // <<<< IMPOSTAZIONE ATTUALE: 0 commissione sui tavoli
+    }
+    // Assicurati che sia un numero valido
+    calculatedCommission = isNaN(calculatedCommission) ? 0 : calculatedCommission;
+
     let ticketDataForEmailAndWhatsApp = null; // Variabile per contenere i dati
 
     try {
@@ -375,6 +390,11 @@ function SellTicketModal({ event, selectedDateItem, onClose, onSold }) {
                 totalPrice: totalPrice, // Usa il prezzo calcolato nello stato
                 status: 'sold',
                 soldAt: sellTimestamp,
+                commissionAmount: calculatedCommission,
+                tableInfo: includeTable ? {
+                    typeId: selectedTableTypeId,
+                    name: formData.availableTablesForDate.find(t => t.id === selectedTableTypeId)?.name || 'Tavolo Standard',
+                } : null,
             };
             
             const ticketDocRef = doc(collection(db, 'tickets')); // Genera ref prima

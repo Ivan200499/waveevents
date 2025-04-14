@@ -31,7 +31,7 @@ function ManagerDashboard() {
   const [filteredStats, setFilteredStats] = useState(null);
   const [stats, setStats] = useState({
     totalSales: 0,
-    totalRevenue: 0,
+    totalCommissions: 0,
     teamLeaderCount: 0,
     promoterCount: 0
   });
@@ -159,11 +159,11 @@ function ManagerDashboard() {
                 eventId: ticket.eventId,
                 eventName: ticket.eventName,
                 totalTickets: 0,
-                totalRevenue: 0
+                totalCommissions: 0
               };
             }
             eventStats[ticket.eventId].totalTickets += ticket.quantity;
-            eventStats[ticket.eventId].totalRevenue += ticket.price * ticket.quantity;
+            eventStats[ticket.eventId].totalCommissions += ticket.price * ticket.quantity;
           });
 
           return {
@@ -255,47 +255,84 @@ function ManagerDashboard() {
 
   const fetchStatistics = async () => {
     try {
-      // Genera chiave di cache
-      const cacheKey = 'statistics_' + currentUser.uid;
-      
-      // Verifica se i dati sono in cache
-      const cachedStats = getMemoryCache(cacheKey);
-      if (cachedStats) {
-        console.log('Statistiche recuperate da cache');
-        setStats(cachedStats);
-        return;
-      }
-      
-      // Calcola le statistiche dai dati di eventi e vendite
-      const ticketsRef = collection(db, 'tickets');
-      const q = query(
-        ticketsRef,
-        where('sellerId', '==', currentUser.uid)
+      // 1. Recupera tutti i team leader associati al manager
+      const leadersQuery = query(
+        collection(db, 'users'),
+        where('managerId', '==', currentUser.uid),
+        where('role', '==', 'teamLeader') // Assicurati di avere un indice composto
       );
-      
-      const querySnapshot = await getDocs(q);
-      let totalSales = 0;
-      let totalRevenue = 0;
-      
-      querySnapshot.forEach(doc => {
-        const ticket = doc.data();
-        totalSales += ticket.quantity;
-        totalRevenue += ticket.totalPrice;
+      const teamLeadersSnapshot = await getDocs(leadersQuery);
+      const teamLeaders = teamLeadersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+      // 2. Per ogni team leader, recupera le statistiche del suo team (incluse commissioni)
+      let totalSalesCount = 0;
+      let totalCommissionsSum = 0;
+      let totalPromoterCount = 0;
+
+      for (const leader of teamLeaders) {
+        // Chiama la funzione che recupera le stats per singolo TL, inclusi i promoter
+        // Assumiamo che fetchTeamLeaderStats ora restituisca un oggetto 
+        // con { teamTotalSales, teamTotalCommissions, promoterCount } o simile
+        const leaderStats = await fetchTeamLeaderStatsForSummary(leader.id); // Funzione helper da creare o adattare
+        
+        totalSalesCount += leaderStats.teamTotalSales || 0;
+        totalCommissionsSum += leaderStats.teamTotalCommissions || 0;
+        totalPromoterCount += leaderStats.promoterCount || 0;
+      }
+
+      // 3. Imposta lo stato globale per la dashboard del manager
+      setStats({
+        totalSales: totalSalesCount,
+        totalCommissions: totalCommissionsSum,
+        teamLeaderCount: teamLeaders.length,
+        promoterCount: totalPromoterCount
       });
-      
-      const calculatedStats = {
-        totalSales,
-        totalRevenue,
-        averageTicketPrice: totalSales > 0 ? totalRevenue / totalSales : 0
-      };
-      
-      // Salva in cache e aggiorna lo stato
-      setMemoryCache(cacheKey, calculatedStats, CACHE_DURATION.STATISTICS);
-      setStats(calculatedStats);
+
     } catch (error) {
-      console.error('Errore nel calcolo delle statistiche:', error);
+      console.error("Errore durante il calcolo delle statistiche manager:", error);
+      setError("Impossibile caricare le statistiche aggregate.");
+    } finally {
+      setLoading(false); // Assicurati che loading venga gestito
     }
   };
+
+  // --- Funzione Helper per Statistiche Aggregate Team Leader (da implementare) --- 
+  // Questa funzione è simile a fetchTeamLeaderStats ma restituisce solo i totali
+  async function fetchTeamLeaderStatsForSummary(teamLeaderId) {
+    // Logica simile a fetchPromoterStats in TeamLeaderStats.js
+    // Recupera promoter del team leader
+    const promotersQuery = query(
+      collection(db, 'users'),
+      where('teamLeaderId', '==', teamLeaderId),
+      where('role', '==', 'promoter')
+    );
+    const promotersSnapshot = await getDocs(promotersQuery);
+    const promoterIds = promotersSnapshot.docs.map(doc => doc.id);
+    
+    let teamTotalSales = 0;
+    let teamTotalCommissions = 0;
+
+    if (promoterIds.length > 0) {
+        // Recupera tutti i biglietti venduti dai promoter di questo team
+        const ticketsQuery = query(
+          collection(db, 'tickets'),
+          where('sellerId', 'in', promoterIds)
+        );
+        const ticketsSnapshot = await getDocs(ticketsQuery);
+
+        ticketsSnapshot.forEach(doc => {
+            const ticketData = doc.data();
+            teamTotalSales += ticketData.quantity || 0;
+            teamTotalCommissions += ticketData.commissionAmount || 0;
+        });
+    }
+
+    return {
+      teamTotalSales,
+      teamTotalCommissions,
+      promoterCount: promoterIds.length
+    };
+  }
 
   const handleSellTicket = (event, dateItem) => {
     if (!event || !dateItem) {
@@ -389,8 +426,8 @@ function ManagerDashboard() {
                   <FaEuroSign />
                 </div>
                 <div className="stat-info">
-                  <h3>Incasso Totale (Gerarchia)</h3>
-                  <div className="value">€{stats.totalRevenue.toFixed(2)}</div>
+                  <h3>Commissioni Totali Team</h3>
+                  <div className="value">€{stats.totalCommissions.toFixed(2)}</div>
                 </div>
               </div>
             </div>

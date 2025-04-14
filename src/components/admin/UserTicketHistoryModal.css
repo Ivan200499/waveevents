@@ -18,8 +18,8 @@
     background: var(--card-bg);
     border-radius: var(--border-radius-lg);
     width: 100%;
-    max-width: 900px; /* Larghezza massima modale */
-    max-height: 85vh; /* Altezza massima */
+    max-width: 1100px; /* Aumentata larghezza massima */
+    max-height: 90vh; /* Aumentata leggermente altezza massima */
     overflow: hidden; /* Nasconde overflow generale */
     display: flex;
     flex-direction: column;
@@ -64,38 +64,67 @@
   }
   
   .modal-table-container {
-    overflow-y: auto; /* Scroll solo sulla tabella */
+    overflow-y: auto; /* Scroll verticale se necessario */
+    overflow-x: auto; /* Scroll orizzontale per la tabella */
+    -webkit-overflow-scrolling: touch; /* Scrolling fluido iOS */
     flex-grow: 1; /* Fa espandere la tabella */
-    padding: var(--spacing-lg, 1.5rem);
-    padding-top: var(--spacing-md, 1rem); /* Padding sopra tabella */
+    padding: var(--spacing-md) var(--spacing-lg); /* Aggiustato padding */
   }
   
   /* Riusa stili tabella da TicketHistory.css o definisci qui */
   .modal-table-container .tickets-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 0.9rem; /* Leggermente più piccolo */
+    font-size: 0.9rem;
+    min-width: 700px; /* Larghezza minima prima dello scroll */
+    border: 1px solid var(--border-color); /* Aggiunto bordo tabella */
+    border-radius: var(--border-radius); /* Arrotondamento angoli tabella */
+    overflow: hidden; /* Per far rispettare border-radius */
   }
   
-  .modal-table-container .tickets-table th,
-  .modal-table-container .tickets-table td {
-    padding: var(--spacing-sm, 0.75rem) var(--spacing-md, 1rem);
-    text-align: left;
-    border-bottom: 1px solid var(--border-color);
-    white-space: nowrap; /* Evita wrap testo celle */
-  }
-  
+  /* Miglioramento Visivo Tabella */
   .modal-table-container .tickets-table th {
     background-color: var(--table-header-bg);
-    color: var(--text-light);
+    color: var(--text-accent-color, var(--primary-color)); /* Usa colore accento per header */
     font-weight: 600;
+    text-transform: uppercase; /* Maiuscoletto */
+    letter-spacing: 0.5px; /* Leggera spaziatura lettere */
+    border-bottom: 2px solid var(--primary-color); /* Bordo inferiore più marcato */
     position: sticky; /* Header tabella sticky */
     top: 0;
     z-index: 10;
   }
   
+  .modal-table-container .tickets-table th,
+  .modal-table-container .tickets-table td {
+    padding: var(--spacing-sm, 0.8rem) var(--spacing-md, 1rem); /* Leggermente più padding */
+    text-align: left;
+    vertical-align: middle; /* Allinea verticalmente al centro */
+    border: none; /* Rimuovi tutti i bordi */
+    border-bottom: 1px solid var(--border-color-light, var(--border-color)); /* Solo bordo inferiore leggero */
+    /* white-space: nowrap; */ /* Permetti wrap se necessario */
+  }
+
+  /* Allineamento colonne numeriche (Quantità: 8a colonna, Incasso: 9a colonna) */
+  .modal-table-container .tickets-table td:nth-child(8),
+  .modal-table-container .tickets-table th:nth-child(8),
+  .modal-table-container .tickets-table td:nth-child(9),
+  .modal-table-container .tickets-table th:nth-child(9) {
+    text-align: right;
+  }
+
+  /* Zebra striping */
+  .modal-table-container .tickets-table tbody tr:nth-child(even) {
+      background-color: var(--table-row-stripe, rgba(0, 0, 0, 0.02)); /* Colore leggerissimo per righe pari */
+  }
+  
   .modal-table-container .tickets-table tbody tr:hover {
-    background-color: var(--table-row-hover);
+    background-color: var(--table-row-hover, rgba(var(--primary-color-rgb), 0.1)); /* Hover più evidente */
+  }
+
+  /* Rimuovi bordo inferiore ultima riga */
+  .modal-table-container .tickets-table tbody tr:last-child td {
+    border-bottom: none;
   }
   
   .modal-table-container .status-badge {
@@ -135,12 +164,83 @@
        font-size: 1.3rem;
      }
      .modal-table-container {
-       padding: var(--spacing-md, 1rem);
-       padding-top: var(--spacing-sm, 0.5rem);
+       padding: var(--spacing-md, 1rem) 0; /* Riduci padding laterale container */
+       overflow-x: hidden; /* << RIMOSSO overflow-x: auto; */
      }
-     .modal-table-container .tickets-table th,
+
+     /* Nascondi header tabella originale */
+     .modal-table-container .tickets-table thead {
+        display: none;
+     }
+
+     .modal-table-container .tickets-table,
+     .modal-table-container .tickets-table tbody,
+     .modal-table-container .tickets-table tr,
+     .modal-table-container .tickets-table td {
+        display: block; /* Rendi tutto block level */
+        width: 100% !important;
+        box-sizing: border-box;
+     }
+
+     .modal-table-container .tickets-table {
+       min-width: initial; /* << RIMOSSO min-width */
+       border: none; /* Rimuovi bordo tabella */
+       border-radius: 0;
+     }
+
+     /* Stile per ogni riga come card */
+     .modal-table-container .tickets-table tr {
+        margin-bottom: 1.5rem;
+        border: 1px solid var(--border-color);
+        border-radius: var(--border-radius-md);
+        padding: var(--spacing-md, 1rem);
+        background-color: var(--card-bg-alt, var(--card-bg)); /* Sfondo leggermente diverso se definito */
+     }
+     /* Rimuovi lo striping non necessario in vista card */
+     .modal-table-container .tickets-table tbody tr:nth-child(even) {
+        background-color: inherit;
+     }
+
+     .modal-table-container .tickets-table td {
+       padding: 0.6rem 0; /* Spaziatura verticale celle */
+       text-align: right; /* Allinea valore a destra */
+       border-bottom: 1px dashed var(--border-color-light); /* Separatore leggero tra dati */
+       position: relative; /* Necessario per ::before */
+       min-height: 1.5em; /* Altezza minima per celle vuote */
+     }
+     .modal-table-container .tickets-table td:last-child {
+        border-bottom: none; /* Rimuovi ultimo separatore */
+     }
+
+     /* Aggiungi etichetta (dal data-label) prima del dato */
+     .modal-table-container .tickets-table td::before {
+        content: attr(data-label); /* Prende etichetta da data-label */
+        position: absolute;
+        left: 0;
+        width: 45%; /* Larghezza etichetta */
+        padding-right: 10px;
+        font-weight: 600;
+        text-align: left;
+        white-space: nowrap;
+        color: var(--text-light); /* Colore etichetta più tenue */
+     }
+
+     /* Allineamento specifico per status badge */
+     .modal-table-container .tickets-table td[data-label="Stato"] {
+        padding-top: 0.8rem; /* Più spazio per badge */
+        padding-bottom: 0.2rem;
+     }
+      .modal-table-container .tickets-table td[data-label="Stato"] .status-badge {
+         float: right; /* Allinea badge a destra */
+      }
+
+     /* Vecchi stili mobile non più necessari */
+     /* .modal-table-container .tickets-table th,
      .modal-table-container .tickets-table td {
        padding: var(--spacing-xs, 0.5rem) var(--spacing-sm, 0.75rem);
        font-size: 0.85rem;
-     }
+     } */
+     /* .modal-table-container .tickets-table {
+       min-width: 600px;
+     } */
   }

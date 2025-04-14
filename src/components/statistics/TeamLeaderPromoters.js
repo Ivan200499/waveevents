@@ -46,7 +46,9 @@ function PromoterCard({ promoter, salesData }) {
             return (
               <div key={eventId} className="event-sale-item">
                 <div className="event-summary-header" onClick={() => hasTicketDetails && toggleEventExpansion(eventId)} style={{ cursor: hasTicketDetails ? 'pointer' : 'default' }}>
-                  <span className="event-name">{eventData.eventName}</span>
+                  <span className="event-name">
+                    {typeof eventData.eventName === 'string' ? eventData.eventName : 'Nome Evento Invalido'}
+                  </span>
                   <div className="event-totals">
                     <span className="event-tickets">{eventData.totalTickets} T</span>
                     <span className="event-revenue">€{eventData.totalRevenue.toFixed(2)}</span>
@@ -69,7 +71,9 @@ function PromoterCard({ promoter, salesData }) {
                       .sort(([, a], [, b]) => b.revenue - a.revenue)
                       .map(([typeId, typeData]) => (
                       <div key={typeId} className="type-sale-row">
-                        <span className="type-name">{typeData.name}</span>
+                        <span className="type-name">
+                           {(typeData && typeof typeData.name === 'string') ? typeData.name : (typeId || 'Sconosciuto')}
+                        </span>
                         <span className="type-quantity">{typeData.quantity}</span>
                         <span className="type-revenue">€{typeData.revenue.toFixed(2)}</span>
                       </div>

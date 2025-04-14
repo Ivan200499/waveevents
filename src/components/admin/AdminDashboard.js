@@ -266,8 +266,8 @@ function AdminDashboard() {
               </select>
             </div>
 
-            <div className="table-container">
-              <table className="table">
+            <div className="table-responsive-wrapper">
+              <table className="users-table">
                 <thead>
                   <tr>
                     <th>Nome</th>

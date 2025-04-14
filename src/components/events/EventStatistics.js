@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react';
 import { db } from '../../firebase/config';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import './EventStatistics.css';
+import { useAuthorization } from '../../hooks/useAuthorization';
 
 function EventStatistics({ event, onClose }) {
+  const { userRole, loading: authLoading } = useAuthorization();
   const [promoterStats, setPromoterStats] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -33,12 +35,12 @@ function EventStatistics({ event, onClose }) {
               name: promoterData.name || 'N/A',
               email: promoterData.email || 'N/A',
               totalTickets: 0,
-              totalRevenue: 0
+              totalCommissions: 0
             };
           }
           
           promoterSales[ticket.sellerId].totalTickets += ticket.quantity;
-          promoterSales[ticket.sellerId].totalRevenue += ticket.totalPrice;
+          promoterSales[ticket.sellerId].totalCommissions += ticket.commissionAmount || 0;
         }
 
         setPromoterStats(Object.values(promoterSales));
@@ -60,7 +62,7 @@ function EventStatistics({ event, onClose }) {
           <button className="close-button" onClick={onClose}>&times;</button>
         </div>
 
-        {loading ? (
+        {loading || authLoading ? (
           <div className="loading">Caricamento statistiche...</div>
         ) : (
           <div className="statistics-content">
@@ -68,7 +70,7 @@ function EventStatistics({ event, onClose }) {
               <p><strong>Data:</strong> {new Date(event.date).toLocaleDateString()}</p>
               <p><strong>Luogo:</strong> {event.location}</p>
               <p><strong>Prezzo:</strong> €{event.price}</p>
-              <p><strong>Biglietti Venduti:</strong> {event.soldTickets || 0}</p>
+              {/* {userRole === 'admin' && */} <p><strong>Biglietti Venduti:</strong> {event.soldTickets || 0}</p> {/* } */}
               <p><strong>Biglietti Disponibili:</strong> {event.availableTickets}</p>
             </div>
 
@@ -80,8 +82,8 @@ function EventStatistics({ event, onClose }) {
                     <tr>
                       <th>Promoter</th>
                       <th>Email</th>
-                      <th>Biglietti Venduti</th>
-                      <th>Incasso Totale</th>
+                      {/* {userRole === 'admin' && */} <th>Biglietti Venduti</th> {/* } */}
+                      {userRole === 'admin' && <th>Commissioni Totali</th>} {/* Sostituisci Incasso */}
                     </tr>
                   </thead>
                   <tbody>
@@ -89,8 +91,8 @@ function EventStatistics({ event, onClose }) {
                       <tr key={index}>
                         <td>{stat.name}</td>
                         <td>{stat.email}</td>
-                        <td>{stat.totalTickets}</td>
-                        <td>€{stat.totalRevenue.toFixed(2)}</td>
+                        {/* {userRole === 'admin' && */} <td>{stat.totalTickets}</td> {/* } */}
+                        {userRole === 'admin' && <td>€{(stat.totalCommissions || 0).toFixed(2)}</td>} {/* Mostra commissioni */}
                       </tr>
                     ))}
                   </tbody>

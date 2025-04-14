@@ -547,4 +547,35 @@
   transition: background-color var(--transition-speed) ease,
               border-color var(--transition-speed) ease,
               transform var(--transition-speed) ease;
-} 
+}
+
+/* Wrapper per rendere la tabella scorrevole su mobile */
+.table-responsive-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch; /* Per uno scrolling più fluido su iOS */
+}
+
+/* Assicura che la tabella occupi almeno la larghezza necessaria per il suo contenuto */
+.users-table {
+  width: 100%; /* Fa sì che la tabella tenti di occupare lo spazio disponibile */
+  min-width: 800px; /* Imposta una larghezza minima, adattala se necessario per vedere tutte le colonne senza stringere troppo */
+  /* Considera white-space: nowrap; per le celle se il contenuto va a capo indesideratamente */
+  /* td,
+  th {
+    white-space: nowrap;
+  } */
+}
+
+/* Stili specifici per mobile potrebbero non essere più necessari per le azioni 
+   se lo scorrimento orizzontale risolve il problema, ma li lascio commentati 
+   come riferimento se servissero aggiustamenti ulteriori 
+@media (max-width: 768px) {
+  .users-table td.actions {
+    min-width: 120px; // Esempio: assicura larghezza minima per contenere i pulsanti
+  }
+  .users-table .action-button {
+     padding: 0.3rem 0.5rem; // Riduci padding su mobile
+     font-size: 0.8rem; // Riduci dimensione font
+  } 
+}*/ 

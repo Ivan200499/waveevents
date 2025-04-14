@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react';
 import { db } from '../../firebase/config';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import './Stats.css';
+import { useAuthorization } from '../../hooks/useAuthorization';
 
 function PromoterStats({ promoterId }) {
+  const { userRole, loading: authLoading } = useAuthorization();
   const [stats, setStats] = useState({
     totalTickets: 0,
     totalRevenue: 0,
@@ -34,7 +36,7 @@ function PromoterStats({ promoterId }) {
         const ticket = doc.data();
         totalTickets++;
         totalRevenue += ticket.price;
-        totalCommissions += ticket.commission;
+        totalCommissions += ticket.commissionAmount || 0;
         recentSales.push({
           id: doc.id,
           ...ticket,
@@ -55,19 +57,24 @@ function PromoterStats({ promoterId }) {
     }
   }
 
-  if (loading) return <div>Caricamento statistiche...</div>;
+  if (loading || authLoading) return <div>Caricamento statistiche...</div>;
 
   return (
     <div className="stats-container">
       <div className="stats-summary">
-        <div className="stat-card">
-          <h3>Biglietti Venduti</h3>
-          <p className="stat-value">{stats.totalTickets}</p>
-        </div>
-        <div className="stat-card">
-          <h3>Ricavo Totale</h3>
-          <p className="stat-value">€{stats.totalRevenue.toFixed(2)}</p>
-        </div>
+        {/* {userRole === 'admin' && ( */} 
+          <div className="stat-card">
+            <h3>Biglietti Venduti</h3>
+            <p className="stat-value">{stats.totalTickets}</p>
+          </div>
+        {/* )} */} 
+        {/* Rimuoviamo la card Ricavo Totale - le commissioni sono già mostrate sotto */}
+        {/* {userRole === 'admin' && ( 
+          <div className="stat-card">
+            <h3>Ricavo Totale</h3>
+            <p className="stat-value">€{stats.totalRevenue.toFixed(2)}</p>
+          </div>
+        )} */}
         <div className="stat-card">
           <h3>Commissioni Totali</h3>
           <p className="stat-value">€{stats.totalCommissions.toFixed(2)}</p>
@@ -91,7 +98,7 @@ function PromoterStats({ promoterId }) {
                 <td>{sale.date}</td>
                 <td>{sale.eventName}</td>
                 <td>€{sale.price}</td>
-                <td>€{sale.commission}</td>
+                <td>€{(sale.commissionAmount || 0).toFixed(2)}</td>
               </tr>
             ))}
           </tbody>

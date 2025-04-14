@@ -20,9 +20,9 @@ function TeamLeaderDashboard() {
   const [error, setError] = useState(null);
   const [stats, setStats] = useState({
     totalSales: 0,
-    totalRevenue: 0,
-    averageTicketPrice: 0,
-    promoterSales: 0
+    totalCommissions: 0,
+    promoterSales: 0,
+    promoterCommissions: 0
   });
   const [activeTab, setActiveTab] = useState('dashboard');
   const [promoters, setPromoters] = useState([]);
@@ -69,18 +69,18 @@ function TeamLeaderDashboard() {
       );
       const leaderSnapshot = await getDocs(leaderTicketsQuery);
       let leaderSales = 0;
-      let leaderRevenue = 0;
+      let leaderCommissions = 0;
       leaderSnapshot.forEach(doc => {
         const ticket = doc.data();
         leaderSales += ticket.quantity || 0;
-        leaderRevenue += ticket.totalPrice || 0;
+        leaderCommissions += ticket.commissionAmount || 0;
       });
 
       const promotersSnapshot = await getDocs(query(collection(db, 'users'), where('teamLeaderId', '==', currentUser.uid)));
       const promoterIds = promotersSnapshot.docs.map(doc => doc.id);
 
       let teamSales = 0;
-      let teamRevenue = 0;
+      let teamCommissions = 0;
       if (promoterIds.length > 0) {
         const teamTicketsQuery = query(
           collection(db, 'tickets'),
@@ -90,14 +90,15 @@ function TeamLeaderDashboard() {
         teamSnapshot.forEach(doc => {
           const ticket = doc.data();
           teamSales += ticket.quantity || 0;
-          teamRevenue += ticket.totalPrice || 0;
+          teamCommissions += ticket.commissionAmount || 0;
         });
       }
 
       setStats({
         totalSales: leaderSales + teamSales,
-        totalRevenue: leaderRevenue + teamRevenue,
+        totalCommissions: leaderCommissions + teamCommissions,
         promoterSales: teamSales,
+        promoterCommissions: teamCommissions
       });
     } catch (error) {
       console.error('Errore nel recupero delle statistiche TL:', error);
@@ -127,19 +128,19 @@ function TeamLeaderDashboard() {
         
         const ticketsSnapshot = await getDocs(promoterTicketsQuery);
         let totalSales = 0;
-        let totalRevenue = 0;
+        let totalCommissions = 0;
         
         ticketsSnapshot.forEach(ticketDoc => {
           const ticket = ticketDoc.data();
           totalSales += ticket.quantity || 0;
-          totalRevenue += ticket.totalPrice || 0;
+          totalCommissions += ticket.commissionAmount || 0;
         });
 
         return {
           id: doc.id,
           ...promoterData,
           totalSales,
-          totalRevenue
+          totalCommissions
         };
       }));
       
@@ -231,8 +232,8 @@ function TeamLeaderDashboard() {
               <div className="stat-card">
                 <FaEuroSign />
                 <div>
-                  <h3>Incasso Totale (Team)</h3>
-                  <p>€ {stats.totalRevenue.toFixed(2)}</p>
+                  <h3>Commissioni Totali (Team)</h3>
+                  <p>€ {stats.totalCommissions.toFixed(2)}</p>
                 </div>
               </div>
               <div className="stat-card">
@@ -290,8 +291,8 @@ function TeamLeaderDashboard() {
                       <div className="stat-value">{promoter.totalSales}</div>
                     </div>
                     <div className="stat-item">
-                      <div className="stat-label">Ricavi Totali</div>
-                      <div className="stat-value">€{promoter.totalRevenue.toFixed(2)}</div>
+                      <div className="stat-label">Commissioni Totali</div>
+                      <div className="stat-value">€{promoter.totalCommissions.toFixed(2)}</div>
                     </div>
                   </div>
                 </div>

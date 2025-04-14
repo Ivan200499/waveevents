@@ -115,7 +115,7 @@ function CreateEventModal({ onClose, onEventCreated }) {
             updatedTicketTypes = dateItem.ticketTypes.filter(t => t.id !== ticketType.id);
           } else {
             // Aggiungi con valori default/vuoti
-            updatedTicketTypes = [...dateItem.ticketTypes, { ...ticketType, price: '', quantity: '' }];
+            updatedTicketTypes = [...dateItem.ticketTypes, { ...ticketType, price: '', quantity: '', commission: '' }];
           }
           return { ...dateItem, ticketTypes: updatedTicketTypes };
         }
@@ -124,7 +124,7 @@ function CreateEventModal({ onClose, onEventCreated }) {
     }));
   };
 
-  // Aggiorna un campo (prezzo/quantità) di un biglietto per una data specifica
+  // Aggiorna un campo (prezzo/quantità/commissione) di un biglietto per una data specifica
   const handleTicketChangeForDate = (dateIndex, ticketId, field, value) => {
      // Assicurati che il valore sia numerico o vuoto
      const numericValue = value === '' ? '' : Number(value);
@@ -227,8 +227,8 @@ const handleTableChangeForDate = (dateIndex, tableId, field, value) => {
         }
         // Validazione biglietti per data
         for (const ticket of dateItem.ticketTypes) {
-            if (ticket.price === '' || ticket.quantity === '' || ticket.price < 0 || ticket.quantity <= 0) {
-                setError('Inserisci prezzo (>0) e quantità (>0) validi per il biglietto "' + ticket.name + '" nella data ' + new Date(dateItem.date).toLocaleDateString() + '.');
+            if (ticket.price === '' || ticket.quantity === '' || ticket.commission === '' || ticket.price < 0 || ticket.quantity <= 0 || ticket.commission < 0) {
+                setError('Inserisci prezzo (>0), quantità (>0) e commissione (>=0) validi per il biglietto "' + ticket.name + '" nella data ' + new Date(dateItem.date).toLocaleDateString() + '.');
                 setLoading(false);
                 return;
             }
@@ -273,9 +273,9 @@ const handleTableChangeForDate = (dateIndex, tableId, field, value) => {
         posterImageUrl: finalPosterImageUrl,
         eventDates: formData.eventDates.map(d => ({
           date: d.date,
-          ticketTypes: d.ticketTypes.map(t => ({ id: t.id, name: t.name, price: t.price, quantity: t.quantity })),
+          ticketTypes: d.ticketTypes.map(t => ({ id: t.id, name: t.name, price: parseFloat(t.price || 0), quantity: parseInt(t.quantity || 0), commission: parseFloat(t.commission || 0) })),
           hasTablesForDate: d.hasTablesForDate,
-          tableTypes: d.tableTypes.map(tb => ({ id: tb.id, name: tb.name, price: tb.price, seats: tb.seats, quantity: tb.quantity }))
+          tableTypes: d.tableTypes.map(tb => ({ id: tb.id, name: tb.name, price: parseFloat(tb.price || 0), seats: parseInt(tb.seats || 0), quantity: parseInt(tb.quantity || 0) }))
         })),
         status: 'active',
         createdAt: new Date().toISOString(),
@@ -388,6 +388,19 @@ const handleTableChangeForDate = (dateIndex, tableId, field, value) => {
                             required
                           />
                         </div>
+                            <div className="form-group inline">
+                              <label htmlFor={`ticket-commission-${index}-${ticketType.id}`}>Comm.:</label>
+                              <input
+                                type="number"
+                                id={`ticket-commission-${index}-${ticketType.id}`}
+                                value={currentTicket?.commission ?? ''}
+                                onChange={(e) => handleTicketChangeForDate(index, ticketType.id, 'commission', e.target.value)}
+                                placeholder="0.00"
+                                step="0.01"
+                                min="0"
+                                required
+                              />
+                            </div>
                             <div className="form-group inline">
                               <label htmlFor={`ticket-quantity-${index}-${ticketType.id}`}>Quantità:</label>
                           <input

@@ -4,8 +4,11 @@ import { collection, getDocs, query, where } from 'firebase/firestore';
 import './TeamOverview.css'; // Creeremo questo file CSS
 import { FaUserTie, FaUserShield, FaUserTag, FaTicketAlt, FaEuroSign } from 'react-icons/fa';
 import UserTicketHistoryModal from './UserTicketHistoryModal'; // Importa il nuovo componente modale
+import { useAuthorization } from '../../hooks/useAuthorization'; // Importa useAuthorization
 
 function TeamOverview() {
+  // const { currentUser } = useAuth(); // Rimuovi currentUser da useAuth
+  const { userRole, loading: authLoading } = useAuthorization(); // Usa useAuthorization
   const [teamMembers, setTeamMembers] = useState([]);
   const [soldTickets, setSoldTickets] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -65,7 +68,7 @@ function TeamOverview() {
       if (typeof sellerId !== 'string' || !sellerId) return acc; 
 
       if (!acc[sellerId]) {
-        acc[sellerId] = { totalTicketsSold: 0, totalRevenue: 0 };
+        acc[sellerId] = { totalTicketsSold: 0, totalRevenue: 0, totalCommissions: 0 };
       }
       // Usa quantity se presente e numerico, altrimenti 1
       const quantity = typeof ticket.quantity === 'number' && ticket.quantity > 0 ? ticket.quantity : 1;
@@ -74,12 +77,13 @@ function TeamOverview() {
 
       acc[sellerId].totalTicketsSold += quantity; 
       acc[sellerId].totalRevenue += price; 
+      acc[sellerId].totalCommissions += ticket.commissionAmount || 0;
       return acc;
     }, {});
 
     // Arricchisci i dati degli utenti con statistiche e assegnazioni
     const enrichedMembers = teamMembers.map(member => {
-      const stats = salesStats[member.id] || { totalTicketsSold: 0, totalRevenue: 0 };
+      const stats = salesStats[member.id] || { totalTicketsSold: 0, totalRevenue: 0, totalCommissions: 0 };
       let assignedToName = 'N/A';
       let roleLabel = member.role; // Default label
 
@@ -99,6 +103,7 @@ function TeamOverview() {
         ...member,
         totalTicketsSold: stats.totalTicketsSold,
         totalRevenue: stats.totalRevenue,
+        totalCommissions: stats.totalCommissions,
         assignedToName,
         roleLabel // Usa etichetta più leggibile
       };
@@ -149,19 +154,25 @@ function TeamOverview() {
         </div>
       </div>
       <div className="member-stats">
-        <div className="stat-item" title={`${member.totalTicketsSold} biglietti venduti`}>
-          <FaTicketAlt /> 
-          <span>{member.totalTicketsSold}</span>
-        </div>
-        <div className="stat-item" title={`€ ${member.totalRevenue.toFixed(2)} incasso totale`}>
-          <FaEuroSign />
-          <span>{member.totalRevenue.toFixed(2)}</span>
-        </div>
+        {/* {userRole === 'admin' && ( */} 
+          <div className="stat-item" title={`${member.totalTicketsSold} biglietti venduti`}>
+            <FaTicketAlt /> 
+            <span>{member.totalTicketsSold}</span>
+          </div>
+        {/* )} */} 
+        {/* Mostra Commissioni (solo admin) */} 
+        {userRole === 'admin' && (
+          <div className="stat-item" title={`€ ${member.totalCommissions.toFixed(2)} commissioni totali`}>
+             {/* Icona Commissioni? Potremmo usare FaHandHoldingUsd o altro */}
+             <FaEuroSign /> {/* Ricicliamo icona Euro per ora */}
+             <span>{member.totalCommissions.toFixed(2)}</span>
+           </div>
+        )}
       </div>
     </div>
   );
 
-  if (loading) {
+  if (loading || authLoading) { // Considera authLoading
     return <div className="loading-container"><div className="loading-spinner"></div> Caricamento panoramica team...</div>;
   }
 
