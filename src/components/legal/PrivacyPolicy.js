@@ -13,7 +13,7 @@ function PrivacyPolicy() {
 
         <div className="legal-body">
           <section>
-            <p>La presente Informativa sulla privacy descrive come Wave Events (il "Sito", "noi", "ci" o "nostro") raccoglie, utilizza e divulga le tue informazioni personali quando visiti, utilizzi i nostri servizi o effettui un acquisto da Bonaeventsmalta.com (il "Sito") o comunichi in altro modo con noi in merito al Sito (collettivamente, i "Servizi"). Ai fini della presente Informativa sulla privacy, "tu" e "tuo" indicano te come utente dei Servizi, che tu sia un cliente, un visitatore del sito web o un altro individuo di cui abbiamo raccolto le informazioni ai sensi della presente Informativa sulla privacy.</p>
+            <p>La presente Informativa sulla privacy descrive come Wave Events (il "Sito", "noi", "ci" o "nostro") raccoglie, utilizza e divulga le tue informazioni personali quando visiti, utilizzi i nostri servizi o effettui un acquisto da Waveeventsmalta.com (il "Sito") o comunichi in altro modo con noi in merito al Sito (collettivamente, i "Servizi"). Ai fini della presente Informativa sulla privacy, "tu" e "tuo" indicano te come utente dei Servizi, che tu sia un cliente, un visitatore del sito web o un altro individuo di cui abbiamo raccolto le informazioni ai sensi della presente Informativa sulla privacy.</p>
             <p>Si prega di leggere attentamente la presente Informativa sulla privacy.</p>
           </section>
 

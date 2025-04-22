@@ -129,7 +129,11 @@ function UserTicketHistoryModal({ member, onClose }) {
                       <td data-label="Codice">{ticket.code}</td>
                       <td data-label="Cliente">{ticket.customerName}</td>
                       <td data-label="Tipo">
-                        {typeof ticket.ticketType === 'object' && ticket.ticketType !== null ? ticket.ticketType.name : ticket.ticketType}
+                        {ticket.ticketType ? 
+                          (typeof ticket.ticketType === 'object' && ticket.ticketType !== null ? 
+                            (ticket.ticketType.name || 'Standard') : 
+                            ticket.ticketType) 
+                          : 'Standard'}
                         {ticket.tableInfo && (
                           <span className="table-info-badge" title={`Tavolo: ${ticket.tableInfo.type?.name || 'N/D'}, Posti: ${ticket.tableInfo.seats || ticket.tableInfo.type?.seats || 'N/D'}`}> (Tavolo)</span>
                         )}
