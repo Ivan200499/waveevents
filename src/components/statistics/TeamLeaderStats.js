@@ -19,7 +19,7 @@ function TeamLeaderStats({ teamLeader, onClose }) {
 
   useEffect(() => {
     if (teamLeader?.id) {
-        fetchTeamLeaderStats();
+    fetchTeamLeaderStats();
     }
   }, [teamLeader?.id]);
 
@@ -44,16 +44,16 @@ function TeamLeaderStats({ teamLeader, onClose }) {
 
       if (promoterIds.length > 0) {
         // 2. Recupera TUTTE le vendite dei promoter del team
-        const salesQuery = query(
+      const salesQuery = query(
           collection(db, 'tickets'),
           where('sellerId', 'in', promoterIds)
         );
-        const salesSnapshot = await getDocs(salesQuery);
+      const salesSnapshot = await getDocs(salesQuery);
         allSalesRaw = salesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })); // Popoliamo allSalesRaw
 
         // 3. Processa le vendite per calcolare statistiche aggregate E dettagli per promoter
         allSalesRaw.forEach(sale => {
-          const eventId = sale.eventId;
+        const eventId = sale.eventId;
           const promoterId = sale.sellerId;
           const ticketTypeRaw = sale.ticketType; // Valore grezzo
           const quantity = sale.quantity || 0;
@@ -80,7 +80,7 @@ function TeamLeaderStats({ teamLeader, onClose }) {
           // Inizializza/Aggiorna statistiche aggregate per evento
           if (!eventStatsMap[eventId]) {
             eventStatsMap[eventId] = {
-              eventId,
+            eventId,
               eventName: sale.eventName || 'Evento Sconosciuto',
               totalTickets: 0,
               totalRevenue: 0,
@@ -109,8 +109,8 @@ function TeamLeaderStats({ teamLeader, onClose }) {
           if (!promoterSalesDetails[promoterId].eventSales[eventId]) {
              promoterSalesDetails[promoterId].eventSales[eventId] = {
                 eventName: sale.eventName || 'Evento Sconosciuto',
-                totalTickets: 0,
-                totalRevenue: 0,
+            totalTickets: 0,
+            totalRevenue: 0,
                 ticketTypeSales: {}
             };
           }
@@ -187,15 +187,15 @@ function TeamLeaderStats({ teamLeader, onClose }) {
                 <h4>Vendite per Evento</h4>
                 {stats.eventStats && stats.eventStats.length > 0 ? (
                     stats.eventStats.map(event => (
-                      <div key={event.eventId} className="event-stat-card">
-                        <div className="event-stat-header">
-                          <h5>{event.eventName}</h5>
-                          <div className="event-totals">
-                            <span>{event.totalTickets} biglietti</span>
-                            <span>€{event.totalRevenue.toFixed(2)}</span>
-                          </div>
-                        </div>
+                  <div key={event.eventId} className="event-stat-card">
+                    <div className="event-stat-header">
+                      <h5>{event.eventName}</h5>
+                      <div className="event-totals">
+                        <span>{event.totalTickets} biglietti</span>
+                        <span>€{event.totalRevenue.toFixed(2)}</span>
                       </div>
+                    </div>
+                  </div>
                     ))
                 ) : (
                     <p className="no-data-inline">Nessuna vendita per evento.</p>
@@ -206,12 +206,12 @@ function TeamLeaderStats({ teamLeader, onClose }) {
                 <h4>Ultime vendite</h4>
                 {recentSalesToShow.length > 0 ? (
                     recentSalesToShow.map(sale => (
-                      <div key={sale.id} className="sale-row">
+                  <div key={sale.id} className="sale-row">
                         <span>{sale.createdAt ? new Date(sale.createdAt.seconds * 1000).toLocaleDateString() : 'Data N/D'}</span>
                         <span>{sale.eventName || 'Evento N/D'}</span>
                         <span>{sale.quantity || 0} biglietti</span>
                         <span>€{sale.totalPrice?.toFixed(2) || '0.00'}</span>
-                      </div>
+                  </div>
                     ))
                 ) : (
                     <p className="no-data-inline">Nessuna vendita recente.</p>
