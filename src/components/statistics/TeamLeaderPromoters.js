@@ -123,10 +123,10 @@ function TeamLeaderPromoters({ promoters, salesDetails }) {
             promoter={promoter} 
             salesData={salesDetails ? salesDetails[promoter.id] : null}
           />
-        ))
+          ))
       )}
     </div>
   );
 }
 
-export default TeamLeaderPromoters;
+export default TeamLeaderPromoters; 

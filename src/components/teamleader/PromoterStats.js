@@ -59,12 +59,12 @@ function PromoterStats({ promoter, onClose }) {
       } catch (error) {
         console.error('Errore nel recupero delle statistiche:', error);
       } finally {
-         setLoading(false);
+        setLoading(false);
       }
     }
 
     if (promoter?.uid) {
-        fetchPromoterStats();
+    fetchPromoterStats();
     }
   }, [promoter?.uid]);
 
