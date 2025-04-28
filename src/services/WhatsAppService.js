@@ -63,6 +63,46 @@ const formatPhoneForWhatsApp = (phoneNumber) => {
 };
 
 /**
+ * Formatta una data per la visualizzazione
+ * @param {Object|string|Date} dateValue - Data da formattare (può essere un timestamp Firestore, una stringa o un oggetto Date)
+ * @returns {string} - Data formattata
+ */
+const formatDate = (dateValue) => {
+  if (!dateValue) return 'Data non disponibile';
+  
+  try {
+    let date;
+    
+    // Gestisci diversi formati di data
+    if (typeof dateValue === 'object' && dateValue.seconds) {
+      // Timestamp Firestore
+      date = new Date(dateValue.seconds * 1000);
+    } else if (typeof dateValue === 'string') {
+      // Stringa di data
+      date = new Date(dateValue);
+    } else if (dateValue instanceof Date) {
+      // Già un oggetto Date
+      date = dateValue;
+    } else {
+      return 'Data non valida';
+    }
+    
+    // Verifica se la data è valida
+    if (isNaN(date.getTime())) return 'Data non valida';
+    
+    // Formatta la data in italiano
+    return date.toLocaleDateString('it-IT', { 
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+  } catch (error) {
+    console.error('Errore nella formattazione della data:', error);
+    return 'Data non disponibile';
+  }
+};
+
+/**
  * Invia un biglietto tramite WhatsApp
  * @param {Object} ticket - Oggetto con i dati del biglietto
  * @param {string} phoneNumber - Numero di telefono del destinatario

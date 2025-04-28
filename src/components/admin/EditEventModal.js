@@ -11,7 +11,7 @@ const TICKET_TYPES = [
   { id: 'vip', name: 'VIP', description: 'Accesso a area VIP' },
   { id: 'backstage', name: 'Backstage', description: 'Include accesso backstage' },
   { id: 'early_bird', name: 'Early Bird', description: 'Prezzo scontato prevendita' },
-  { id: 'student', name: 'Studenti', description: 'Sconto per studenti' },
+  { id: 'student', name: 'VIP Early birds', description: 'Accesso anticipato area VIP' },
   { id: 'group', name: 'Gruppo', description: 'Per gruppi di 5+ persone' }
 ];
 

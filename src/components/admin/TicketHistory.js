@@ -430,30 +430,51 @@ function TicketHistory() {
                         <span>{getStatusLabel(ticket.status)}</span>
                       </div>
                     </td>
-                    <td>
-                      <div className="actions inline-actions">
-                        {ticket.status === 'active' && (
-                          <button 
-                            className="btn-action disable small btn-action-disable"
-                            onClick={() => handleDisableTicket(ticket.id)}
-                            disabled={cancellingTicket}
-                            title="Disabilita biglietto"
-                          >
-                            <FaBan />
-                          </button>
-                        )}
-                        
-                        {ticket.status === 'disabled' && (
-                          <button 
-                            className="btn-action enable small btn-action-enable"
-                            onClick={() => handleEnableTicket(ticket.id)}
-                            disabled={cancellingTicket}
-                            title="Abilita biglietto"
-                          >
-                            <FaCheckCircle />
-                          </button>
-                        )}
-                      </div>
+                    <td className="ticket-actions">
+                      {/* View Details Button */}
+                      <button 
+                        onClick={() => handleViewDetails(ticket)} 
+                        className="action-btn details-btn"
+                        title="Vedi Dettagli"
+                      >
+                        <FaInfoCircle />
+                      </button>
+
+                      {/* Enable/Disable Buttons - Updated Logic */}
+                      {/* Show Enable only if disabled */}
+                      {ticket.status === 'disabled' && (
+                        <button 
+                          onClick={() => handleEnableTicket(ticket.id)} 
+                          className="action-btn enable-btn"
+                          disabled={cancellingTicket}
+                          title="Riabilita (Imposta ad Attivo)" 
+                        >
+                          <FaUndo />
+                        </button>
+                      )}
+
+                      {/* Show Disable if not already disabled, validated or cancelled */}
+                      {(ticket.status === 'active' || ticket.status === 'sold') && (
+                        <button 
+                          onClick={() => handleDisableTicket(ticket.id)} 
+                          className="action-btn disable-btn"
+                          disabled={cancellingTicket}
+                          title="Disabilita (Impedisce la validazione)" 
+                        >
+                          <FaBan />
+                        </button>
+                      )}
+                      
+                      {/* WhatsApp Share Button */}
+                      {(ticket.status === 'active' || ticket.status === 'sold') && (
+                        <button 
+                          onClick={() => handleShareWhatsApp(ticket)} 
+                          className="action-btn whatsapp-btn"
+                          title="Condividi su WhatsApp"
+                        >
+                          <FaWhatsapp />
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
