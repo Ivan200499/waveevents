@@ -10,6 +10,15 @@ import './SellTicketModal.css';
 import { generateTicketCode } from '../../utils/ticketUtils';
 import { FaTicketAlt, FaUser, FaEnvelope, FaTable, FaEuroSign, FaWhatsapp } from 'react-icons/fa';
 
+// Funzione per mappare il nome del tipo di biglietto
+const mapTicketTypeName = (ticketType) => {
+  // Se l'ID è "student" o il nome è "Studenti", lo cambia in "VIP Early Birds"
+  if (ticketType.id === 'student' || ticketType.name === 'Studenti') {
+    return { ...ticketType, name: 'VIP Early Birds' };
+  }
+  return ticketType;
+};
+
 // La prop ora include selectedDateItem
 function SellTicketModal({ event, selectedDateItem, onClose, onSold }) {
   const { currentUser } = useAuth();
@@ -39,7 +48,8 @@ function SellTicketModal({ event, selectedDateItem, onClose, onSold }) {
         return;
     }
 
-    const ticketsForDate = selectedDateItem.ticketTypes || [];
+    // Applica la mappatura dei nomi dei tipi di biglietto
+    const ticketsForDate = (selectedDateItem.ticketTypes || []).map(mapTicketTypeName);
     const tablesForDate = selectedDateItem.tableTypes || [];
 
     // Trova il primo tipo di biglietto disponibile come default
