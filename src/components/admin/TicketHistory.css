@@ -522,7 +522,6 @@ tr.status-deleted {
 }
 
 @media (max-width: 480px) {
-    // ... existing media query ...
     .tickets-table {
         font-size: 12px; /* Ancora più piccolo */
     }
@@ -533,7 +532,7 @@ tr.status-deleted {
     }
 
     .ticket-actions {
-      /* Già gestito nel blocco esistente (stack verticale) */
+      /* Stili esistenti per stack verticale */
       gap: 8px; /* Spazio tra pulsanti impilati */
     }
     .action-btn {
