@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../../firebase/config';
-import { collection, getDocs, doc, updateDoc, query, where, orderBy, limit, serverTimestamp } from 'firebase/firestore';
-import { FaSearch, FaTimesCircle, FaCheckCircle, FaBan, FaUndo, FaInfoCircle, FaWhatsapp } from 'react-icons/fa';
+import { collection, getDocs, doc, updateDoc, deleteDoc, query, where, orderBy, limit, serverTimestamp, increment } from 'firebase/firestore';
+import { FaSearch, FaTimesCircle, FaCheckCircle, FaBan, FaUndo, FaInfoCircle, FaWhatsapp, FaTrash, FaShoppingCart, FaQuestionCircle } from 'react-icons/fa';
 import './TicketHistory.css';
 
 function TicketHistory() {
@@ -60,9 +60,10 @@ function TicketHistory() {
       const snapshot = await getDocs(ticketsQuery);
       const ticketsData = snapshot.docs.map(doc => {
         const data = doc.data();
-        return {
+        const mappedTicket = {
           id: doc.id,
           ...data,
+          eventId: data.eventId || data.event_id || null,
           createdAtFormatted: formatDate(data.createdAt),
           qrCode: data.qrCode || data.qr_code || null,
           code: data.code || data.ticketCode || null,
@@ -75,7 +76,7 @@ function TicketHistory() {
           quantity: data.quantity || 1,
           eventDate: data.eventDate || data.event_date,
           eventLocation: data.eventLocation || data.event_location,
-          ticketType: data.ticketType || data.ticket_type,
+          ticketType: data.ticketType || data.ticket_type || 'Standard',
           tableNumber: data.tableNumber || data.table_number,
           sellerId: data.sellerId || data.seller_id,
           sellerName: data.sellerName || data.seller_name,
@@ -83,6 +84,7 @@ function TicketHistory() {
           cancelledAt: data.cancelledAt || data.cancelled_at,
           previousStatus: data.previousStatus || data.previous_status
         };
+        return mappedTicket;
       });
 
       // Ordina i biglietti lato client
@@ -146,18 +148,20 @@ function TicketHistory() {
       setCancellingTicket(true);
       setError(null);
 
-      // Aggiorna lo stato del biglietto a "disabled"
+      // Aggiorna lo stato del biglietto a "disabled" e aggiungi il messaggio per lo scanner
       const ticketRef = doc(db, 'tickets', ticketId);
       await updateDoc(ticketRef, {
         status: 'disabled',
-        updatedAt: serverTimestamp()
+        updatedAt: serverTimestamp(),
+        scannerMessage: 'Ticket disabilitato', // Aggiungo il messaggio per lo scanner
+        previousStatus: 'active' // Mantengo lo stato precedente
       });
 
       // Aggiorna l'UI
       setTickets(prevTickets =>
         prevTickets.map(ticket =>
           ticket.id === ticketId
-            ? {...ticket, status: 'disabled'}
+            ? {...ticket, status: 'disabled', scannerMessage: 'Ticket disabilitato'}
             : ticket
         )
       );
@@ -166,7 +170,8 @@ function TicketHistory() {
       if (selectedTicket && selectedTicket.id === ticketId) {
         setSelectedTicket({
           ...selectedTicket,
-          status: 'disabled'
+          status: 'disabled',
+          scannerMessage: 'Ticket disabilitato'
         });
       }
 
@@ -222,6 +227,51 @@ function TicketHistory() {
     }
   }
 
+  async function handleDeleteTicket(ticketId, eventId, quantity) {
+    if (!window.confirm('Sei sicuro di voler eliminare definitivamente questo biglietto? Questa azione non può essere annullata.')) {
+      return;
+    }
+
+    try {
+      setCancellingTicket(true);
+      setError(null);
+
+      // 1. Elimina direttamente il biglietto
+      const ticketRef = doc(db, 'tickets', ticketId);
+      await deleteDoc(ticketRef);
+      
+      // 2. Tenta di aggiornare le giacenze solo se abbiamo un ID evento valido, ma non bloccare l'esecuzione
+      if (eventId) {
+        try {
+          const eventRef = doc(db, 'events', eventId);
+          await updateDoc(eventRef, {
+            availableTickets: increment(quantity || 1)
+          });
+        } catch (eventError) {
+          // Ignora l'errore di aggiornamento delle giacenze
+          console.warn("Impossibile aggiornare le giacenze, ma il biglietto è stato eliminato");
+        }
+      }
+
+      // 3. Aggiorna l'UI
+      setTickets(prevTickets => prevTickets.filter(ticket => ticket.id !== ticketId));
+      
+      // 4. Chiudi il modale dei dettagli se era aperto
+      if (selectedTicket && selectedTicket.id === ticketId) {
+        setShowDetails(false);
+        setSelectedTicket(null);
+      }
+
+      setSuccessMessage('Biglietto eliminato con successo!');
+      setTimeout(() => setSuccessMessage(null), 3000);
+    } catch (error) {
+      console.error("Errore durante eliminazione biglietto:", error);
+      setError("Si è verificato un errore durante eliminazione del biglietto");
+    } finally {
+      setCancellingTicket(false);
+    }
+  }
+
   function handleSearch() {
     // Filtra i biglietti localmente in base alla query di ricerca
     if (!searchQuery.trim()) {
@@ -240,24 +290,54 @@ function TicketHistory() {
     setTickets(filtered);
   }
 
-  function getStatusLabel(status) {
+  const getStatusLabel = (status) => {
     switch (status) {
-      case 'active': return 'Attivo';
-      case 'validated': return 'Validato';
-      case 'disabled': return 'Disabilitato';
-      case 'cancelled': return 'Annullato';
-      default: return status;
+      case 'active':
+        return 'Attivo';
+      case 'validated':
+        return 'Validato';
+      case 'disabled':
+        return 'Disabilitato';
+      case 'sold':
+        return 'Venduto';
+      case 'cancelled':
+        return 'Cancellato';
+      default:
+        return 'Sconosciuto';
     }
-  }
+  };
 
-  function getStatusIcon(status) {
+  const getStatusIcon = (status) => {
     switch (status) {
-      case 'active': return <FaCheckCircle className="status-icon active" />;
-      case 'validated': return <FaCheckCircle className="status-icon validated" />;
-      case 'disabled': return <FaBan className="status-icon disabled" />;
-      case 'cancelled': return <FaTimesCircle className="status-icon cancelled" />;
-      default: return <FaInfoCircle className="status-icon unknown" />;
+      case 'active':
+        return <FaCheckCircle className="status-icon active" />;
+      case 'validated':
+        return <FaCheckCircle className="status-icon validated" />;
+      case 'disabled':
+        return <FaBan className="status-icon disabled" />;
+      case 'sold':
+        return <FaShoppingCart className="status-icon sold" />;
+      case 'cancelled':
+        return <FaTimesCircle className="status-icon cancelled" />;
+      default:
+        return <FaQuestionCircle className="status-icon" />;
     }
+  };
+
+  function getScannerMessage(ticket) {
+    if (ticket.status === 'disabled') {
+      return 'Ticket disabilitato';
+    }
+    if (ticket.status === 'deleted') {
+      return 'Ticket eliminato';
+    }
+    if (ticket.status === 'validated') {
+      return 'Ticket già validato';
+    }
+    if (ticket.status === 'cancelled') {
+      return 'Ticket annullato';
+    }
+    return null;
   }
 
   function handleViewDetails(ticket) {
@@ -428,6 +508,9 @@ function TicketHistory() {
                       <div className="status">
                         {getStatusIcon(ticket.status)}
                         <span>{getStatusLabel(ticket.status)}</span>
+                        {getScannerMessage(ticket) && (
+                          <span className="scanner-message">{getScannerMessage(ticket)}</span>
+                        )}
                       </div>
                     </td>
                     <td className="ticket-actions">
@@ -440,8 +523,7 @@ function TicketHistory() {
                         <FaInfoCircle />
                       </button>
 
-                      {/* Enable/Disable Buttons - Updated Logic */}
-                      {/* Show Enable only if disabled */}
+                      {/* Enable/Disable Buttons */}
                       {ticket.status === 'disabled' && (
                         <button 
                           onClick={() => handleEnableTicket(ticket.id)} 
@@ -453,7 +535,6 @@ function TicketHistory() {
                         </button>
                       )}
 
-                      {/* Show Disable if not already disabled, validated or cancelled */}
                       {(ticket.status === 'active' || ticket.status === 'sold') && (
                         <button 
                           onClick={() => handleDisableTicket(ticket.id)} 
@@ -464,6 +545,18 @@ function TicketHistory() {
                           <FaBan />
                         </button>
                       )}
+                      
+                      {/* Delete Button */}
+                      <button 
+                        onClick={() => {
+                          handleDeleteTicket(ticket.id, ticket.eventId, ticket.quantity);
+                        }} 
+                        className="action-btn delete-btn"
+                        disabled={cancellingTicket}
+                        title="Elimina Biglietto" 
+                      >
+                        <FaTrash />
+                      </button>
                       
                       {/* WhatsApp Share Button */}
                       {(ticket.status === 'active' || ticket.status === 'sold') && (

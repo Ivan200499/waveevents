@@ -20,6 +20,8 @@ function TicketValidator() {
   const inputRef = useRef(null); // Ref per l'input manuale
   const messageTimeoutRef = useRef(null); // Ref per il timeout del messaggio
   const [isScanPaused, setIsScanPaused] = useState(false); // Stato per pausa scansione
+  const scannerContainerRef = useRef(null);
+  const [scannerInitialized, setScannerInitialized] = useState(false);
 
   useEffect(() => {
     async function checkUserRole() {
@@ -48,84 +50,130 @@ function TicketValidator() {
     checkUserRole();
   }, [currentUser, navigate]);
 
-  // Cleanup dello scanner quando il componente si smonta o lo scanner si disattiva
+  // Cleanup migliorato
   useEffect(() => {
     return () => {
       if (scannerRef.current) {
+        try {
         scannerRef.current.clear().catch(error => {
           console.error("Errore nella pulizia dello scanner:", error);
         });
         scannerRef.current = null;
+        } catch (error) {
+          console.error("Errore durante il cleanup dello scanner:", error);
+        }
       }
-      // Pulisci anche il timeout del messaggio
       if (messageTimeoutRef.current) {
         clearTimeout(messageTimeoutRef.current);
       }
+      setScannerInitialized(false);
     };
-  }, []); // Esegui solo allo smontaggio
+  }, []);
   
-  // Gestione avvio/stop scanner
+  // Gestione scanner migliorata
   useEffect(() => {
-      if (scannerActive) {
-          if (!scannerRef.current) {
-              try { // Aggiungo un try...catch per l'inizializzazione
+    if (scannerActive && !scannerInitialized) {
+      const initializeScanner = async () => {
+        try {
+          if (scannerRef.current) {
+            await scannerRef.current.clear();
+            scannerRef.current = null;
+          }
+
                 const html5QrcodeScanner = new Html5QrcodeScanner(
                     "reader",
                     { 
                         fps: 10, 
                         qrbox: { width: 250, height: 250 },
                         videoConstraints: {
-                            facingMode: { exact: "environment" }
+                facingMode: "environment",
+                width: { min: 640, ideal: 1280, max: 1920 },
+                height: { min: 480, ideal: 720, max: 1080 }
                         },
-                        supportedScanTypes: [/* Html5QrcodeScanType.SCAN_TYPE_CAMERA */ 0]
+              supportedScanTypes: [0]
                     },
-                    false // verbose = false
+            false
                 );
   
                 html5QrcodeScanner.render(
                     (decodedText) => {
-                        // Se loading è true o la scansione è in pausa, ignora
-                        if (loading || isScanPaused) { 
-                            return; 
-                        }
+              if (loading || isScanPaused) return;
                         
-                        // Metti in pausa lo scan e valida
                         setIsScanPaused(true);
                         handleValidateTicket(decodedText);
 
-                        // Riattiva lo scan dopo 2 secondi
                         setTimeout(() => {
                             setIsScanPaused(false);
                         }, 2000);
                     },
                     (errorMessage) => {
-                        // Gestisce errori di scansione, ma non fermare
-                        // console.warn(`QR error = ${errorMessage}`);
-                    }
-                );
-                // Se render non lancia errori, l'inizializzazione è ok
-                console.log("Scanner QR avviato.");
-                scannerRef.current = html5QrcodeScanner;
-              } catch (err) {
-                // Cattura errori durante la creazione o il render dello scanner
-                console.error("Errore inizializzazione scanner QR:", err);
-                setMessage("Errore nell'avvio dello scanner QR. Controlla i permessi della fotocamera o ricarica la pagina.");
-                setMessageType('error');
-                setScannerActive(false); // Disattiva se c'è un errore grave
+              // Gestione errori migliorata
+              if (errorMessage.includes("No MultiFormat Readers were able to detect the code")) {
+                return;
               }
-          }
-      } else {
-          // Se scannerActive diventa false, ferma lo scanner
+              if (errorMessage.includes("OverconstrainedError")) {
+                console.warn("Errore vincoli fotocamera, riprovo con configurazione base");
+                // Riprova con configurazione base
+                html5QrcodeScanner.clear();
+                const basicScanner = new Html5QrcodeScanner(
+                  "reader",
+                  { 
+                    fps: 10, 
+                    qrbox: { width: 250, height: 250 },
+                    videoConstraints: {
+                      facingMode: "environment"
+                    },
+                    supportedScanTypes: [0]
+                  },
+                  false
+                );
+                basicScanner.render(
+                  (decodedText) => {
+                    if (loading || isScanPaused) return;
+                    setIsScanPaused(true);
+                    handleValidateTicket(decodedText);
+                    setTimeout(() => {
+                      setIsScanPaused(false);
+                    }, 2000);
+                  },
+                  (error) => {
+                    console.warn(`QR Scanner warning: ${error}`);
+                  }
+                );
+                scannerRef.current = basicScanner;
+                return;
+              }
+              console.warn(`QR Scanner warning: ${errorMessage}`);
+            }
+          );
+
+                scannerRef.current = html5QrcodeScanner;
+          setScannerInitialized(true);
+              } catch (err) {
+                console.error("Errore inizializzazione scanner QR:", err);
+          setMessage("Errore nell'avvio dello scanner QR. Ricarica la pagina e riprova.");
+                setMessageType('error');
+          setScannerActive(false);
+          setScannerInitialized(false);
+        }
+      };
+
+      initializeScanner();
+    } else if (!scannerActive && scannerInitialized) {
+      const cleanupScanner = async () => {
+        try {
           if (scannerRef.current) {
-              scannerRef.current.clear().then(() => {
-                  console.log("Scanner QR fermato con successo.");
-              }).catch(error => {
-                  console.error("Errore nella pulizia dello scanner:", error);
-              });
+            await scannerRef.current.clear();
               scannerRef.current = null;
           }
-      }
-  }, [scannerActive, loading, isScanPaused]); // Aggiungi isScanPaused alle dipendenze
+          setScannerInitialized(false);
+        } catch (error) {
+          console.error("Errore durante la pulizia dello scanner:", error);
+        }
+      };
+      cleanupScanner();
+    }
+  }, [scannerActive, loading, isScanPaused]);
 
   // Funzione per mostrare messaggi temporanei
   const showTemporaryMessage = (msg, type = 'info', duration = 4000) => {
@@ -147,7 +195,7 @@ function TicketValidator() {
         showTemporaryMessage('Codice biglietto non fornito.', 'error');
         return;
     }
-    setLoading(true); // Mostra caricamento solo per la validazione effettiva
+    setLoading(true);
     let currentTicketCode = '';
 
     try {
@@ -175,30 +223,30 @@ function TicketValidator() {
       const ticketsSnapshot = await getDocs(ticketsQuery);
 
       if (ticketsSnapshot.empty) {
-        throw new Error(`Biglietto non trovato (${currentTicketCode})`);
+        throw new Error(`❌ Biglietto ELIMINATO\n(${currentTicketCode})`);
       }
 
       const ticketDoc = ticketsSnapshot.docs[0];
       const ticketData = ticketDoc.data();
 
+      // Controllo stato del biglietto
+      if (ticketData.status === 'disabled') {
+        throw new Error(`❌ Biglietto DISABILITATO\n${ticketData.eventName}\n(${currentTicketCode})`);
+      }
+
       if (ticketData.validatedAt || ticketData.status === 'used') {
          throw new Error(`❌ Biglietto GIA' VALIDATO\n${ticketData.eventName}\n(${currentTicketCode})`);
       }
 
-      // Aggiungi controllo opzionale sull'evento (se necessario)
-      // const eventRef = doc(db, 'events', ticketData.eventId);
-      // const eventSnap = await getDoc(eventRef);
-      // if (!eventSnap.exists()) { throw new Error('Evento associato non trovato'); }
-      // const eventData = eventSnap.data();
-      // const eventDate = eventData.date ? new Date(eventData.date) : null;
-      // const now = new Date();
-      // if (eventDate && eventDate < now) { throw new Error('Evento già passato'); }
+      if (ticketData.status === 'cancelled') {
+        throw new Error(`❌ Biglietto CANCELLATO\n${ticketData.eventName}\n(${currentTicketCode})`);
+      }
 
       await updateDoc(doc(db, 'tickets', ticketDoc.id), {
         validatedAt: new Date().toISOString(),
-        status: 'used',
+        status: 'validated',
         validatedBy: currentUser.uid,
-        validatorName: currentUser.displayName || currentUser.email // Aggiungi nome validatore
+        validatorName: currentUser.displayName || currentUser.email
       });
 
       showTemporaryMessage(
@@ -252,9 +300,8 @@ function TicketValidator() {
       )}
 
       {scannerActive ? (
-        <div className="scanner-container">
-           {/* Contenitore per lo scanner QR */}
-           <div id="reader"></div> 
+        <div className="scanner-container" ref={scannerContainerRef}>
+          <div id="reader" style={{ width: '100%', height: '100%' }}></div>
            {loading && <div className="scanner-loading-overlay">Validazione...</div>}
         </div>
       ) : (

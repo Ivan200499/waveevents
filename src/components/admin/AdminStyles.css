@@ -879,3 +879,75 @@
 [data-theme="dark"] .no-dates-message {
   color: #9e9e9e;
 }
+
+/* Stili per le statistiche dei biglietti */
+.ticket-stats {
+  margin-top: 15px;
+  padding: 10px;
+  background: var(--background-secondary);
+  border-radius: 8px;
+}
+
+.ticket-stats h4 {
+  margin: 0 0 10px 0;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.stat-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.stat-item.total {
+  grid-column: 1 / -1;
+  margin-top: 5px;
+  padding-top: 5px;
+  border-top: 1px solid var(--border-color);
+  font-weight: bold;
+  color: var(--text-primary);
+}
+
+.status-icon {
+  font-size: 1rem;
+}
+
+.status-icon.active {
+  color: #4CAF50;
+}
+
+.status-icon.validated {
+  color: #2196F3;
+}
+
+.status-icon.disabled {
+  color: #F44336;
+}
+
+.status-icon.sold {
+  color: #FF9800;
+}
+
+.status-icon.cancelled {
+  color: #9E9E9E;
+}
+
+/* Responsive styles */
+@media (max-width: 768px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .stat-item {
+    font-size: 0.75rem;
+  }
+}
