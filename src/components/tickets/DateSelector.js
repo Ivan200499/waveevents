@@ -22,11 +22,6 @@ function DateSelector({ dates, selectedDate, onDateSelect }) {
     day: 'numeric' 
   };
 
-  const timeOptions = {
-    hour: '2-digit',
-    minute: '2-digit'
-  };
-
   // Ordina le date cronologicamente (dalla più vicina alla più lontana)
   const sortedDates = [...dates].sort((a, b) => {
     const dateA = a.date instanceof Date ? a.date : new Date(a.date);
@@ -54,7 +49,6 @@ function DateSelector({ dates, selectedDate, onDateSelect }) {
           }
           
           const formattedDate = dateObj.toLocaleDateString('it-IT', dateOptions);
-          const formattedTime = dateObj.toLocaleTimeString('it-IT', timeOptions);
           
           return (
             <div 
@@ -65,7 +59,6 @@ function DateSelector({ dates, selectedDate, onDateSelect }) {
               <div className="date-item-content">
                 <div className="date-info">
                   <div className="date-day">{formattedDate}</div>
-                  <div className="date-time">{formattedTime}</div>
                 </div>
               </div>
               {isSelected && <div className="date-selected-indicator">✓</div>}

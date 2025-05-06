@@ -7,14 +7,14 @@ import { Html5QrcodeScanner } from 'html5-qrcode';
 import { FaQrcode, FaKeyboard } from 'react-icons/fa';
 import './TicketValidator.css';
 
-function TicketValidator() {
+function TicketValidator({ initializeWithScanner = false }) {
   const { currentUser } = useAuth();
   const [ticketCode, setTicketCode] = useState('');
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState('info'); // 'success', 'error', 'info'
   const [loading, setLoading] = useState(false);
   const [userRole, setUserRole] = useState(null);
-  const [scannerActive, setScannerActive] = useState(false);
+  const [scannerActive, setScannerActive] = useState(initializeWithScanner);
   const navigate = useNavigate();
   const scannerRef = useRef(null); // Ref per l'istanza dello scanner
   const inputRef = useRef(null); // Ref per l'input manuale
@@ -22,6 +22,7 @@ function TicketValidator() {
   const [isScanPaused, setIsScanPaused] = useState(false); // Stato per pausa scansione
   const scannerContainerRef = useRef(null);
   const [scannerInitialized, setScannerInitialized] = useState(false);
+  const [lastScannedTicketDetails, setLastScannedTicketDetails] = useState(null);
 
   useEffect(() => {
     async function checkUserRole() {
@@ -191,18 +192,21 @@ function TicketValidator() {
   };
 
   async function handleValidateTicket(code) {
+    setLastScannedTicketDetails(null); // Resetta i dettagli precedenti
     if (!code) {
         showTemporaryMessage('Codice biglietto non fornito.', 'error');
+        setLastScannedTicketDetails({ ticketCode: 'N/A', error: 'Codice non fornito' });
         return;
     }
     setLoading(true);
     let currentTicketCode = '';
+    let ticketDataForDisplay = null;
 
     try {
       // Prova a parsare come JSON (formato QR consigliato)
       try {
-        const ticketData = JSON.parse(code);
-        currentTicketCode = ticketData.ticketCode;
+        const parsedCode = JSON.parse(code);
+        currentTicketCode = parsedCode.ticketCode;
         console.log('QR Code JSON valido, codice estratto:', currentTicketCode);
       } catch (e) {
         // Altrimenti, usa il codice come stringa
@@ -211,10 +215,15 @@ function TicketValidator() {
       }
 
       if (!currentTicketCode) {
-        throw new Error("Codice biglietto non valido nel QR code.");
+        showTemporaryMessage("Codice biglietto non valido nel QR code.", 'error');
+        setLastScannedTicketDetails({ ticketCode: code, error: 'Codice non valido nel QR' });
+        setLoading(false);
+        return;
       }
       
       currentTicketCode = currentTicketCode.trim();
+      ticketDataForDisplay = { ticketCode: currentTicketCode };
+
 
       const ticketsQuery = query(
         collection(db, 'tickets'),
@@ -223,43 +232,75 @@ function TicketValidator() {
       const ticketsSnapshot = await getDocs(ticketsQuery);
 
       if (ticketsSnapshot.empty) {
-        throw new Error(`❌ Biglietto ELIMINATO\n(${currentTicketCode})`);
+        ticketDataForDisplay = { ...ticketDataForDisplay, error: `Biglietto ELIMINATO o NON ESISTENTE` };
+        throw new Error(`❌ Biglietto ELIMINATO o NON ESISTENTE\n(${currentTicketCode})`);
       }
 
       const ticketDoc = ticketsSnapshot.docs[0];
       const ticketData = ticketDoc.data();
+      ticketDataForDisplay = { // Popola con più dati possibili
+        ticketCode: currentTicketCode,
+        eventName: ticketData.eventName,
+        customerName: ticketData.customerName || ticketData.customerEmail || 'N/D',
+        ticketType: ticketData.ticketType || 'Standard',
+        eventDate: ticketData.eventDate, // Verrà formattato poi
+        status: ticketData.status,
+      };
 
       // Controllo stato del biglietto
       if (ticketData.status === 'disabled') {
+        ticketDataForDisplay = { ...ticketDataForDisplay, error: 'Biglietto DISABILITATO' };
         throw new Error(`❌ Biglietto DISABILITATO\n${ticketData.eventName}\n(${currentTicketCode})`);
       }
 
       if (ticketData.validatedAt || ticketData.status === 'used') {
-         throw new Error(`❌ Biglietto GIA' VALIDATO\n${ticketData.eventName}\n(${currentTicketCode})`);
+        ticketDataForDisplay = { ...ticketDataForDisplay, error: 'Biglietto GIA\' VALIDATO', validatedAt: ticketData.validatedAt, validatorName: ticketData.validatorName };
+        throw new Error(`❌ Biglietto GIA' VALIDATO\n${ticketData.eventName}\n(${currentTicketCode})`);
       }
 
       if (ticketData.status === 'cancelled') {
+        ticketDataForDisplay = { ...ticketDataForDisplay, error: 'Biglietto CANCELLATO' };
         throw new Error(`❌ Biglietto CANCELLATO\n${ticketData.eventName}\n(${currentTicketCode})`);
       }
 
       await updateDoc(doc(db, 'tickets', ticketDoc.id), {
         validatedAt: new Date().toISOString(),
-        status: 'validated',
+        status: 'validated', // Cambiato da 'used' a 'validated' per coerenza
         validatedBy: currentUser.uid,
         validatorName: currentUser.displayName || currentUser.email
       });
+      
+      ticketDataForDisplay = { ...ticketDataForDisplay, status: 'validated'}; // Aggiorna lo stato per display
 
       showTemporaryMessage(
-        `✅ Biglietto VALIDATO!\nEvento: ${ticketData.eventName}\nCliente: ${ticketData.customerEmail || 'N/D'}\nTipo: ${ticketData.ticketType || 'Standard'}\nCodice: ${currentTicketCode}`,
+        `✅ Biglietto VALIDATO!\nEvento: ${ticketData.eventName}\nCliente: ${ticketData.customerName || ticketData.customerEmail || 'N/D'}\nTipo: ${ticketData.ticketType || 'Standard'}\nCodice: ${currentTicketCode}`,
         'success'
       );
 
     } catch (error) {
       console.error('Errore validazione:', error);
-      showTemporaryMessage(error.message || 'Errore sconosciuto durante la validazione.', 'error');
+      // ticketDataForDisplay potrebbe essere già parzialmente popolato
+      // o contenere solo il ticketCode se l'errore è avvenuto presto.
+      // Se l'errore ha un messaggio specifico, usalo, altrimenti "Errore sconosciuto".
+      const displayError = ticketDataForDisplay.error || error.message || 'Errore sconosciuto durante la validazione.';
+      showTemporaryMessage(displayError, 'error');
+      // Assicurati che ticketDataForDisplay contenga almeno il codice
+      if (!ticketDataForDisplay.ticketCode && currentTicketCode) {
+        ticketDataForDisplay.ticketCode = currentTicketCode;
+      } else if (!ticketDataForDisplay.ticketCode && code) {
+         ticketDataForDisplay.ticketCode = code; // Fallback al codice raw se parsing fallito
+      }
+      // Aggiungi l'errore specifico se non già presente
+      if (!ticketDataForDisplay.error) {
+          ticketDataForDisplay.error = displayError.split('\n')[0]; // Prendi solo la prima riga dell'errore per brevità
+      }
+
     } finally {
       setLoading(false);
       setTicketCode(''); // Svuota sempre l'input manuale dopo il tentativo
+      if (ticketDataForDisplay) {
+        setLastScannedTicketDetails(ticketDataForDisplay);
+      }
     }
   }
 
@@ -296,6 +337,61 @@ function TicketValidator() {
           key={message} // Cambia key per forzare update pulito del messaggio
           className={`message ${messageType}`}>
           {message}
+        </div>
+      )}
+
+      {/* Dettagli del biglietto scansionato */} 
+      {lastScannedTicketDetails && (
+        <div className="scanned-ticket-details-container">
+          <h4>Dettagli Biglietto Scansionato:</h4>
+          <div className="ticket-detail-item">
+            <strong>Codice:</strong> {lastScannedTicketDetails.ticketCode || 'N/D'}
+          </div>
+          {lastScannedTicketDetails.eventName && (
+            <div className="ticket-detail-item">
+              <strong>Evento:</strong> {lastScannedTicketDetails.eventName}
+            </div>
+          )}
+          {lastScannedTicketDetails.customerName && (
+            <div className="ticket-detail-item">
+              <strong>Cliente:</strong> {lastScannedTicketDetails.customerName}
+            </div>
+          )}
+          {lastScannedTicketDetails.ticketType && (
+            <div className="ticket-detail-item">
+              <strong>Tipo:</strong> {lastScannedTicketDetails.ticketType}
+            </div>
+          )}
+          {lastScannedTicketDetails.eventDate && (
+            <div className="ticket-detail-item">
+              <strong>Data Evento:</strong> 
+              {new Date(lastScannedTicketDetails.eventDate.seconds ? lastScannedTicketDetails.eventDate.seconds * 1000 : lastScannedTicketDetails.eventDate).toLocaleDateString('it-IT', {
+                day: '2-digit', month: '2-digit', year: 'numeric'
+              })}
+            </div>
+          )}
+          {/* Mostra lo stato attuale del biglietto (potrebbe essere diverso dal messaggio di errore se l'errore non è di stato) */}
+          {lastScannedTicketDetails.status && !lastScannedTicketDetails.error && (
+             <div className="ticket-detail-item">
+               <strong>Stato:</strong> <span className={`status-${lastScannedTicketDetails.status}`}>{lastScannedTicketDetails.status}</span>
+             </div>
+          )}
+          {/* Mostra informazioni sulla validazione precedente, se presenti e se il biglietto è già stato validato */}
+          {lastScannedTicketDetails.error && lastScannedTicketDetails.error.includes("GIA' VALIDATO") && lastScannedTicketDetails.validatedAt && (
+            <div className="ticket-detail-item">
+              <strong>Già Validato Il:</strong> 
+              {new Date(lastScannedTicketDetails.validatedAt).toLocaleString('it-IT', {
+                day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
+              })}
+              {lastScannedTicketDetails.validatorName && ` da ${lastScannedTicketDetails.validatorName}`}
+            </div>
+          )}
+           {/* Mostra un messaggio di errore specifico per il biglietto, se presente */}
+          {lastScannedTicketDetails.error && (
+            <div className="ticket-detail-item error-highlight">
+              <strong>Problema Rilevato:</strong> {lastScannedTicketDetails.error}
+            </div>
+          )}
         </div>
       )}
 

@@ -113,6 +113,21 @@ function validateTicketStructure(ticketData, eventData = null) {
   return ticketData;
 }
 
+// Funzione per formattare la data senza l'ora
+const formatDateOnly = (timestamp) => {
+  if (!timestamp) return 'N/A';
+  
+  const date = timestamp instanceof Date 
+    ? timestamp 
+    : new Date(timestamp.seconds ? timestamp.seconds * 1000 : timestamp);
+  
+  return date.toLocaleDateString('it-IT', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  });
+};
+
 // Componente per la visualizzazione elegante del biglietto
 function TicketPage() {
   const { ticketCode } = useParams();
@@ -676,17 +691,7 @@ function TicketPage() {
                 <div className="info-item-text">
                   <span className="info-item-label">Data</span>
                   <span className="info-item-value">
-                    {ticket.eventDate && typeof ticket.eventDate === 'string' ? formatDate(ticket.eventDate) : 'N/A'}
-                  </span>
-                </div>
-              </div>
-              
-              <div className="info-item">
-                <IoTimeOutline size={deviceConfig.iconSize.normal} />
-                <div className="info-item-text">
-                  <span className="info-item-label">Ora</span>
-                  <span className="info-item-value">
-                    {ticket.eventDate && typeof ticket.eventDate === 'string' ? formatTime(ticket.eventDate) : 'N/A'}
+                    {ticket.eventDate && typeof ticket.eventDate === 'string' ? formatDateOnly(ticket.eventDate) : 'N/A'}
                   </span>
                 </div>
               </div>
@@ -799,7 +804,7 @@ function TicketPage() {
               Questo biglietto è valido solo per l'evento e la data indicati
             </p>
             <p style={{ fontSize: deviceConfig.fontSize.small }}>
-              Generato da BonaEvents
+              Generato da Wave Events
             </p>
           </div>
         </div>

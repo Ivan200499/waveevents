@@ -49,6 +49,8 @@
   background: #000;
   border-radius: 8px;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .manual-input {
@@ -151,91 +153,28 @@
   .method-button {
     width: 100%;
     justify-content: center;
+    padding: 1rem 0.8rem;
+    font-size: 0.95rem;
+    min-height: 48px;
+    text-align: center;
   }
-}
 
-.qr-container {
-  width: 100%;
-  max-width: 500px;
-  margin: 0 auto;
-  aspect-ratio: 1;
-  overflow: hidden;
-  border-radius: 8px;
-  background: #000;
-}
+  .method-button svg {
+    font-size: 1.2em;
+  }
 
-.qr-container section {
-  padding: 0 !important;
-}
-
-.qr-container video {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-#reader {
-  width: 100% !important;
-  height: 100% !important;
-  position: relative !important;
-}
-
-#reader video {
-  width: 100% !important;
-  height: 100% !important;
-  object-fit: cover !important;
-}
-
-#reader__scan_region {
-  width: 100% !important;
-  height: 100% !important;
-  position: relative !important;
-}
-
-#reader__scan_region video {
-  width: 100% !important;
-  height: 100% !important;
-  object-fit: cover !important;
-}
-
-#reader__dashboard {
-  position: absolute !important;
-  bottom: 0 !important;
-  left: 0 !important;
-  right: 0 !important;
-  background: rgba(0, 0, 0, 0.7) !important;
-  padding: 10px !important;
-  z-index: 1000 !important;
-}
-
-.scanner-loading-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.7);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  color: white;
-  font-size: 1.2rem;
-  z-index: 1000;
-}
-
-/* Stili responsive per mobile */
-@media (max-width: 768px) {
   .scanner-container {
-    height: 250px;
+    height: 320px;
     margin: 15px 0;
   }
 
   #reader__dashboard {
-    padding: 8px !important;
+    padding: 5px !important;
+    box-sizing: border-box;
   }
 
-  .validator-container {
-    padding: 15px;
+  .validator-container h2 {
+    font-size: 1.5rem;
   }
 
   .input-methods {
@@ -246,22 +185,108 @@
   .method-button {
     width: 100%;
     justify-content: center;
+    padding: 0.8rem;
+    font-size: 0.9rem;
+  }
+
+  .method-button svg {
+    font-size: 1.2em;
+  }
+
+  .ticket-input {
+    padding: 15px;
+    font-size: 1.1rem;
+  }
+
+  .validate-button {
+    padding: 15px;
+    font-size: 1.1rem;
+  }
+
+  #reader__scan_region::after {
+    width: 180px;
+    height: 180px;
+  }
+
+  .scanned-ticket-details-container h4 {
+    font-size: 1rem;
+  }
+
+  .ticket-detail-item {
+    font-size: 0.9rem;
+  }
+
+  .validator-header .logo-image {
+    height: 30px;
+    min-height: 25px;
+    display: block;
+  }
+
+  .validator-header .logo-text {
+    font-size: 1rem;
   }
 }
 
 /* Stili per schermi molto piccoli */
 @media (max-width: 480px) {
   .scanner-container {
-    height: 200px;
+    height: 280px;
     margin: 10px 0;
   }
 
   #reader__dashboard {
-    padding: 5px !important;
+    padding: 4px !important;
+    box-sizing: border-box;
+  }
+
+  .validator-container h2 {
+    font-size: 1.3rem;
+  }
+
+  .method-button {
+    padding: 0.7rem;
+    font-size: 0.85rem;
+  }
+
+  .method-button svg {
+    font-size: 1.1em;
+  }
+
+  .ticket-input, .validate-button {
+    padding: 12px;
+    font-size: 1rem;
+  }
+
+  #reader__scan_region::after {
+    width: 150px;
+    height: 150px;
   }
 
   .scanner-loading-overlay {
     font-size: 1rem;
+  }
+
+  .scanned-ticket-details-container {
+    padding: 10px;
+  }
+
+  .scanned-ticket-details-container h4 {
+    font-size: 0.95rem;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+  }
+
+  .ticket-detail-item {
+    font-size: 0.85rem;
+    margin-bottom: 6px;
+  }
+
+  .validator-header .logo-image {
+    height: 25px;
+  }
+
+  .validator-header .logo-text {
+    font-size: 0.9rem;
   }
 }
 
@@ -297,4 +322,174 @@
   border-radius: 8px;
   box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0.5);
   pointer-events: none;
+}
+
+/* Stili per il container della pagina validator */
+.validator-page-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: var(--background-color, #f5f5f5);
+}
+
+.validator-header {
+  background-color: var(--header-background, #007bff);
+  color: white;
+  padding: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.validator-header .logo-container {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.validator-header .logo-image {
+  height: 40px;
+  width: auto;
+}
+
+.validator-header .logo-text {
+  font-size: 1.2rem;
+  font-weight: bold;
+}
+
+/* Migliora lo stile per il container dello scanner */
+#reader {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 300px;
+  position: relative !important;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+#reader video {
+  width: 100% !important;
+  height: calc(100% - 45px) !important;
+  object-fit: cover !important;
+  border-radius: 8px;
+}
+
+/* Migliora la visibilità dei messaggi */
+.message {
+  margin: 1rem 0;
+  padding: 1rem;
+  border-radius: 8px;
+  text-align: center;
+  font-weight: 500;
+  line-height: 1.5;
+  white-space: pre-line; /* Permette l'andata a capo con \n nel messaggio */
+}
+
+.message.success {
+  background-color: var(--success-color, #28a745);
+  color: white;
+}
+
+.message.error {
+  background-color: var(--error-color, #dc3545);
+  color: white;
+}
+
+.message.info {
+  background-color: var(--info-color, #17a2b8);
+  color: white;
+}
+
+/* Stili per i dettagli del biglietto scansionato */
+.scanned-ticket-details-container {
+  margin-top: 20px;
+  padding: 15px;
+  border: 1px solid var(--border-color, #ddd);
+  border-radius: 8px;
+  background-color: var(--background-secondary, #f9f9f9);
+}
+
+.scanned-ticket-details-container h4 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  color: var(--text-primary);
+  font-size: 1.1rem;
+  border-bottom: 1px solid var(--border-color, #eee);
+  padding-bottom: 10px;
+}
+
+.ticket-detail-item {
+  margin-bottom: 8px;
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+}
+
+.ticket-detail-item strong {
+  color: var(--text-primary);
+  margin-right: 5px;
+}
+
+.ticket-detail-item.error-highlight {
+  color: var(--notification-error, #dc3545);
+  font-weight: bold;
+}
+
+.ticket-detail-item .status-validated {
+  color: var(--notification-success, #28a745);
+  font-weight: bold;
+}
+.ticket-detail-item .status-disabled,
+.ticket-detail-item .status-cancelled,
+.ticket-detail-item .status-used {
+  color: var(--notification-error, #dc3545);
+  font-weight: bold;
+}
+
+[data-theme="dark"] .scanned-ticket-details-container {
+  background-color: var(--background-tertiary, #2c2c2c);
+  border-color: var(--border-color-dark, #444);
+}
+
+[data-theme="dark"] .scanned-ticket-details-container h4 {
+  border-bottom-color: var(--border-color-dark, #444);
+}
+
+#reader__scan_region video {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+}
+
+#reader__dashboard {
+  background: var(--background-secondary, #eee) !important;
+  color: var(--text-primary, #333) !important;
+  padding: 8px !important;
+  width: 100%;
+  box-sizing: border-box;
+  text-align: center;
+  position: relative;
+}
+
+/* Stili specifici per Dark Theme per il dashboard */
+[data-theme="dark"] #reader__dashboard {
+  background: var(--background-tertiary, #333) !important;
+  color: var(--text-primary, #fff) !important;
+}
+
+.scanner-loading-overlay {
+  #reader__dashboard {
+    padding: 5px !important;
+    box-sizing: border-box;
+  }
+
+  .validator-container {
+    #reader__dashboard {
+      padding: 4px !important;
+      box-sizing: border-box;
+    }
+    .validator-container h2 {
+      font-size: 1.3rem;
+    }
+  }
 }

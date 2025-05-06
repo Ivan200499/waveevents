@@ -21,7 +21,6 @@ import ManagerDashboard from './components/manager/ManagerDashboard';
 import TeamLeaderDashboard from './components/teamleader/TeamLeaderDashboard';
 import PromoterDashboard from './components/promoter/PromoterDashboard';
 import TicketHistory from './components/tickets/TicketHistory';
-import ValidateTicket from './components/tickets/ValidateTicket';
 import TicketPage from './components/tickets/TicketPage';
 import PrivacyPolicy from './components/legal/PrivacyPolicy';
 import TermsOfService from './components/legal/TermsOfService';
@@ -161,7 +160,15 @@ function App() {
                     path="/validate-ticket" 
                     element={
                       <ProtectedRoute requiredRole="canValidateTickets">
-                        <ValidateTicket />
+                        <div className="validator-page-container">
+                          <header className="validator-header">
+                            <div className="logo-container">
+                              <img src="/logo.png" alt="Logo" className="logo-image" />
+                              <span className="logo-text">Ticket Validator</span>
+                            </div>
+                          </header>
+                          <TicketValidator initializeWithScanner={true} />
+                        </div>
                       </ProtectedRoute>
                     } 
                   />

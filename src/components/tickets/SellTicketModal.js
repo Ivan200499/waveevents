@@ -177,12 +177,11 @@ function SellTicketModal({ event, selectedDateItem, onClose, onSold }) {
   // --- Logica Invio Messaggio WhatsApp --- 
   const generateWhatsAppMessage = (ticketData, ticketLink) => {
     const eventDate = new Date(ticketData.eventDate);
-    const formattedDate = eventDate.toLocaleDateString('it-IT');
-    const formattedTime = eventDate.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+    const formattedDate = eventDate.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
     let message = `*RIEPILOGO ORDINE*\n\n`;
     message += `*Evento:* ${event.name}\n`;
-    message += `*Data:* ${formattedDate} ${formattedTime}\n`;
+    message += `*Data:* ${formattedDate}\n`;
     message += `*Luogo:* ${event.location}\n\n`;
 
     if (ticketData.itemType === 'table') {

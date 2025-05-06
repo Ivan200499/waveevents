@@ -139,6 +139,20 @@ function TicketHistory() {
     });
   }
 
+  function formatDateOnly(timestamp) {
+    if (!timestamp) return 'N/A';
+    
+    const date = timestamp instanceof Date 
+      ? timestamp 
+      : new Date(timestamp.seconds ? timestamp.seconds * 1000 : timestamp);
+    
+    return date.toLocaleDateString('it-IT', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+  }
+
   async function handleDisableTicket(ticketId) {
     if (!window.confirm('Sei sicuro di voler disabilitare questo biglietto? Non potrà essere validato.')) {
       return;
@@ -348,7 +362,7 @@ function TicketHistory() {
   function generateWhatsAppMessage(ticket) {
     const message = `🎫 Dettagli del tuo biglietto:\n\n` +
       `Evento: ${ticket.eventName}\n` +
-      `Data: ${formatDate(ticket.eventDate)}\n` +
+      `Data: ${formatDateOnly(ticket.eventDate)}\n` +
       `Luogo: ${ticket.eventLocation || 'N/A'}\n` +
       `Tipo: ${ticket.ticketType || 'Standard'}\n` +
       `Quantità: ${ticket.quantity}\n` +

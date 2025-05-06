@@ -102,6 +102,21 @@ const formatDate = (dateValue) => {
   }
 };
 
+// Funzione per formattare la data senza l'ora
+const formatDateOnly = (timestamp) => {
+  if (!timestamp) return 'N/A';
+  
+  const date = timestamp instanceof Date 
+    ? timestamp 
+    : new Date(timestamp.seconds ? timestamp.seconds * 1000 : timestamp);
+  
+  return date.toLocaleDateString('it-IT', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  });
+};
+
 /**
  * Invia un biglietto tramite WhatsApp
  * @param {Object} ticket - Oggetto con i dati del biglietto
@@ -135,7 +150,7 @@ export const sendTicketViaWhatsApp = async (ticket, phoneNumber) => {
 
     // Costruisci il messaggio
     const message = `Ecco il tuo biglietto per ${ticket.eventName || 'l\'evento'}!\n\n` +
-      `📅 Data: ${formatDate(ticket.eventDate)}\n` +
+      `📅 Data: ${formatDateOnly(ticket.eventDate)}\n` +
       `📍 Luogo: ${ticket.eventLocation || 'Non specificato'}\n` +
       `👤 Nome: ${ticket.customerName || 'Non specificato'}\n` +
       `🎫 Codice: ${ticketCode}\n\n` +
