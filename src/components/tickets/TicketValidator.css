@@ -157,11 +157,11 @@
     font-size: 0.95rem;
     min-height: 48px;
     text-align: center;
-  }
+}
 
   .method-button svg {
     font-size: 1.2em;
-  }
+}
 
   .scanner-container {
     height: 320px;

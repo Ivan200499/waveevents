@@ -138,6 +138,11 @@ function TicketHistory() {
             
             <div className="ticket-details">
               <div className="detail-row">
+                <span className="label">Evento:</span>
+                <span className="value">{ticket.eventName || 'N/D'}</span>
+              </div>
+
+              <div className="detail-row">
                 <span className="label">Data vendita:</span>
                 <span className="value">{ticket.saleDate.toLocaleDateString()}</span>
               </div>
@@ -154,7 +159,12 @@ function TicketHistory() {
 
               <div className="detail-row">
                 <span className="label">Email cliente:</span>
-                <span className="value">{ticket.customerEmail}</span>
+                <span className="value">{ticket.customerEmail || 'N/D'}</span>
+              </div>
+
+              <div className="detail-row">
+                <span className="label">Telefono cliente:</span>
+                <span className="value">{ticket.customerPhone || 'N/D'}</span>
               </div>
 
               <div className="detail-row">

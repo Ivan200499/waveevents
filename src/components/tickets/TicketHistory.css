@@ -309,26 +309,31 @@ th {
 }
 
 .ticket-header {
-  background-color: var(--primary-color);
-  color: white;
-  padding: var(--spacing-md);
-  position: relative;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  border-bottom: 1px solid #f0f0f0;
+  padding-bottom: 10px;
+  margin-bottom: 10px;
+  gap: 10px;
 }
 
 .ticket-header h3 {
   margin: 0;
-  font-size: 1.125rem;
-  font-weight: 500;
-  margin-bottom: var(--spacing-xs);
+  font-size: 1.1rem;
+  color: #333;
+  font-weight: 600;
+  flex-grow: 1;
 }
 
 .ticket-code {
-  font-size: 0.875rem;
-  opacity: 0.9;
-  display: block;
-  padding: var(--spacing-xs) 0;
-  font-family: monospace;
-  letter-spacing: 0.5px;
+  font-size: 0.85rem;
+  color: #666;
+  background-color: #eee;
+  padding: 3px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .ticket-details {
@@ -391,7 +396,7 @@ th {
 
   .search-box {
     flex-direction: column;
-    width: 100%;
+    align-items: stretch;
   }
 
   .search-input,
@@ -421,6 +426,10 @@ th {
     padding: var(--spacing-xs) 0;
     margin-top: var(--spacing-xs);
     border-radius: 0;
+  }
+
+  .ticket-header h3 {
+    font-size: 1rem;
   }
 }
 
@@ -487,7 +496,7 @@ th {
   }
   
   .ticket-header h3 {
-    font-size: 1.1rem;
+    font-size: 1rem;
   }
   
   .ticket-details {

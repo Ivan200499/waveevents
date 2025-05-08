@@ -255,7 +255,7 @@ function TicketValidator({ initializeWithScanner = false }) {
 
       if (ticketData.validatedAt || ticketData.status === 'used') {
         ticketDataForDisplay = { ...ticketDataForDisplay, error: 'Biglietto GIA\' VALIDATO', validatedAt: ticketData.validatedAt, validatorName: ticketData.validatorName };
-        throw new Error(`❌ Biglietto GIA' VALIDATO\n${ticketData.eventName}\n(${currentTicketCode})`);
+         throw new Error(`❌ Biglietto GIA' VALIDATO\n${ticketData.eventName}\n(${currentTicketCode})`);
       }
 
       if (ticketData.status === 'cancelled') {
