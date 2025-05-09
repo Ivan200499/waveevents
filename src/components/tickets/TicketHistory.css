@@ -386,51 +386,88 @@ th {
 /* Mobile Optimizations */
 @media (max-width: 768px) {
   .ticket-history {
-    padding: var(--spacing-sm);
+    padding: var(--spacing-sm, 15px); /* Fallback se var non definito */
   }
 
   .filters-section {
     flex-direction: column;
-    gap: var(--spacing-sm);
+    gap: var(--spacing-md, 15px); /* Aumentato un po' il gap tra sezioni di filtri */
+    padding: var(--spacing-sm, 10px);
+    background-color: var(--background-container-alt, #f9f9f9); /* Sfondo leggermente diverso */
+    border-radius: var(--border-radius, 6px);
+    margin-bottom: var(--spacing-lg, 20px); /* Spazio sotto i filtri */
   }
 
   .search-box {
     flex-direction: column;
     align-items: stretch;
+    gap: var(--spacing-sm, 10px); /* Gap tra input di ricerca e select */
+  }
+
+  .filter-label {
+    /* Su mobile, potremmo volerle un po' più grandi o con più margine se necessario */
+    font-size: 0.85rem; /* Leggermente più piccolo per mobile per risparmiare spazio */
+    /* margin-bottom: var(--spacing-sm, 8px); */
   }
 
   .search-input,
   .filter-select {
     width: 100%;
+    padding: var(--spacing-md, 12px); 
+    font-size: 1rem; 
+    /* RIPRISTINO STILI ORIGINALI */
+    border: 1px solid var(--border-color, #ccc);
+    background-color: var(--input-background, white);
+    color: var(--text-input-color, #333); /* Colore testo input */
+    /* FINE RIPRISTINO */
+    border-radius: var(--border-radius-sm, 4px); 
+    box-sizing: border-box; 
   }
 
+  .filter-select {
+    /* ... eventuali stili specifici per il select ... */
+  }
+  
   .tickets-grid {
     grid-template-columns: 1fr;
-    gap: var(--spacing-sm);
+    gap: var(--spacing-sm, 10px); /* Consistenza nel gap */
   }
 
   .ticket-card {
-    margin-bottom: var(--spacing-sm);
+    margin-bottom: var(--spacing-sm, 10px); /* Consistenza */
   }
 
   .ticket-header {
-    padding: var(--spacing-sm);
+    padding: var(--spacing-sm, 10px);
   }
 
   .ticket-details {
-    padding: var(--spacing-sm);
+    padding: var(--spacing-sm, 10px);
   }
 
   .ticket-code {
     background: none;
-    padding: var(--spacing-xs) 0;
-    margin-top: var(--spacing-xs);
+    padding: var(--spacing-xs, 4px) 0;
+    margin-top: var(--spacing-xs, 4px);
     border-radius: 0;
   }
 
   .ticket-header h3 {
     font-size: 1rem;
   }
+}
+
+/* Ripristino anche per il tema scuro */
+[data-theme="dark"] .filters-section { /* Mantengo gli stili per filters-section che avevamo aggiunto e sembravano ok */
+  background-color: var(--dark-background-container-alt, #2c2c2e); 
+  border: 1px solid var(--dark-border-color-container, #444); 
+}
+
+[data-theme="dark"] .search-input,
+[data-theme="dark"] .filter-select {
+  border-color: var(--dark-border-color, #555);
+  background-color: var(--dark-input-background, #3a3a3c);
+  color: var(--dark-text-primary, #f0f0f0);
 }
 
 /* Loading and Error States */
@@ -594,4 +631,29 @@ th {
   .ticket-card:active {
     transform: scale(0.98);
   }
+}
+
+.filter-label {
+  display: block; /* Per farla stare sopra l'input/select */
+  margin-bottom: var(--spacing-xs, 4px); /* Spazio tra etichetta e controllo */
+  font-weight: 500; /* Leggermente grassetto */
+  font-size: 0.9rem;
+  color: var(--text-secondary, #555); /* Colore di fallback se var non definita */
+}
+
+/* Tema Scuro */
+[data-theme="dark"] .filter-label {
+  color: var(--dark-text-secondary, #bbb);
+}
+
+[data-theme="dark"] .filters-section { 
+  background-color: var(--dark-background-container-alt, #2c2c2e); 
+  border: 1px solid var(--dark-border-color-container, #444); 
+}
+
+[data-theme="dark"] .search-input,
+[data-theme="dark"] .filter-select {
+  border-color: var(--dark-border-color, #555);
+  background-color: var(--dark-input-background, #3a3a3c);
+  color: var(--dark-text-primary, #f0f0f0);
 } 

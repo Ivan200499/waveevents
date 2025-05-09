@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../../firebase/config';
-import { collection, getDocs, doc, updateDoc, deleteDoc, query, where, orderBy, limit, serverTimestamp, increment } from 'firebase/firestore';
+import { collection, getDocs, doc, updateDoc, deleteDoc, query, where, orderBy, limit, serverTimestamp, increment, getDoc } from 'firebase/firestore';
 import { FaSearch, FaTimesCircle, FaCheckCircle, FaBan, FaUndo, FaInfoCircle, FaWhatsapp, FaTrash, FaShoppingCart, FaQuestionCircle } from 'react-icons/fa';
 import './TicketHistory.css';
 
@@ -250,37 +250,216 @@ function TicketHistory() {
       setCancellingTicket(true);
       setError(null);
 
-      // 1. Elimina direttamente il biglietto
-      const ticketRef = doc(db, 'tickets', ticketId);
-      await deleteDoc(ticketRef);
+      console.log(`Inizio eliminazione del biglietto ${ticketId}`);
       
-      // 2. Tenta di aggiornare le giacenze solo se abbiamo un ID evento valido, ma non bloccare l'esecuzione
-      if (eventId) {
-        try {
-          const eventRef = doc(db, 'events', eventId);
-          await updateDoc(eventRef, {
-            availableTickets: increment(quantity || 1)
-          });
-        } catch (eventError) {
-          // Ignora l'errore di aggiornamento delle giacenze
-          console.warn("Impossibile aggiornare le giacenze, ma il biglietto è stato eliminato");
-        }
+      // 1. Recupera i dettagli del biglietto prima di eliminarlo
+      const ticketRef = doc(db, 'tickets', ticketId);
+      const ticketSnap = await getDoc(ticketRef);
+      
+      if (!ticketSnap.exists()) {
+        throw new Error('Biglietto non trovato');
       }
-
-      // 3. Aggiorna l'UI
+      
+      const ticketData = ticketSnap.data();
+      const ticketEventId = ticketData.eventId || ticketData.event_id;
+      const ticketQuantity = ticketData.quantity || 1;
+      const eventDate = ticketData.eventDate || ticketData.event_date;
+      
+      // Recupera informazioni sul tipo di biglietto
+      const ticketTypeId = ticketData.ticketTypeId || ticketData.ticketType?.id || '';
+      const ticketTypeName = ticketData.ticketTypeName || ticketData.ticketType?.name || '';
+      console.log(`Dettagli biglietto - ID Evento: ${ticketEventId}, Quantità: ${ticketQuantity}, Tipo: ${ticketTypeName || "Sconosciuto"}`);
+      
+      // 2. Elimina il biglietto
+      await deleteDoc(ticketRef);
+      console.log(`Biglietto ${ticketId} eliminato con successo`);
+      
+      // 3. Aggiorna le giacenze dell'evento
+      if (ticketEventId) {
+        try {
+          console.log(`Recupero dettagli completi dell'evento ${ticketEventId}`);
+          
+          const eventRef = doc(db, 'events', ticketEventId);
+          const eventSnap = await getDoc(eventRef);
+          
+          if (!eventSnap.exists()) {
+            throw new Error(`Evento ${ticketEventId} non trovato`);
+          }
+          
+          const eventData = eventSnap.data();
+          console.log(`Evento trovato: ${eventData.name}`);
+          
+          // Log dettagliato per debugging
+          console.log(`STRUTTURA COMPLETA DELL'EVENTO:`, JSON.stringify(eventData, null, 2));
+          
+          // Controlla anche eventDates se presente
+          if (eventData.eventDates && Array.isArray(eventData.eventDates) && eventData.eventDates.length > 0) {
+            console.log(`L'evento ha ${eventData.eventDates.length} date configurate`);
+            
+            // Cerca la data corrispondente al biglietto
+            let foundDate = false;
+            if (eventDate) {
+              const eventDateObj = eventDate instanceof Date ? 
+                eventDate : 
+                new Date(eventDate.seconds ? eventDate.seconds * 1000 : eventDate);
+              
+              const eventDateString = eventDateObj.toISOString().split('T')[0];
+              
+              // Copia l'array delle date per la modifica
+              const updatedEventDates = [...eventData.eventDates];
+              
+              for (let i = 0; i < updatedEventDates.length; i++) {
+                const dateItem = updatedEventDates[i];
+                const itemDate = dateItem.date instanceof Date ? 
+                  dateItem.date : 
+                  new Date(dateItem.date.seconds ? dateItem.date.seconds * 1000 : dateItem.date);
+                
+                const itemDateString = itemDate.toISOString().split('T')[0];
+                
+                // Se abbiamo trovato la data corrispondente
+                if (itemDateString === eventDateString) {
+                  console.log(`Trovata data corrispondente al biglietto: ${itemDateString}`);
+                  
+                  // Verifica se la data ha tipi di biglietto
+                  if (dateItem.ticketTypes && Array.isArray(dateItem.ticketTypes)) {
+                    console.log(`La data ha ${dateItem.ticketTypes.length} tipi di biglietto`);
+                    
+                    // Cerca il tipo "general"
+                    let foundTicketType = false;
+                    for (let j = 0; j < dateItem.ticketTypes.length; j++) {
+                      const typeItem = dateItem.ticketTypes[j];
+                      const typeName = (typeItem.name || '').toLowerCase();
+                      
+                      if (typeName === 'general' || typeName === 'generale' || typeName === 'standard') {
+                        console.log(`Trovato tipo "general" per la data ${itemDateString}`);
+                        const oldQuantity = parseInt(typeItem.quantity) || 0;
+                        const newQuantity = oldQuantity + ticketQuantity;
+                        
+                        console.log(`Incremento quantità da ${oldQuantity} a ${newQuantity}`);
+                        updatedEventDates[i].ticketTypes[j].quantity = newQuantity;
+                        
+                        // Aggiorna il documento
+                        await updateDoc(eventRef, { eventDates: updatedEventDates });
+                        console.log(`Aggiornato documento con nuovo valore per il tipo "${typeName}"`);
+                        
+                        foundTicketType = true;
+                        foundDate = true;
+                        break;
+                      }
+                    }
+                    
+                    // Se non trovato, usa il primo tipo disponibile
+                    if (!foundTicketType && dateItem.ticketTypes.length > 0) {
+                      const typeItem = dateItem.ticketTypes[0];
+                      const oldQuantity = parseInt(typeItem.quantity) || 0;
+                      const newQuantity = oldQuantity + ticketQuantity;
+                      
+                      console.log(`Tipo "general" non trovato, uso il primo tipo: ${typeItem.name}`);
+                      console.log(`Incremento quantità da ${oldQuantity} a ${newQuantity}`);
+                      
+                      updatedEventDates[i].ticketTypes[0].quantity = newQuantity;
+                      
+                      // Aggiorna il documento
+                      await updateDoc(eventRef, { eventDates: updatedEventDates });
+                      console.log(`Aggiornato documento con nuovo valore per il tipo "${typeItem.name}"`);
+                      
+                      foundDate = true;
+                    }
+                  }
+                  
+                  break;
+                }
+              }
+            }
+            
+            // Se abbiamo trovato e aggiornato la data corretta, possiamo interrompere qui
+            if (foundDate) {
+              console.log(`Data aggiornata con successo, nessun'altra azione richiesta`);
+              return;
+            }
+          }
+          
+          // Recupera il documento evento per effettuare modifiche
+          // Controlla se l'evento ha tipi di biglietto 
+          if (eventData.ticketTypes && Array.isArray(eventData.ticketTypes) && eventData.ticketTypes.length > 0) {
+            console.log(`L'evento ha ${eventData.ticketTypes.length} tipi di biglietto`);
+            
+            // Copia l'array dei tipi di biglietto
+            const updatedTicketTypes = [...eventData.ticketTypes];
+            let foundTicketType = false;
+            
+            // Cerca il tipo "generale" o "standard"
+            for (let i = 0; i < updatedTicketTypes.length; i++) {
+              const typeName = (updatedTicketTypes[i].name || '').toLowerCase();
+              if (typeName === 'general' || typeName === 'generale' || typeName === 'standard') {
+                console.log(`Trovato tipo di biglietto standard: ${updatedTicketTypes[i].name}`);
+                const oldQuantity = parseInt(updatedTicketTypes[i].quantity) || 0;
+                const newQuantity = oldQuantity + ticketQuantity;
+                
+                console.log(`Incremento quantità da ${oldQuantity} a ${newQuantity}`);
+                updatedTicketTypes[i].quantity = newQuantity;
+                
+                // Aggiorna il documento
+                await updateDoc(eventRef, { ticketTypes: updatedTicketTypes });
+                console.log(`Aggiornato biglietto di tipo ${updatedTicketTypes[i].name}: ${oldQuantity} -> ${newQuantity}`);
+                foundTicketType = true;
+                break;
+              }
+            }
+            
+            // Se non è stato possibile trovare un tipo specifico, aggiorna tutti
+            if (!foundTicketType) {
+              console.log(`Tipo specifico non trovato, incremento primo disponibile`);
+              // Usa il primo tipo disponibile
+              if (updatedTicketTypes.length > 0) {
+                const oldQuantity = parseInt(updatedTicketTypes[0].quantity) || 0;
+                const newQuantity = oldQuantity + ticketQuantity;
+                
+                console.log(`Incremento quantità per ${updatedTicketTypes[0].name} da ${oldQuantity} a ${newQuantity}`);
+                updatedTicketTypes[0].quantity = newQuantity;
+                
+                // Aggiorna il documento
+                await updateDoc(eventRef, { ticketTypes: updatedTicketTypes });
+              }
+            }
+          } else {
+            // Se non ci sono tipi di biglietto, incrementa il contatore generale
+            const oldAvailableTickets = parseInt(eventData.availableTickets) || 0;
+            console.log(`Incremento contatore generale da ${oldAvailableTickets} a ${oldAvailableTickets + ticketQuantity}`);
+            await updateDoc(eventRef, { availableTickets: increment(ticketQuantity) });
+          }
+          
+          // Notifica l'aggiornamento
+          const ticketUpdateEvent = new CustomEvent('ticketQuantityUpdated', {
+            detail: {
+              eventId: ticketEventId
+            }
+          });
+          window.dispatchEvent(ticketUpdateEvent);
+          
+          console.log(`Biglietto eliminato: ripristinati ${ticketQuantity} biglietti all'evento`);
+        } catch (eventError) {
+          console.error("Errore nell'aggiornamento delle giacenze:", eventError);
+          setError("Il biglietto è stato eliminato, ma non è stato possibile aggiornare le giacenze dell'evento.");
+        }
+      } else {
+        console.warn("Nessun ID evento associato al biglietto");
+      }
+      
+      // 4. Aggiorna l'UI
       setTickets(prevTickets => prevTickets.filter(ticket => ticket.id !== ticketId));
       
-      // 4. Chiudi il modale dei dettagli se era aperto
+      // 5. Chiudi il modale dei dettagli se era aperto
       if (selectedTicket && selectedTicket.id === ticketId) {
         setShowDetails(false);
         setSelectedTicket(null);
       }
 
-      setSuccessMessage('Biglietto eliminato con successo!');
-      setTimeout(() => setSuccessMessage(null), 3000);
+      setSuccessMessage(`Biglietto eliminato con successo! ${ticketQuantity} biglietti sono stati ripristinati all'evento.`);
+      setTimeout(() => setSuccessMessage(null), 5000);
     } catch (error) {
       console.error("Errore durante eliminazione biglietto:", error);
-      setError("Si è verificato un errore durante eliminazione del biglietto");
+      setError("Si è verificato un errore durante eliminazione del biglietto: " + error.message);
     } finally {
       setCancellingTicket(false);
     }

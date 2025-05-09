@@ -19,6 +19,20 @@ function EventManagement() {
     fetchEvents();
   }, []);
 
+  // Ascoltatore per aggiornare gli eventi quando un biglietto viene eliminato/ripristinato
+  useEffect(() => {
+    const handleTicketUpdate = () => {
+      console.log('Aggiornamento eventi in corso dopo modifica biglietti...');
+      fetchEvents();
+    };
+
+    window.addEventListener('ticketQuantityUpdated', handleTicketUpdate);
+    
+    return () => {
+      window.removeEventListener('ticketQuantityUpdated', handleTicketUpdate);
+    };
+  }, []);
+
   const fetchEvents = async () => {
     try {
       const eventsSnapshot = await getDocs(collection(db, 'events'));

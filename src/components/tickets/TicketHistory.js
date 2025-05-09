@@ -107,14 +107,18 @@ function TicketHistory() {
       
       <div className="filters-section">
         <div className="search-box">
+          <label htmlFor="searchInput" className="filter-label">Cerca vendite:</label>
           <input
             type="text"
-            placeholder="Cerca vendite..."
+            id="searchInput"
+            placeholder="Nome, email, evento, codice..."
             value={searchTerm}
             onChange={handleSearch}
             className="search-input"
           />
+          <label htmlFor="filterSelect" className="filter-label">Filtra per:</label>
           <select
+            id="filterSelect"
             value={filterBy}
             onChange={handleFilterChange}
             className="filter-select"

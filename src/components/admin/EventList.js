@@ -1,9 +1,39 @@
 import { FaCalendarAlt } from 'react-icons/fa';
+import { useState, useEffect } from 'react';
 
 function EventList({ events, onEdit, onDelete }) {
+  const [eventsList, setEventsList] = useState(events);
+
+  // Ascoltatore per aggiornare la UI quando un biglietto viene eliminato/ripristinato
+  useEffect(() => {
+    const handleTicketUpdate = (event) => {
+      console.log('Evento di aggiornamento biglietti ricevuto:', event.detail);
+      
+      // Aggiorna l'evento specifico nella lista
+      setEventsList(prevEvents => 
+        prevEvents.map(evt => 
+          evt.id === event.detail.eventId 
+            ? { ...evt, availableTickets: event.detail.newQuantity }
+            : evt
+        )
+      );
+    };
+
+    window.addEventListener('ticketQuantityUpdated', handleTicketUpdate);
+    
+    return () => {
+      window.removeEventListener('ticketQuantityUpdated', handleTicketUpdate);
+    };
+  }, []);
+
+  // Aggiorna lo stato locale quando cambiano gli eventi da props
+  useEffect(() => {
+    setEventsList(events);
+  }, [events]);
+
   return (
     <div className="events-grid">
-      {events.map(event => (
+      {eventsList.map(event => (
         <div key={event.id} className="event-card">
           {/* Aggiungiamo la sezione immagine usando posterImageUrl */}
           {event.posterImageUrl && (
@@ -17,15 +47,19 @@ function EventList({ events, onEdit, onDelete }) {
               <div className="event-dates">
                 <h4><FaCalendarAlt /> Date disponibili:</h4>
                 <div className="dates-list">
-                  {event.dates.map((date, index) => (
+                  {/* Utilizziamo subEvents invece di dates per eventi ricorrenti */}
+                  {event.subEvents && event.subEvents.map((subEvent, index) => (
                     <div key={index} className="date-item">
-                      {new Date(date.date).toLocaleDateString()} - {date.availableTickets} biglietti
+                      {new Date(subEvent.date.seconds ? new Date(subEvent.date.seconds * 1000) : subEvent.date).toLocaleDateString()} - {subEvent.availableTickets} biglietti
                     </div>
                   ))}
                 </div>
               </div>
             ) : (
-              <p><FaCalendarAlt /> Data: {new Date(event.date).toLocaleDateString()}</p>
+              <>
+                <p><FaCalendarAlt /> Data: {event.date && new Date(event.date.seconds ? event.date.seconds * 1000 : event.date).toLocaleDateString()}</p>
+                <p><strong>Biglietti disponibili: {event.availableTickets || 0}</strong></p>
+              </>
             )}
             <p>Luogo: {event.location}</p>
             <p>Prezzo: €{event.price}</p>

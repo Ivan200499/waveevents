@@ -44,13 +44,15 @@
 .scanner-container {
   position: relative;
   width: 100%;
-  height: 300px;
-  margin: 20px 0;
-  background: #000;
+  max-width: 500px;
+  aspect-ratio: 1 / 1;
+  margin: 15px auto;
+  background: var(--background-secondary, #f0f0f0);
   border-radius: 8px;
   overflow: hidden;
   display: flex;
-  flex-direction: column;
+  justify-content: center;
+  align-items: center;
 }
 
 .manual-input {
@@ -164,8 +166,9 @@
 }
 
   .scanner-container {
-    height: 320px;
-    margin: 15px 0;
+    width: 90%;
+    max-width: 450px;
+    margin: 10px auto;
   }
 
   #reader__dashboard {
@@ -230,8 +233,10 @@
 /* Stili per schermi molto piccoli */
 @media (max-width: 480px) {
   .scanner-container {
-    height: 280px;
-    margin: 10px 0;
+    width: 95%;
+    aspect-ratio: 1/1;
+    max-width: none;
+    margin: 5px auto;
   }
 
   #reader__dashboard {
@@ -360,19 +365,18 @@
 
 /* Migliora lo stile per il container dello scanner */
 #reader {
+  display: block !important;
+  position: relative !important;
   width: 100% !important;
   height: 100% !important;
-  min-height: 300px;
-  position: relative !important;
-  border-radius: 8px;
-  overflow: hidden;
+  overflow: hidden !important;
 }
 
 #reader video {
   width: 100% !important;
-  height: calc(100% - 45px) !important;
+  height: 100% !important;
   object-fit: cover !important;
-  border-radius: 8px;
+  display: block !important;
 }
 
 /* Migliora la visibilità dei messaggi */
@@ -383,7 +387,7 @@
   text-align: center;
   font-weight: 500;
   line-height: 1.5;
-  white-space: pre-line; /* Permette l'andata a capo con \n nel messaggio */
+  white-space: pre-line;
 }
 
 .message.success {
@@ -456,19 +460,21 @@
 }
 
 #reader__scan_region video {
-  width: 100% !important;
-  height: 100% !important;
   object-fit: cover !important;
 }
 
 #reader__dashboard {
-  background: var(--background-secondary, #eee) !important;
-  color: var(--text-primary, #333) !important;
-  padding: 8px !important;
-  width: 100%;
-  box-sizing: border-box;
-  text-align: center;
-  position: relative;
+  position: absolute !important;
+  bottom: 0;
+  left: 0;
+  width: 100% !important;
+  background: rgba(0, 0, 0, 0.5) !important;
+  padding: 10px !important;
+  box-sizing: border-box !important;
+  z-index: 20 !important;
+  display: flex !important;
+  justify-content: space-around !important;
+  align-items: center !important;
 }
 
 /* Stili specifici per Dark Theme per il dashboard */
@@ -492,4 +498,44 @@
       font-size: 1.3rem;
     }
   }
+}
+
+/* Stili specifici per html5-qrcode UI elements, se necessario */
+#reader__dashboard_section_csr span select {
+  font-size: 0.8rem;
+}
+
+#reader__dashboard_section_swaplink {
+  font-size: 0.8rem;
+  padding: 8px 0;
+}
+
+#reader__scan_region {
+  background: none !important;
+  border: 2px solid white !important;
+  box-shadow: 0 0 0 100vmax rgba(0,0,0,0.5) !important;
+  width: 75% !important;
+  padding-bottom: 75% !important;
+  height: auto !important;
+  position: absolute !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  box-sizing: border-box !important;
+}
+
+#reader__dashboard_torch_img {
+    display: none !important;
+}
+
+/* Potrebbe essere necessario un overlay trasparente per evitare interazioni accidentali */
+/* se la libreria non lo gestisce bene su iOS */
+.scanner-overlay-ios-fix {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+    -webkit-transform: translateZ(0);
 }
