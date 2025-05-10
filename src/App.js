@@ -12,7 +12,6 @@ import './App.css';
 import Login from './components/auth/Login';
 import Register from './components/auth/Register';
 import Dashboard from './components/dashboard/Dashboard';
-import TicketValidator from './components/tickets/TicketValidator';
 import PrivateRoute from './components/shared/PrivateRoute';
 import InitialSetup from './components/auth/InitialSetup';
 import ProtectedRoute from './components/shared/ProtectedRoute';
@@ -24,6 +23,7 @@ import TicketHistory from './components/tickets/TicketHistory';
 import TicketPage from './components/tickets/TicketPage';
 import PrivacyPolicy from './components/legal/PrivacyPolicy';
 import TermsOfService from './components/legal/TermsOfService';
+import ValidatorPage from './pages/ValidatorPage';
 
 function App() {
   const [isAppReady, setIsAppReady] = useState(false);
@@ -160,15 +160,7 @@ function App() {
                     path="/validate-ticket" 
                     element={
                       <ProtectedRoute requiredRole="canValidateTickets">
-                        <div className="validator-page-container">
-                          <header className="validator-header">
-                            <div className="logo-container">
-                              <img src="/logo.png" alt="Logo" className="logo-image" />
-                              <span className="logo-text">Ticket Validator</span>
-                            </div>
-                          </header>
-                          <TicketValidator initializeWithScanner={true} />
-                        </div>
+                        <ValidatorPage />
                       </ProtectedRoute>
                     } 
                   />

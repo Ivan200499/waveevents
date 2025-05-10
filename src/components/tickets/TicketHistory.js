@@ -185,6 +185,13 @@ function TicketHistory() {
                 <span className="label">Totale:</span>
                 <span className="value">€{ticket.totalPrice?.toFixed(2) || '0.00'}</span>
               </div>
+
+              {typeof ticket.commissionAmount === 'number' && (
+                <div className="detail-row commission">
+                  <span className="label">Commissione Guadagnata:</span>
+                  <span className="value">€{ticket.commissionAmount.toFixed(2)}</span>
+                </div>
+              )}
             </div>
           </div>
         ))}

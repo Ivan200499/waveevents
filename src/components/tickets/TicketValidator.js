@@ -2,45 +2,48 @@ import { useState, useEffect, useRef } from 'react';
 import { db } from '../../firebase/config';
 import { doc, getDoc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { useAuth } from '../../contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
 import { Html5QrcodeScanner } from 'html5-qrcode';
-import { FaQrcode, FaKeyboard } from 'react-icons/fa';
+import { FaQrcode, FaKeyboard, FaTicketAlt, FaUser, FaCalendarAlt, FaMapMarkerAlt, FaCheck, FaTimes } from 'react-icons/fa';
 import './TicketValidator.css';
 
-function TicketValidator({ initializeWithScanner = false }) {
+function TicketValidator({ initializeWithScanner = true }) {
   const { currentUser } = useAuth();
   const [ticketCode, setTicketCode] = useState('');
   const [message, setMessage] = useState('');
-  const [messageType, setMessageType] = useState('info'); // 'success', 'error', 'info'
+  const [messageType, setMessageType] = useState('info');
   const [loading, setLoading] = useState(false);
   const [userRole, setUserRole] = useState(null);
   const [scannerActive, setScannerActive] = useState(initializeWithScanner);
-  const navigate = useNavigate();
-  const scannerRef = useRef(null); // Ref per l'istanza dello scanner
-  const inputRef = useRef(null); // Ref per l'input manuale
-  const messageTimeoutRef = useRef(null); // Ref per il timeout del messaggio
-  const [isScanPaused, setIsScanPaused] = useState(false); // Stato per pausa scansione
+  const scannerRef = useRef(null);
+  const inputRef = useRef(null);
+  const messageTimeoutRef = useRef(null);
+  const [isScanPaused, setIsScanPaused] = useState(false);
   const scannerContainerRef = useRef(null);
   const [scannerInitialized, setScannerInitialized] = useState(false);
   const [lastScannedTicketDetails, setLastScannedTicketDetails] = useState(null);
 
+  // Check user permissions
   useEffect(() => {
     async function checkUserRole() {
       try {
+        if (!currentUser) {
+          setMessage('Utente non autenticato.');
+          setMessageType('error');
+          return;
+        }
+        
         const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
         if (userDoc.exists()) {
           setUserRole(userDoc.data().role);
-          // Permetti validazione a manager E admin (o ruolo specifico 'validator')
+          const currentRole = (userDoc.data().role || '').toLowerCase();
           const allowedRoles = ['manager', 'admin', 'validator']; 
-          if (!allowedRoles.includes(userDoc.data().role)) {
+          if (!allowedRoles.includes(currentRole)) {
             setMessage('Non hai i permessi per validare i biglietti.');
             setMessageType('error');
-            navigate('/'); // Reindirizza se non autorizzato
           }
         } else {
           setMessage('Utente non trovato.');
           setMessageType('error');
-          navigate('/');
         }
       } catch (error) {
         console.error('Errore nel recupero del ruolo:', error);
@@ -49,382 +52,399 @@ function TicketValidator({ initializeWithScanner = false }) {
       }
     }
     checkUserRole();
-  }, [currentUser, navigate]);
+  }, [currentUser]);
 
-  // Cleanup migliorato
+  // Cleanup when component unmounts
   useEffect(() => {
+    const instanceAtMount = scannerRef.current;
     return () => {
-      if (scannerRef.current) {
+      if (instanceAtMount) {
         try {
-        scannerRef.current.clear().catch(error => {
-          console.error("Errore nella pulizia dello scanner:", error);
-        });
-        scannerRef.current = null;
+          instanceAtMount.clear();
         } catch (error) {
-          console.error("Errore durante il cleanup dello scanner:", error);
+          console.log("Cleanup error on unmount:", error);
         }
       }
       if (messageTimeoutRef.current) {
         clearTimeout(messageTimeoutRef.current);
       }
-      setScannerInitialized(false);
     };
   }, []);
   
-  // Gestione scanner migliorata
+  // Initialize scanner when scannerActive changes
   useEffect(() => {
-    if (scannerActive && !scannerInitialized) {
-      const initializeScanner = async () => {
+    let isEffectActive = true;
+
+    const initializeNewScanner = async () => {
+      console.log("Attempting to initialize scanner...");
+      if (!isEffectActive || !document.getElementById("html5qr-code-full-region")) {
+        console.log("Scanner initialization aborted: effect not active or element not found.");
+        return;
+      }
+
+      if (scannerRef.current) {
+        console.log("Clearing previous scanner instance...");
         try {
-          if (scannerRef.current) {
-            await scannerRef.current.clear();
-            scannerRef.current = null;
+          await scannerRef.current.clear();
+          console.log("Previous scanner cleared.");
+        } catch (e) { 
+          console.warn("Error clearing previous scanner:", e);
+        }
+        scannerRef.current = null;
+      }
+
+      const config = {
+        fps: 10,
+        qrbox: { width: 250, height: 250 },
+        videoConstraints: { facingMode: "environment" },
+        rememberLastUsedCamera: true,
+        supportedScanTypes: [0] // SCAN_TYPE_CAMERA
+      };
+      console.log("Scanner config:", config);
+
+      const html5QrcodeScanner = new Html5QrcodeScanner("html5qr-code-full-region", config, false);
+
+      const onScanSuccess = (decodedText, decodedResult) => {
+        console.log("[SCAN SUCCESS] Decoded Text:", decodedText, "Full Result:", decodedResult);
+        if (!isEffectActive || loading || isScanPaused) {
+          console.log("[SCAN SUCCESS] Aborted due to state:", { isEffectActive, loading, isScanPaused });
+          return;
+        }
+        setIsScanPaused(true);
+        console.log("[SCAN SUCCESS] Calling handleValidateTicket...");
+        handleValidateTicket(decodedText);
+        setTimeout(() => { 
+          if (isEffectActive) {
+            setIsScanPaused(false); 
+            console.log("[SCAN SUCCESS] Scan pause released.");
           }
+        }, 2000);
+      };
 
-                const html5QrcodeScanner = new Html5QrcodeScanner(
-                    "reader",
-                    { 
-                        fps: 10, 
-                        qrbox: { width: 250, height: 250 },
-                        videoConstraints: {
-                facingMode: "environment",
-                width: { min: 640, ideal: 1280, max: 1920 },
-                height: { min: 480, ideal: 720, max: 1080 }
-                        },
-              supportedScanTypes: [0]
-                    },
-            false
-                );
-  
-                html5QrcodeScanner.render(
-                    (decodedText) => {
-              if (loading || isScanPaused) return;
-                        
-                        setIsScanPaused(true);
-                        handleValidateTicket(decodedText);
-
-                        setTimeout(() => {
-                            setIsScanPaused(false);
-                        }, 2000);
-                    },
-                    (errorMessage) => {
-              // Gestione errori migliorata
-              if (errorMessage.includes("No MultiFormat Readers were able to detect the code")) {
-                return;
-              }
-              if (errorMessage.includes("OverconstrainedError")) {
-                console.warn("Errore vincoli fotocamera, riprovo con configurazione base");
-                // Riprova con configurazione base
-                html5QrcodeScanner.clear();
-                const basicScanner = new Html5QrcodeScanner(
-                  "reader",
-                  { 
-                    fps: 10, 
-                    qrbox: { width: 250, height: 250 },
-                    videoConstraints: {
-                      facingMode: "environment"
-                    },
-                    supportedScanTypes: [0]
-                  },
-                  false
-                );
-                basicScanner.render(
-                  (decodedText) => {
-                    if (loading || isScanPaused) return;
-                    setIsScanPaused(true);
-                    handleValidateTicket(decodedText);
-                    setTimeout(() => {
-                      setIsScanPaused(false);
-                    }, 2000);
-                  },
-                  (error) => {
-                    console.warn(`QR Scanner warning: ${error}`);
-                  }
-                );
-                scannerRef.current = basicScanner;
-                return;
-              }
-              console.warn(`QR Scanner warning: ${errorMessage}`);
-            }
-          );
-
-                scannerRef.current = html5QrcodeScanner;
+      const onScanFailure = (errorMessage) => {
+        if (!isEffectActive) return;
+        // console.warn("[SCAN FAILURE]:", errorMessage); // Decommenta per debug dettagliato fallimenti scansione
+      };
+      
+      try {
+        console.log("Rendering scanner...");
+        await html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+        console.log("Scanner rendered successfully.");
+        if (isEffectActive) {
+          scannerRef.current = html5QrcodeScanner;
           setScannerInitialized(true);
-              } catch (err) {
-                console.error("Errore inizializzazione scanner QR:", err);
-          setMessage("Errore nell'avvio dello scanner QR. Ricarica la pagina e riprova.");
-                setMessageType('error');
+          console.log("Scanner initialized and ref set.");
+        } else {
+          console.log("Effect became inactive during scanner render, clearing scanner.");
+          if(html5QrcodeScanner && html5QrcodeScanner.getState && html5QrcodeScanner.getState() === 2) {
+            html5QrcodeScanner.clear().catch(e => console.warn("Error clearing scanner on inactive effect:", e));
+          }
+        }
+      } catch (renderError) {
+        console.error("Error rendering scanner:", renderError);
+        if (isEffectActive) {
+          setMessage("Errore nell'avvio dello scanner. Verifica permessi fotocamera e ricarica.");
+          setMessageType('error');
           setScannerActive(false);
           setScannerInitialized(false);
         }
-      };
+      }
+    };
 
-      initializeScanner();
-    } else if (!scannerActive && scannerInitialized) {
-      const cleanupScanner = async () => {
+    const cleanupCurrentScanner = async () => {
+      console.log("Cleaning up current scanner...");
+      if (scannerRef.current) {
+        const instanceToCleanup = scannerRef.current;
+        scannerRef.current = null; 
         try {
-          if (scannerRef.current) {
-            await scannerRef.current.clear();
-              scannerRef.current = null;
+          if (instanceToCleanup && instanceToCleanup.getState && instanceToCleanup.getState() === 2) {
+            await instanceToCleanup.clear();
+            console.log("Scanner instance cleared in cleanup.");
           }
-          setScannerInitialized(false);
         } catch (error) {
-          console.error("Errore durante la pulizia dello scanner:", error);
+          console.warn("Error in cleanupCurrentScanner:", error);
         }
-      };
-      cleanupScanner();
-    }
-  }, [scannerActive, loading, isScanPaused]);
+      }
+      if (isEffectActive) {
+        setScannerInitialized(false);
+        console.log("Scanner uninitialized.");
+      }
+    };
 
-  // Funzione per mostrare messaggi temporanei
+    if (scannerActive) {
+      console.log("Scanner is active. Initialized:", scannerInitialized, "Loading:", loading);
+      if (!scannerInitialized && !loading) {
+        const initTimeout = setTimeout(() => {
+          if(isEffectActive) initializeNewScanner();
+        }, 100); // Ridotto il timeout, ma assicurati che il div sia nel DOM
+        return () => clearTimeout(initTimeout);
+      }
+    } else { 
+      console.log("Scanner is not active. Initialized:", scannerInitialized);
+      if (scannerInitialized) {
+        cleanupCurrentScanner();
+      }
+    }
+
+    return () => {
+      console.log("Effect cleanup for [scannerActive, scannerInitialized, loading, currentUser]");
+      isEffectActive = false;
+      // Considera se è necessario pulire lo scanner qui, 
+      // potrebbe essere già gestito dalla logica if/else sopra
+      // o dallo smontaggio del componente.
+    };
+  }, [scannerActive, scannerInitialized, loading, currentUser]);
+
   const showTemporaryMessage = (msg, type = 'info', duration = 4000) => {
+    console.log(`[MESSAGE] Type: ${type}, Message: ${msg}`);
     setMessage(msg);
     setMessageType(type);
-    // Cancella timeout precedente se esiste
     if (messageTimeoutRef.current) {
         clearTimeout(messageTimeoutRef.current);
     }
-    // Imposta nuovo timeout
     messageTimeoutRef.current = setTimeout(() => {
         setMessage('');
-        setMessageType('info'); // Resetta tipo messaggio
+        setMessageType('info');
     }, duration);
   };
 
   async function handleValidateTicket(code) {
-    setLastScannedTicketDetails(null); // Resetta i dettagli precedenti
+    console.log("[VALIDATE] Called with code:", code);
+    setLastScannedTicketDetails(null);
+    
     if (!code) {
         showTemporaryMessage('Codice biglietto non fornito.', 'error');
         setLastScannedTicketDetails({ ticketCode: 'N/A', error: 'Codice non fornito' });
+        console.log("[VALIDATE] No code provided.");
         return;
     }
+    
     setLoading(true);
+    console.log("[VALIDATE] setLoading(true)");
     let currentTicketCode = '';
     let ticketDataForDisplay = null;
 
     try {
-      // Prova a parsare come JSON (formato QR consigliato)
       try {
         const parsedCode = JSON.parse(code);
         currentTicketCode = parsedCode.ticketCode;
-        console.log('QR Code JSON valido, codice estratto:', currentTicketCode);
+        console.log("[VALIDATE] Parsed QR as JSON. Ticket code:", currentTicketCode);
       } catch (e) {
-        // Altrimenti, usa il codice come stringa
         currentTicketCode = code;
-        console.log('Codice trattato come stringa:', currentTicketCode);
+        console.log("[VALIDATE] QR not JSON. Using raw code:", currentTicketCode);
       }
 
-      if (!currentTicketCode) {
-        showTemporaryMessage("Codice biglietto non valido nel QR code.", 'error');
-        setLastScannedTicketDetails({ ticketCode: code, error: 'Codice non valido nel QR' });
+      if (!currentTicketCode || typeof currentTicketCode !== 'string') {
+        showTemporaryMessage('Codice biglietto estratto non valido.', 'error');
+        setLastScannedTicketDetails({ ticketCode: String(code), error: 'Codice estratto non valido' });
         setLoading(false);
+        console.log("[VALIDATE] Invalid extracted ticket code.", currentTicketCode);
+        return;
+      }
+      currentTicketCode = currentTicketCode.trim();
+      console.log("[VALIDATE] Searching for ticket code:", currentTicketCode);
+
+      const ticketsRef = collection(db, 'tickets');
+      const q = query(ticketsRef, where('ticketCode', '==', currentTicketCode));
+      const querySnapshot = await getDocs(q);
+      console.log("[VALIDATE] Firestore query result. Empty:", querySnapshot.empty, "Size:", querySnapshot.size);
+
+      if (querySnapshot.empty) {
+        showTemporaryMessage('Biglietto non trovato nel sistema.', 'error');
+        setLastScannedTicketDetails({ ticketCode: currentTicketCode, error: 'Biglietto non trovato' });
+        setLoading(false);
+        console.log("[VALIDATE] Ticket not found in DB.");
         return;
       }
       
-      currentTicketCode = currentTicketCode.trim();
-      ticketDataForDisplay = { ticketCode: currentTicketCode };
-
-
-      const ticketsQuery = query(
-        collection(db, 'tickets'),
-        where('ticketCode', '==', currentTicketCode)
-      );
-      const ticketsSnapshot = await getDocs(ticketsQuery);
-
-      if (ticketsSnapshot.empty) {
-        ticketDataForDisplay = { ...ticketDataForDisplay, error: `Biglietto ELIMINATO o NON ESISTENTE` };
-        throw new Error(`❌ Biglietto ELIMINATO o NON ESISTENTE\n(${currentTicketCode})`);
-      }
-
-      const ticketDoc = ticketsSnapshot.docs[0];
+      const ticketDoc = querySnapshot.docs[0];
       const ticketData = ticketDoc.data();
-      ticketDataForDisplay = { // Popola con più dati possibili
+      const ticketId = ticketDoc.id;
+      console.log("[VALIDATE] Ticket found:", { ticketId, ticketData });
+
+      ticketDataForDisplay = {
         ticketCode: currentTicketCode,
-        eventName: ticketData.eventName,
-        customerName: ticketData.customerName || ticketData.customerEmail || 'N/D',
-        ticketType: ticketData.ticketType || 'Standard',
-        eventDate: ticketData.eventDate, // Verrà formattato poi
-        status: ticketData.status,
+        id: ticketId,
+        eventName: ticketData.eventName || 'N/D',
+        eventDate: ticketData.eventDate?.seconds ? new Date(ticketData.eventDate.seconds * 1000).toLocaleDateString('it-IT') : 'N/D',
+        eventLocation: ticketData.eventLocation || 'N/D',
+        customerName: ticketData.customerName || 'N/D',
+        customerEmail: ticketData.customerEmail || 'N/D',
+        quantity: ticketData.quantity || 1,
+        price: ticketData.price != null ? `€${Number(ticketData.price).toFixed(2)}` : 'N/D',
+        isValidated: ticketData.isValidated || false,
+        isDisabled: ticketData.isDisabled || false,
+        validatedAt: ticketData.validatedAt?.seconds ? new Date(ticketData.validatedAt.seconds * 1000).toLocaleString('it-IT') : null
       };
+      console.log("[VALIDATE] Ticket data for display:", ticketDataForDisplay);
 
-      // Controllo stato del biglietto
-      if (ticketData.status === 'disabled') {
-        ticketDataForDisplay = { ...ticketDataForDisplay, error: 'Biglietto DISABILITATO' };
-        throw new Error(`❌ Biglietto DISABILITATO\n${ticketData.eventName}\n(${currentTicketCode})`);
+      if (ticketData.isDisabled) {
+        showTemporaryMessage('Questo biglietto è stato disabilitato.', 'error');
+        setLastScannedTicketDetails({ ...ticketDataForDisplay, status: 'disabled', statusMessage: 'Biglietto disabilitato' });
+        setLoading(false);
+        console.log("[VALIDATE] Ticket is disabled.");
+        return;
       }
 
-      if (ticketData.validatedAt || ticketData.status === 'used') {
-        ticketDataForDisplay = { ...ticketDataForDisplay, error: 'Biglietto GIA\' VALIDATO', validatedAt: ticketData.validatedAt, validatorName: ticketData.validatorName };
-         throw new Error(`❌ Biglietto GIA' VALIDATO\n${ticketData.eventName}\n(${currentTicketCode})`);
+      if (ticketData.isValidated) {
+        showTemporaryMessage(`Biglietto già validato il ${ticketDataForDisplay.validatedAt}.`, 'error');
+        setLastScannedTicketDetails({ ...ticketDataForDisplay, status: 'already_validated', statusMessage: `Già validato il ${ticketDataForDisplay.validatedAt}` });
+        setLoading(false);
+        console.log("[VALIDATE] Ticket already validated.");
+        return;
       }
 
-      if (ticketData.status === 'cancelled') {
-        ticketDataForDisplay = { ...ticketDataForDisplay, error: 'Biglietto CANCELLATO' };
-        throw new Error(`❌ Biglietto CANCELLATO\n${ticketData.eventName}\n(${currentTicketCode})`);
-      }
-
-      await updateDoc(doc(db, 'tickets', ticketDoc.id), {
-        validatedAt: new Date().toISOString(),
-        status: 'validated', // Cambiato da 'used' a 'validated' per coerenza
-        validatedBy: currentUser.uid,
-        validatorName: currentUser.displayName || currentUser.email
+      await updateDoc(doc(db, 'tickets', ticketId), {
+        isValidated: true,
+        validatedAt: new Date(),
+        validatedBy: currentUser.uid
       });
-      
-      ticketDataForDisplay = { ...ticketDataForDisplay, status: 'validated'}; // Aggiorna lo stato per display
+      console.log("[VALIDATE] Ticket successfully validated and updated in DB.");
 
-      showTemporaryMessage(
-        `✅ Biglietto VALIDATO!\nEvento: ${ticketData.eventName}\nCliente: ${ticketData.customerName || ticketData.customerEmail || 'N/D'}\nTipo: ${ticketData.ticketType || 'Standard'}\nCodice: ${currentTicketCode}`,
-        'success'
-      );
+      showTemporaryMessage('Biglietto validato con successo!', 'success');
+      setLastScannedTicketDetails({
+        ...ticketDataForDisplay,
+        isValidated: true, // Aggiorna anche qui per coerenza immediata UI
+        status: 'valid',
+        statusMessage: 'Validato con successo',
+        validatedAt: new Date().toLocaleString('it-IT')
+      });
 
     } catch (error) {
-      console.error('Errore validazione:', error);
-      // ticketDataForDisplay potrebbe essere già parzialmente popolato
-      // o contenere solo il ticketCode se l'errore è avvenuto presto.
-      // Se l'errore ha un messaggio specifico, usalo, altrimenti "Errore sconosciuto".
-      const displayError = ticketDataForDisplay.error || error.message || 'Errore sconosciuto durante la validazione.';
-      showTemporaryMessage(displayError, 'error');
-      // Assicurati che ticketDataForDisplay contenga almeno il codice
-      if (!ticketDataForDisplay.ticketCode && currentTicketCode) {
-        ticketDataForDisplay.ticketCode = currentTicketCode;
-      } else if (!ticketDataForDisplay.ticketCode && code) {
-         ticketDataForDisplay.ticketCode = code; // Fallback al codice raw se parsing fallito
-      }
-      // Aggiungi l'errore specifico se non già presente
-      if (!ticketDataForDisplay.error) {
-          ticketDataForDisplay.error = displayError.split('\n')[0]; // Prendi solo la prima riga dell'errore per brevità
-      }
-
+      console.error("[VALIDATE] Error during validation process:", error);
+      showTemporaryMessage('Errore durante la validazione del biglietto.', 'error');
+      setLastScannedTicketDetails({
+        ticketCode: currentTicketCode || String(code),
+        error: 'Errore di sistema',
+        errorDetails: error.message
+      });
     } finally {
       setLoading(false);
-      setTicketCode(''); // Svuota sempre l'input manuale dopo il tentativo
-      if (ticketDataForDisplay) {
-        setLastScannedTicketDetails(ticketDataForDisplay);
-      }
+      setTicketCode(''); 
+      console.log("[VALIDATE] setLoading(false) in finally block.");
     }
   }
 
   const handleManualSubmit = async (e) => {
-      e.preventDefault(); // Previene ricaricamento pagina se usato in form
-      await handleValidateTicket(ticketCode);
-      // Riporta focus sull'input dopo il tentativo
-      inputRef.current?.focus(); 
+    e.preventDefault();
+    if (!ticketCode.trim()) {
+      showTemporaryMessage('Inserisci un codice biglietto valido.', 'error');
+      return;
+    }
+    await handleValidateTicket(ticketCode);
   };
 
   return (
     <div className="validator-container">
-      <h2>Valida Biglietto</h2>
+      <h2>Validazione Biglietti</h2>
+      
       <div className="input-methods">
-        <button 
-          className={`method-button ${!scannerActive ? 'active' : ''}`}
-          onClick={() => setScannerActive(false)}
-          title="Inserisci manualmente il codice del biglietto"
-        >
-          <FaKeyboard /> Inserisci Codice
-        </button>
         <button 
           className={`method-button ${scannerActive ? 'active' : ''}`}
           onClick={() => setScannerActive(true)}
-          title="Attiva la fotocamera per scansionare il QR code"
         >
-          <FaQrcode /> Scansiona QR
+          <FaQrcode /> Scanner QR
+        </button>
+        <button 
+          className={`method-button ${!scannerActive ? 'active' : ''}`}
+          onClick={() => setScannerActive(false)}
+        >
+          <FaKeyboard /> Inserimento Manuale
         </button>
       </div>
 
-      {/* Messaggio di stato */}
       {message && (
-        <div 
-          key={message} // Cambia key per forzare update pulito del messaggio
-          className={`message ${messageType}`}>
+        <div className={`message ${messageType}`}>
           {message}
         </div>
       )}
 
-      {/* Dettagli del biglietto scansionato */} 
-      {lastScannedTicketDetails && (
-        <div className="scanned-ticket-details-container">
-          <h4>Dettagli Biglietto Scansionato:</h4>
-          <div className="ticket-detail-item">
-            <strong>Codice:</strong> {lastScannedTicketDetails.ticketCode || 'N/D'}
-          </div>
-          {lastScannedTicketDetails.eventName && (
-            <div className="ticket-detail-item">
-              <strong>Evento:</strong> {lastScannedTicketDetails.eventName}
-            </div>
-          )}
-          {lastScannedTicketDetails.customerName && (
-            <div className="ticket-detail-item">
-              <strong>Cliente:</strong> {lastScannedTicketDetails.customerName}
-            </div>
-          )}
-          {lastScannedTicketDetails.ticketType && (
-            <div className="ticket-detail-item">
-              <strong>Tipo:</strong> {lastScannedTicketDetails.ticketType}
-            </div>
-          )}
-          {lastScannedTicketDetails.eventDate && (
-            <div className="ticket-detail-item">
-              <strong>Data Evento:</strong> 
-              {new Date(lastScannedTicketDetails.eventDate.seconds ? lastScannedTicketDetails.eventDate.seconds * 1000 : lastScannedTicketDetails.eventDate).toLocaleDateString('it-IT', {
-                day: '2-digit', month: '2-digit', year: 'numeric'
-              })}
-            </div>
-          )}
-          {/* Mostra lo stato attuale del biglietto (potrebbe essere diverso dal messaggio di errore se l'errore non è di stato) */}
-          {lastScannedTicketDetails.status && !lastScannedTicketDetails.error && (
-             <div className="ticket-detail-item">
-               <strong>Stato:</strong> <span className={`status-${lastScannedTicketDetails.status}`}>{lastScannedTicketDetails.status}</span>
-             </div>
-          )}
-          {/* Mostra informazioni sulla validazione precedente, se presenti e se il biglietto è già stato validato */}
-          {lastScannedTicketDetails.error && lastScannedTicketDetails.error.includes("GIA' VALIDATO") && lastScannedTicketDetails.validatedAt && (
-            <div className="ticket-detail-item">
-              <strong>Già Validato Il:</strong> 
-              {new Date(lastScannedTicketDetails.validatedAt).toLocaleString('it-IT', {
-                day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
-              })}
-              {lastScannedTicketDetails.validatorName && ` da ${lastScannedTicketDetails.validatorName}`}
-            </div>
-          )}
-           {/* Mostra un messaggio di errore specifico per il biglietto, se presente */}
-          {lastScannedTicketDetails.error && (
-            <div className="ticket-detail-item error-highlight">
-              <strong>Problema Rilevato:</strong> {lastScannedTicketDetails.error}
-            </div>
-          )}
-        </div>
-      )}
-
       {scannerActive ? (
-        <div className="scanner-container" ref={scannerContainerRef}>
-          <div id="reader" style={{ width: '100%', height: '100%' }}></div>
-           {loading && <div className="scanner-loading-overlay">Validazione...</div>}
+        <div className="scanner-wrapper">
+          <div className="scanner-container" ref={scannerContainerRef}>
+            <div id="html5qr-code-full-region"></div>
+            {loading && (
+              <div className="scanner-loading-overlay">
+                <div className="loading-spinner"></div>
+                <p>Validazione in corso...</p>
+              </div>
+            )}
+          </div>
         </div>
       ) : (
-        // Form per input manuale
-        <form onSubmit={handleManualSubmit} className="manual-input">
+        <form className="manual-input" onSubmit={handleManualSubmit}>
           <input
-            ref={inputRef} // Associa ref all'input
             type="text"
-            value={ticketCode}
-            onChange={(e) => setTicketCode(e.target.value.toUpperCase())} // Mantieni uppercase
-            placeholder="Inserisci codice biglietto"
             className="ticket-input"
-            aria-label="Codice Biglietto"
-            disabled={loading}
+            placeholder="Inserisci il codice del biglietto"
+            value={ticketCode}
+            onChange={(e) => setTicketCode(e.target.value)}
+            ref={inputRef}
+            autoFocus
           />
           <button
-            type="submit" // Cambia in type submit per il form
-            disabled={loading || !ticketCode}
-            className={`validate-button ${loading ? 'loading' : ''}`}
+            type="submit" 
+            className="validate-button"
+            disabled={loading || !ticketCode.trim()}
           >
             {loading ? 'Validazione...' : 'Valida Biglietto'}
           </button>
         </form>
       )}
 
+      {lastScannedTicketDetails && (
+        <div className="scanned-ticket-details-container">
+          <h4>Dettagli Biglietto</h4>
+          
+          {lastScannedTicketDetails.error ? (
+            <div className="ticket-detail-item error-highlight">
+              <strong>Errore:</strong> {lastScannedTicketDetails.error}
+              {lastScannedTicketDetails.errorDetails && <small style={{display: 'block', marginTop: '5px'}}>Dettagli: {lastScannedTicketDetails.errorDetails}</small>}
+            </div>
+          ) : (
+            <>
+              <div className="ticket-detail-item">
+                <FaTicketAlt /> <strong>Evento:</strong> {lastScannedTicketDetails.eventName}
+              </div>
+              <div className="ticket-detail-item">
+                <FaCalendarAlt /> <strong>Data:</strong> {lastScannedTicketDetails.eventDate}
+              </div>
+              <div className="ticket-detail-item">
+                <FaMapMarkerAlt /> <strong>Luogo:</strong> {lastScannedTicketDetails.eventLocation}
+              </div>
+              <div className="ticket-detail-item">
+                <FaUser /> <strong>Cliente:</strong> {lastScannedTicketDetails.customerName}
+              </div>
+              <div className="ticket-detail-item">
+                <strong>Email:</strong> {lastScannedTicketDetails.customerEmail}
+              </div>
+              <div className="ticket-detail-item">
+                <strong>Quantità:</strong> {lastScannedTicketDetails.quantity}
+              </div>
+              <div className="ticket-detail-item">
+                <strong>Prezzo:</strong> {lastScannedTicketDetails.price}
+              </div>
+              <div className="ticket-detail-item">
+                <strong>Stato:</strong> 
+                {lastScannedTicketDetails.status === 'valid' ? (
+                  <span className="status-validated"><FaCheck /> {lastScannedTicketDetails.statusMessage} (il {lastScannedTicketDetails.validatedAt})</span>
+                ) : lastScannedTicketDetails.status === 'disabled' ? (
+                  <span className="status-disabled"><FaTimes /> {lastScannedTicketDetails.statusMessage}</span>
+                ) : lastScannedTicketDetails.status === 'already_validated' ? (
+                  <span className="status-already-validated"><FaTimes /> {lastScannedTicketDetails.statusMessage}</span>
+                ) : (
+                  <span>Sconosciuto ({lastScannedTicketDetails.status})</span>
+                )}
+              </div>
+              <div className="ticket-detail-item">
+                <strong>Codice:</strong> {lastScannedTicketDetails.ticketCode}
+              </div>
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }
 
-export default TicketValidator; 
+export default TicketValidator;

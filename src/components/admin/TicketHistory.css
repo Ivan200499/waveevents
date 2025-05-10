@@ -792,18 +792,18 @@ tr.status-deleted {
   }
 }
 
-/* Stack verticale su schermi molto piccoli */
-@media (max-width: 480px) {
-  .ticket-actions {
-    flex-direction: column;
-    align-items: stretch;
+  /* Stack verticale su schermi molto piccoli */
+  @media (max-width: 480px) {
+    .ticket-actions {
+      flex-direction: column;
+      align-items: stretch;
     gap: 6px;
     padding: 5px 0;
-  }
+    }
 
-  .action-btn {
+    .action-btn {
     display: flex;
-    width: 100%;
+      width: 100%;
     height: auto;
     padding: 10px 12px;
     margin: 2px 0;
@@ -811,19 +811,19 @@ tr.status-deleted {
     align-items: center;
     text-align: left;
     border-radius: 6px;
-  }
+    }
 
   /* Mostra sempre le etichette testuali per i pulsanti su mobile */
-  .action-btn::after {
-    content: attr(title);
+    .action-btn::after {
+      content: attr(title);
     margin-left: 12px;
     font-size: 1rem;
     font-weight: 500;
     display: inline-block;
-  }
+    }
 
   /* Assicura che le icone siano sempre visibili e di dimensione appropriata */
-  .action-btn svg {
+    .action-btn svg {
     display: inline-block !important;
     font-size: 1.1rem;
     min-width: 18px;
@@ -844,7 +844,7 @@ tr.status-deleted {
 
   .delete-btn {
     background-color: #c0392b;
-  }
+    }
 
   .whatsapp-btn {
     background-color: #25D366;
@@ -951,4 +951,4 @@ tr.status-deleted {
     margin-left: 0;
     text-align: center;
   }
-}
+} 
