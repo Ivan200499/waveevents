@@ -58,7 +58,6 @@ function EventList({ events, onEdit, onDelete }) {
             ) : (
               <>
                 <p><FaCalendarAlt /> Data: {event.date && new Date(event.date.seconds ? event.date.seconds * 1000 : event.date).toLocaleDateString()}</p>
-                <p><strong>Biglietti disponibili: {event.availableTickets || 0}</strong></p>
               </>
             )}
             <p>Luogo: {event.location}</p>
