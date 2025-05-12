@@ -1,13 +1,15 @@
 import { useState, useEffect, useMemo } from 'react';
 import { db } from '../../firebase/config';
 import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
-import { FaSearch } from 'react-icons/fa';
+import { FaSearch, FaTimes } from 'react-icons/fa';
 import './TeamLeaderStyles.css';
 
 function PromoterStats({ promoter, onClose }) {
   const [eventStats, setEventStats] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [selectedEventDetails, setSelectedEventDetails] = useState(null);
 
   useEffect(() => {
     async function fetchPromoterStats() {
@@ -46,13 +48,34 @@ function PromoterStats({ promoter, onClose }) {
               eventDate: eventDate,
               totalTickets: 0,
               totalRevenue: 0,
-              commission: 0
+              commission: 0,
+              ticketTypes: {}
             };
           }
           
+          const commission = ticket.commission ?? ticket.commissionAmount ?? 0;
           eventSales[eventId].totalTickets += ticket.quantity || 0;
           eventSales[eventId].totalRevenue += ticket.totalPrice || 0;
-          eventSales[eventId].commission += ticket.commission || 0;
+          eventSales[eventId].commission += commission;
+          
+          const typeKey = typeof ticket.ticketType === 'object' && ticket.ticketType !== null ? (ticket.ticketType.name || 'Standard') : (ticket.ticketType || 'Standard');
+          if (!eventSales[eventId].ticketTypes[typeKey]) {
+            eventSales[eventId].ticketTypes[typeKey] = {
+              name: typeKey,
+              quantity: 0,
+              unitPrice: ticket.price || 0,
+              total: 0,
+              commission: 0,
+              codes: [],
+              tableInfo: ticket.tableInfo || null
+            };
+          }
+          eventSales[eventId].ticketTypes[typeKey].quantity += ticket.quantity || 0;
+          eventSales[eventId].ticketTypes[typeKey].unitPrice = ticket.price || 0;
+          eventSales[eventId].ticketTypes[typeKey].total += ticket.totalPrice || 0;
+          eventSales[eventId].ticketTypes[typeKey].commission += commission;
+          eventSales[eventId].ticketTypes[typeKey].codes.push(ticket.code || ticket.ticketCode || 'N/D');
+          eventSales[eventId].ticketTypes[typeKey].tableInfo = ticket.tableInfo || null;
         }
 
         setEventStats(Object.values(eventSales));
@@ -87,6 +110,16 @@ function PromoterStats({ promoter, onClose }) {
           return acc;
       }, { totalTickets: 0, totalRevenue: 0, totalCommission: 0 });
   }, [eventStats]);
+
+  const handleOpenDetailModal = (eventData) => {
+    setSelectedEventDetails(eventData);
+    setIsDetailModalOpen(true);
+  };
+
+  const handleCloseDetailModal = () => {
+    setIsDetailModalOpen(false);
+    setSelectedEventDetails(null);
+  };
 
   return (
     <div className="modal-overlay">
@@ -150,7 +183,7 @@ function PromoterStats({ promoter, onClose }) {
                   </thead>
                   <tbody>
                     {filteredEventStats.map((stat, index) => (
-                      <tr key={stat.eventId || index}>
+                      <tr key={stat.eventId || index} className="event-row clickable-row" onClick={() => handleOpenDetailModal(stat)}>
                         <td data-label="Evento">{stat.eventName}</td>
                         <td data-label="Data">{new Date(stat.eventDate?.seconds * 1000 || stat.eventDate).toLocaleDateString()}</td>
                         <td data-label="Biglietti">{stat.totalTickets}</td>
@@ -171,6 +204,51 @@ function PromoterStats({ promoter, onClose }) {
           </div>
         )}
       </div>
+
+      {/* === Modale Dettaglio Evento === */}
+      {isDetailModalOpen && selectedEventDetails && (
+          <div className="modal-overlay event-detail-modal-overlay" onClick={handleCloseDetailModal}>
+              <div className="modal-content event-detail-modal-content" onClick={(e) => e.stopPropagation()}>
+                 {/* Header del Modale Dettaglio */}
+                 <div className="modal-header">
+                    <h2>Dettaglio Vendite: {selectedEventDetails.eventName}</h2>
+                    <button onClick={handleCloseDetailModal} className="close-button" title="Chiudi">
+                        <FaTimes />
+                    </button>
+                 </div>
+
+                 {/* Tabella Dettaglio Tipi Biglietto (riutilizziamo la struttura) */}
+                 <div className="ticket-type-detail-table-wrapper modal-table-wrapper">
+                    <table className="ticket-type-detail-table">
+                        <thead>
+                        <tr>
+                            <th>Tipo</th>
+                            <th>Quantità</th>
+                            <th>Prezzo Unitario</th>
+                            <th>Incasso</th>
+                            <th>Commissione</th>
+                            <th>Codici</th>
+                            <th>Tavolo</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {Object.values(selectedEventDetails.ticketTypes).map((type, i) => (
+                            <tr key={i}>
+                            <td data-th="Tipo"><span>{type.name}</span></td>
+                            <td data-th="Quantità"><span>{type.quantity}</span></td>
+                            <td data-th="Prezzo Unitario"><span>€{Number(type.unitPrice).toFixed(2)}</span></td>
+                            <td data-th="Incasso"><span>€{Number(type.total).toFixed(2)}</span></td>
+                            <td data-th="Commissione"><span>€{Number(type.commission).toFixed(2)}</span></td>
+                            <td data-th="Codici"><span>{type.codes.join(', ')}</span></td>
+                            <td data-th="Tavolo"><span>{type.tableInfo ? (type.tableInfo.type?.name || 'Tavolo') : '-'}</span></td>
+                            </tr>
+                        ))}
+                        </tbody>
+                    </table>
+                 </div>
+              </div>
+          </div>
+      )}
     </div>
   );
 }

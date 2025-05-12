@@ -58,8 +58,8 @@ function TicketValidator({ initializeWithScanner = true }) {
   useEffect(() => {
     const instanceAtMount = scannerRef.current;
     return () => {
-      if (instanceAtMount) {
-        try {
+        if (instanceAtMount) {
+          try {
           instanceAtMount.clear();
         } catch (error) {
           console.log("Cleanup error on unmount:", error);
@@ -138,15 +138,15 @@ function TicketValidator({ initializeWithScanner = true }) {
           console.log("Effect became inactive during scanner render, clearing scanner.");
           if(html5QrcodeScanner && html5QrcodeScanner.getState && html5QrcodeScanner.getState() === 2) {
             html5QrcodeScanner.clear().catch(e => console.warn("Error clearing scanner on inactive effect:", e));
-          }
+           }
         }
       } catch (renderError) {
         console.error("Error rendering scanner:", renderError);
         if (isEffectActive) {
-          setMessage("Errore nell'avvio dello scanner. Verifica permessi fotocamera e ricarica.");
-          setMessageType('error');
-          setScannerActive(false);
-          setScannerInitialized(false);
+            setMessage("Errore nell'avvio dello scanner. Verifica permessi fotocamera e ricarica.");
+            setMessageType('error');
+            setScannerActive(false);
+            setScannerInitialized(false);
         }
       }
     };
@@ -158,7 +158,7 @@ function TicketValidator({ initializeWithScanner = true }) {
         scannerRef.current = null; 
         try {
           if (instanceToCleanup && instanceToCleanup.getState && instanceToCleanup.getState() === 2) {
-            await instanceToCleanup.clear();
+             await instanceToCleanup.clear();
             console.log("Scanner instance cleared in cleanup.");
           }
         } catch (error) {
@@ -331,7 +331,7 @@ function TicketValidator({ initializeWithScanner = true }) {
       showTemporaryMessage('Inserisci un codice biglietto valido.', 'error');
       return;
     }
-    await handleValidateTicket(ticketCode);
+      await handleValidateTicket(ticketCode);
   };
 
   return (
@@ -447,4 +447,4 @@ function TicketValidator({ initializeWithScanner = true }) {
   );
 }
 
-export default TicketValidator;
+export default TicketValidator; 

@@ -58,6 +58,12 @@ function UserTicketHistoryModal({ member, onClose }) {
           const data = doc.data();
           // Usa la data di creazione del documento come fallback se createdAt non è presente
           const createdAt = data.createdAt || doc.createTime?.toDate() || new Date();
+          // Formatta la data evento solo come data (senza orario)
+          let eventDateFormatted = 'N/D';
+          if (data.eventDate) {
+            const eventDateObj = data.eventDate.seconds ? new Date(data.eventDate.seconds * 1000) : new Date(data.eventDate);
+            eventDateFormatted = eventDateObj.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
+          }
           return {
             id: doc.id,
             ...data,
@@ -71,8 +77,10 @@ function UserTicketHistoryModal({ member, onClose }) {
             totalPrice: data.totalPrice || data.price || 0,
             ticketType: data.ticketType || data.ticketTypeName || 'Standard',
             eventDate: data.eventDate,
+            eventDateFormatted,
             eventLocation: data.eventLocation || 'N/D',
-            tableInfo: data.tableInfo
+            tableInfo: data.tableInfo,
+            commission: data.commission ?? data.commissionAmount ?? 0
           };
         });
 
@@ -119,6 +127,7 @@ function UserTicketHistoryModal({ member, onClose }) {
                     <th>Data Vendita</th>
                     <th>Q.tà</th>
                     <th><FaEuroSign /> Incasso</th>
+                    <th>Commissione</th>
                     <th>Stato</th>
                   </tr>
                 </thead>
@@ -143,6 +152,7 @@ function UserTicketHistoryModal({ member, onClose }) {
                       <td data-label="Data Vendita">{ticket.createdAtFormatted}</td>
                       <td data-label="Q.tà">{ticket.quantity}</td>
                       <td data-label="Incasso">€ {ticket.totalPrice.toFixed(2)}</td>
+                      <td data-label="Commissione">€ {Number(ticket.commission).toFixed(2)}</td>
                       <td data-label="Stato">
                         <span className={`status-badge ${ticket.status}`}>
                            {getStatusIcon(ticket.status)} 

@@ -586,3 +586,366 @@
     color: #eee;
   }
 }
+
+/* Responsive styles for PromoterStats Detail Table */
+.ticket-type-detail-table-wrapper {
+  overflow-x: auto; /* Add horizontal scroll if needed on very small screens */
+  margin-top: 10px;
+  padding: 10px;
+  background-color: #f9f9f9; /* Slightly different background for detail */
+  border-radius: 4px;
+}
+
+.ticket-type-detail-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.ticket-type-detail-table th,
+.ticket-type-detail-table td {
+  padding: 8px 10px;
+  text-align: left;
+  border-bottom: 1px solid #ddd;
+  font-size: 0.9em; /* Slightly smaller font for detail */
+}
+
+.ticket-type-detail-table th {
+  background-color: #eee;
+  font-weight: bold;
+}
+
+.ticket-type-detail-table td[data-label="Codici"] {
+  word-break: break-all; /* Break long code strings */
+  max-width: 150px; /* Limit width if needed */
+  white-space: normal; /* Allow wrapping */
+}
+
+/* Mobile specific styles for PromoterStats Detail Table */
+@media (max-width: 768px) {
+  .ticket-type-detail-table thead {
+    display: none; /* Hide table header on mobile */
+  }
+
+  .ticket-type-detail-table tr {
+    display: block; /* Stack rows vertically */
+    margin-bottom: 15px;
+    border: 1px solid #eee;
+    border-radius: 4px;
+    padding: 10px;
+    background-color: #fff; /* White background for each card-like row */
+  }
+
+  .ticket-type-detail-table td {
+    display: flex; /* Use Flexbox */
+    justify-content: space-between; /* Space between label and value */
+    align-items: flex-start; /* Align items at the start vertically */
+    text-align: left; /* Reset text-align */
+    padding: 8px 0; /* Adjust padding */
+    position: relative;
+    border-bottom: 1px solid #eee; /* Add subtle border between fields */
+  }
+
+  .ticket-type-detail-table tr:last-child td:last-child {
+      border-bottom: none; /* Remove border for the very last item */
+  }
+
+  .ticket-type-detail-table td::before {
+    text-align: left;
+    font-weight: bold;
+    color: #555;
+    margin-right: 10px; 
+    flex-shrink: 0; 
+    width: 110px; /* Give label a fixed width */
+    display: inline-block; /* Ensure width is respected */
+  }
+
+  /* We need to wrap the actual value in a span or div in the JSX for this to work perfectly */
+  /* This CSS assumes the value is the direct text content of the TD after the ::before */
+  .ticket-type-detail-table td > :last-child {
+      text-align: right; /* Align the actual value to the right */
+      word-break: break-word; /* Allow value to wrap */
+      flex-grow: 1; /* Allow value to take remaining space */
+  }
+
+  /* Adjust specific columns for mobile */
+  .ticket-type-detail-table td[data-label="Codici"]::before {
+    content: "Codici:";
+  }
+   .ticket-type-detail-table td[data-label="Tipo"]::before {
+    content: "Tipo:";
+  }
+   .ticket-type-detail-table td[data-label="Quantità"]::before {
+    content: "Quantità:";
+  }
+  .ticket-type-detail-table td[data-label="Prezzo Unitario"]::before {
+    content: "Prezzo Unit.:"; /* Abbreviate label */
+  }
+  .ticket-type-detail-table td[data-label="Incasso"]::before {
+    content: "Incasso:";
+  }
+  .ticket-type-detail-table td[data-label="Commissione"]::before {
+    content: "Commissione:";
+  }
+    .ticket-type-detail-table td[data-label="Tavolo"]::before {
+    content: "Tavolo:";
+  }
+}
+
+/* === Stili per Modale Dettaglio Evento === */
+.event-detail-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7); /* Sfondo più scuro */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1100; /* Assicura sia sopra altri modali se necessario */
+  padding: 15px;
+}
+
+.event-detail-modal-content {
+  background-color: #fff;
+  padding: 25px 30px;
+  border-radius: 12px;
+  width: 95%;
+  max-width: 700px; /* Larghezza massima modale dettaglio */
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 5px 25px rgba(0,0,0,0.2);
+  position: relative;
+}
+
+/* Riutilizziamo modal-header, ma possiamo aggiungere specificità se serve */
+.event-detail-modal-content .modal-header {
+  padding-bottom: 15px;
+  margin-bottom: 20px;
+  border-color: #e5e5e5;
+}
+.event-detail-modal-content .modal-header h2 {
+    font-size: 1.5rem;
+}
+
+/* Riutilizziamo close-button */
+.event-detail-modal-content .close-button {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+}
+
+/* Adattiamo wrapper e tabella per il modale */
+.modal-table-wrapper {
+  margin-top: 0; /* Rimuoviamo margine extra nel modale */
+  padding: 0;
+  background-color: transparent;
+  border-radius: 0;
+}
+
+/* Riutilizziamo stili .ticket-type-detail-table e media query mobile */
+/* Gli stili per .ticket-type-detail-table e @media (max-width: 768px) definiti prima */
+/* dovrebbero funzionare anche qui, poiché le classi sono le stesse. */
+/* Assicuriamoci solo che non ci siano conflitti o sovrascritture indesiderate. */
+
+/* Se necessario, si possono aggiungere regole più specifiche: */
+/* .event-detail-modal-content .ticket-type-detail-table { ... } */
+
+/* Dark Mode per Modale Dettaglio */
+@media (prefers-color-scheme: dark) {
+  .event-detail-modal-content {
+    background-color: #282828; /* Sfondo scuro per modale dettaglio */
+  }
+  .event-detail-modal-content .modal-header {
+    border-color: #444;
+  }
+  .event-detail-modal-content .modal-header h2 {
+      color: #eee;
+  }
+  .event-detail-modal-content .close-button {
+      color: #bbb;
+  }
+   .event-detail-modal-content .close-button:hover {
+      background-color: #3a3a3a;
+      color: #fff;
+  }
+  /* Adattare stili tabella dettaglio per dark mode se non già fatto */
+  .event-detail-modal-content .ticket-type-detail-table-wrapper {
+      background-color: transparent;
+  }
+   .event-detail-modal-content .ticket-type-detail-table th {
+      background-color: #3a3a3a;
+      color: #eee;
+  }
+   .event-detail-modal-content .ticket-type-detail-table td {
+      border-color: #444;
+      color: #ccc;
+  }
+   .event-detail-modal-content .ticket-type-detail-table tr:not(:last-child) td {
+       border-bottom: 1px solid #444;
+   }
+  .event-detail-modal-content .ticket-type-detail-table td::before {
+    color: #aaa;
+  }
+  .event-detail-modal-content .ticket-type-detail-table td > span {
+      color: #eee;
+  }
+  /* Stili per righe mobile in dark mode */
+  @media (max-width: 768px) {
+      .event-detail-modal-content .ticket-type-detail-table tr {
+            background-color: #333;
+            border-color: #484848;
+      }
+  }
+
+}
+
+/* Aggiungiamo stile cursore per le righe cliccabili */
+.clickable-row {
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+.clickable-row:hover {
+    background-color: #f0f4ff; /* O un colore adatto al tema */
+}
+@media (prefers-color-scheme: dark) {
+    .clickable-row:hover {
+        background-color: #303848; /* Colore hover scuro */
+    }
+}
+
+/* Specific styles for the detail table INSIDE the event detail modal */
+.event-detail-modal-content .ticket-type-detail-table-wrapper {
+  /* Reset potentially conflicting styles */
+  background-color: transparent; 
+  margin-top: 0;
+  padding: 0;
+  overflow-x: auto; /* Ensure horizontal scroll works if needed */
+}
+
+.event-detail-modal-content .ticket-type-detail-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.event-detail-modal-content .ticket-type-detail-table th,
+.event-detail-modal-content .ticket-type-detail-table td {
+  padding: 9px 12px; /* Slightly more padding */
+  text-align: left;
+  border-bottom: 1px solid #e0e0e0;
+  font-size: 0.9em;
+  color: #333; /* Explicit text color */
+  vertical-align: top; /* Align text top */
+}
+
+.event-detail-modal-content .ticket-type-detail-table th {
+  background-color: #f2f2f2; /* Lighter header */
+  font-weight: 600; /* Bolder header */
+  color: #111;
+}
+
+.event-detail-modal-content .ticket-type-detail-table td[data-th="Codici"] span {
+  word-break: break-all; 
+  white-space: normal; 
+  display: block; /* Ensure block display for wrapping */
+  max-width: 250px; /* Allow more width for codes */
+}
+
+/* Mobile specific styles for the detail table INSIDE the modal */
+@media (max-width: 768px) {
+  .event-detail-modal-content .ticket-type-detail-table thead {
+    display: none;
+  }
+
+  .event-detail-modal-content .ticket-type-detail-table tr {
+    display: block; 
+    margin-bottom: 15px;
+    border: 1px solid #ddd; /* Slightly darker border for card */
+    border-radius: 6px;
+    padding: 12px;
+    background-color: #fff; 
+  }
+
+  .event-detail-modal-content .ticket-type-detail-table td {
+    display: flex; 
+    justify-content: space-between; 
+    align-items: flex-start; 
+    text-align: left; 
+    padding: 8px 0; 
+    position: relative;
+    border-bottom: 1px solid #eee;
+    color: #444; /* Ensure text color */
+  }
+
+  .event-detail-modal-content .ticket-type-detail-table tr:last-child td:last-child {
+      border-bottom: none;
+  }
+
+  .event-detail-modal-content .ticket-type-detail-table td::before {
+    text-align: left;
+    font-weight: bold;
+    color: #111; /* Darker label color */
+    margin-right: 15px; 
+    flex-shrink: 0; 
+    width: 100px; /* Slightly smaller width for label */
+    display: inline-block; 
+  }
+
+  .event-detail-modal-content .ticket-type-detail-table td > span {
+      text-align: right; 
+      word-break: break-word; 
+      flex-grow: 1; 
+      color: #333; /* Ensure value color */
+  }
+
+  /* Adjust specific columns labels for mobile inside modal */
+  .event-detail-modal-content .ticket-type-detail-table td[data-th="Codici"]::before { content: "Codici:"; }
+  .event-detail-modal-content .ticket-type-detail-table td[data-th="Tipo"]::before { content: "Tipo:"; }
+  .event-detail-modal-content .ticket-type-detail-table td[data-th="Quantità"]::before { content: "Quantità:"; }
+  .event-detail-modal-content .ticket-type-detail-table td[data-th="Prezzo Unitario"]::before { content: "Prezzo U.:"; } /* Shorter */
+  .event-detail-modal-content .ticket-type-detail-table td[data-th="Incasso"]::before { content: "Incasso:"; }
+  .event-detail-modal-content .ticket-type-detail-table td[data-th="Commissione"]::before { content: "Commiss.:"; } /* Shorter */
+  .event-detail-modal-content .ticket-type-detail-table td[data-th="Tavolo"]::before { content: "Tavolo:"; }
+}
+
+/* Dark Mode for Detail Table INSIDE Modal - Increased Specificity */
+@media (prefers-color-scheme: dark) {
+
+  /* ... (other dark mode styles) ... */
+
+  .event-detail-modal-content .ticket-type-detail-table th {
+      background-color: #3a3a3a;
+      color: #eee;
+      border-color: #4a4a4a;
+  }
+   .event-detail-modal-content .ticket-type-detail-table td {
+      border-color: #4a4a4a;
+      color: #ccc; /* Explicit dark mode text color */
+  }
+   .event-detail-modal-content .ticket-type-detail-table tr:not(:last-child) td {
+       /* border-bottom: 1px solid #4a4a4a; Re-evaluate if needed */
+   }
+  .event-detail-modal-content .ticket-type-detail-table td::before {
+    color: #aaa; /* Explicit dark mode label color */
+  }
+  .event-detail-modal-content .ticket-type-detail-table td > span {
+      color: #eee; /* Explicit dark mode value color */
+  }
+  /* Mobile card styles in dark mode */
+  @media (max-width: 768px) {
+      .event-detail-modal-content .ticket-type-detail-table tr {
+            background-color: #333;
+            border-color: #484848;
+      }
+       .event-detail-modal-content .ticket-type-detail-table td {
+           border-color: #4a4a4a;
+           color: #ddd; /* Ensure text visibility */
+       }
+       .event-detail-modal-content .ticket-type-detail-table td::before {
+           color: #bbb; /* Ensure label visibility */
+       }
+        .event-detail-modal-content .ticket-type-detail-table td > span {
+           color: #eee; /* Ensure value visibility */
+       }
+  }
+}
