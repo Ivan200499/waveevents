@@ -13,7 +13,7 @@ function TicketValidator({ initializeWithScanner = true }) {
   const [messageType, setMessageType] = useState('info');
   const [loading, setLoading] = useState(false);
   const [userRole, setUserRole] = useState(null);
-  const [scannerActive, setScannerActive] = useState(false); // Inizialmente disattivato per avvio controllato
+  const [scannerActive, setScannerActive] = useState(false);
   const [lastScannedTicketDetails, setLastScannedTicketDetails] = useState(null);
   const [cameraError, setCameraError] = useState(false);
   
@@ -23,13 +23,12 @@ function TicketValidator({ initializeWithScanner = true }) {
   const messageTimeoutRef = useRef(null);
   const lastScanTimeRef = useRef(0);
   const scanTimeoutRef = useRef(null);
-  const isFirstRenderRef = useRef(true); // Per tracciare il primo render
+  const isFirstRenderRef = useRef(true);
 
   // Inizializzazione ritardata dello scanner
   useEffect(() => {
     if (isFirstRenderRef.current && initializeWithScanner) {
       isFirstRenderRef.current = false;
-      // Avvia lo scanner dopo un breve ritardo per garantire che il DOM sia pronto
       setTimeout(() => {
         setScannerActive(true);
       }, 300);
@@ -68,7 +67,7 @@ function TicketValidator({ initializeWithScanner = true }) {
     checkUserRole();
   }, [currentUser]);
 
-  // Nuova implementazione del QR scanner usando Html5Qrcode diretto
+  // Implementazione QR scanner semplificata
   useEffect(() => {
     // Se lo scanner non è attivo, pulire le risorse
     if (!scannerActive) {
@@ -102,38 +101,32 @@ function TicketValidator({ initializeWithScanner = true }) {
       return;
     }
 
-    console.log("Inizializzazione QR scanner diretto...");
+    console.log("Inizializzazione QR scanner...");
     
-    // Pulizia completa del container prima dell'inizializzazione
+    // Pulizia container
     try {
-      // Rimuovi elementi precedenti che potrebbero interferire
       while (qrContainer.firstChild) {
         qrContainer.removeChild(qrContainer.firstChild);
       }
-      console.log("Container QR ripulito per nuova inizializzazione");
     } catch (e) {
       console.warn("Errore nella pulizia del container QR:", e);
     }
     
-    // Crea una nuova istanza di Html5Qrcode
+    // Configurazione basilare
     const html5QrCode = new Html5Qrcode("qr-reader");
     
-    // Configurazione della scansione
     const qrConfig = {
       fps: 10,
-      qrbox: 250,
-      aspectRatio: 1.0,
-      showTorchButtonIfSupported: true,
-      hideControls: true,
-      drawScanRegion: false // Disabilita il disegno del mirino della libreria
+      qrbox: { width: 250, height: 250 },
+      aspectRatio: 1.0
     };
     
-    // Scegli la fotocamera frontale per localhost, altrimenti quella posteriore
+    // Fotocamera posteriore su dispositivi mobili
     const cameraConfig = {
-      facingMode: window.location.hostname === "localhost" ? "user" : "environment"
+      facingMode: "environment"
     };
 
-    // Avvia lo scanner
+    // Avvia scanner semplificato
     html5QrCode.start(
       cameraConfig, 
       qrConfig,
@@ -141,33 +134,26 @@ function TicketValidator({ initializeWithScanner = true }) {
         // Successo: QR Code decodificato
         console.log("QR Code decodificato:", decodedText);
         
-        // Verifica se è troppo presto per una nuova scansione (2 secondi di timeout)
+        // Previeni scansioni multiple
         const now = Date.now();
         if (now - lastScanTimeRef.current < 2000) {
           console.log("Ignorata scansione troppo rapida");
-          return; // Ignora questa scansione, è troppo presto
+          return;
         }
         
-        // Aggiorna l'ultimo tempo di scansione
         lastScanTimeRef.current = now;
         
-        // Feedback audio alla scansione
+        // Feedback audio
         try {
           const beep = new Audio();
-          beep.src = "data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YUt..."; // Base64 troncato
+          beep.src = "data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YUt...";
           beep.volume = 0.3;
-          beep.play().catch(e => {}); // Ignora errori audio
-        } catch (e) { 
-          // Ignora errori audio
-        }
+          beep.play().catch(e => {});
+        } catch (e) {}
         
-        // Pausa la scansione 
+        // Pausa scanner
         try {
-          const pausePromise = html5QrCode.pause();
-          // Solo se .pause() restituisce una promise con .catch, la usiamo
-          if (pausePromise && typeof pausePromise.catch === 'function') {
-            pausePromise.catch(e => console.error("Errore pausa scanner:", e));
-          }
+          html5QrCode.pause().catch(e => console.error("Errore pausa scanner:", e));
         } catch (error) {
           console.error("Errore durante la pausa dello scanner:", error);
         }
@@ -175,15 +161,11 @@ function TicketValidator({ initializeWithScanner = true }) {
         // Elabora il codice
         handleValidateTicket(decodedText)
           .finally(() => {
-            // Riprendi la scansione dopo 2 secondi
+            // Riprendi scanner dopo 2 secondi
             scanTimeoutRef.current = setTimeout(() => {
               if (scannerActive && scannerRef.current) {
                 try {
-                  const resumePromise = html5QrCode.resume();
-                  // Solo se .resume() restituisce una promise con .catch, la usiamo
-                  if (resumePromise && typeof resumePromise.catch === 'function') {
-                    resumePromise.catch(e => console.error("Errore ripresa scanner:", e));
-                  }
+                  html5QrCode.resume().catch(e => console.error("Errore ripresa scanner:", e));
                 } catch (error) {
                   console.error("Errore durante la ripresa dello scanner:", error);
                 }
@@ -192,7 +174,7 @@ function TicketValidator({ initializeWithScanner = true }) {
           });
       },
       (errorMessage) => {
-        // Ignora gli errori di scansione normali
+        // Ignora errori standard
         if (errorMessage.includes("No QR code found")) {
           return;
         }
@@ -202,87 +184,6 @@ function TicketValidator({ initializeWithScanner = true }) {
     .then(() => {
       console.log("Scanner QR avviato con successo!");
       scannerRef.current = html5QrCode;
-      
-      // Fix per l'interfaccia utente su mobile - rimuovi elementi duplicati
-      setTimeout(() => {
-        try {
-          // Rimuovi eventuali elementi UI indesiderati creati dalla libreria
-          const scanTypeSelector = document.getElementById('html5-qrcode-select-camera');
-          if (scanTypeSelector) scanTypeSelector.style.display = 'none';
-          
-          // Rimuovi tutti i bottoni tranne quello della torcia
-          const buttons = qrContainer.querySelectorAll('button');
-          buttons.forEach(button => {
-            if (!button.innerHTML.includes('torch')) {
-              button.style.display = 'none';
-            }
-          });
-          
-          // Rimuovi l'header con testo duplicato (se presente)
-          const headers = qrContainer.querySelectorAll('div[style*="border-bottom"]');
-          headers.forEach(header => header.style.display = 'none');
-          
-          // Assicurati che ci sia un solo video attivo
-          const videos = qrContainer.querySelectorAll('video');
-          console.log(`Trovati ${videos.length} elementi video`);
-          
-          if (videos.length > 1) {
-            // Mantieni solo il primo video
-            for (let i = 1; i < videos.length; i++) {
-              videos[i].style.display = 'none';
-            }
-          }
-          
-          // Assicurati che il video principale sia ben visibile
-          if (videos.length > 0) {
-            const mainVideo = videos[0];
-            mainVideo.style.width = '100%';
-            mainVideo.style.height = '100%';
-            mainVideo.style.objectFit = 'cover';
-            mainVideo.style.borderRadius = '12px';
-            mainVideo.style.transform = 'scaleX(1)'; // Rimuove eventuali rotazioni
-          }
-          
-          // NON nascondere il mirino della libreria su mobile, potrebbe essere più efficace
-          const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-          if (isMobile) {
-            console.log("Dispositivo mobile rilevato - mantengo il mirino della libreria");
-            // Rimuovi solo gli stili CSS che nascondono i mirini della libreria
-            const existingStyles = document.querySelectorAll('style');
-            existingStyles.forEach(style => {
-              if (style.innerHTML.includes('border: 6px solid rgb(255, 255, 255)') ||
-                  style.innerHTML.includes('border:6px solid rgb(255,255,255)')) {
-                style.innerHTML = style.innerHTML.replace('display: none !important;', '');
-                style.innerHTML = style.innerHTML.replace('opacity: 0 !important;', '');
-                style.innerHTML = style.innerHTML.replace('visibility: hidden !important;', '');
-              }
-            });
-          }
-        } catch (e) {
-          console.warn("Errore durante la pulizia dell'interfaccia:", e);
-        }
-      }, 500);
-      
-      // Assicurati che il mirino personalizzato sia sempre visibile anche dopo che la libreria prova a modificare l'UI
-      setInterval(() => {
-        try {
-          // Controlla e ripristina il mirino personalizzato se necessario
-          const customViewfinder = document.querySelector('.custom-scanner-viewfinder');
-          if (customViewfinder && (
-              customViewfinder.style.display === 'none' || 
-              customViewfinder.style.visibility === 'hidden' ||
-              customViewfinder.style.opacity === '0'
-          )) {
-            console.log('Ripristino visibilità del mirino personalizzato');
-            customViewfinder.style.display = 'block';
-            customViewfinder.style.visibility = 'visible';
-            customViewfinder.style.opacity = '1';
-            customViewfinder.style.zIndex = '1000';
-          }
-        } catch (e) {
-          // Ignora errori
-        }
-      }, 1000); // Controlla ogni secondo
     })
     .catch((err) => {
       console.error("Errore avvio scanner QR:", err);
@@ -303,7 +204,6 @@ function TicketValidator({ initializeWithScanner = true }) {
         scannerRef.current = null;
       }
       
-      // Pulisci anche i timeout se sono attivi
       if (scanTimeoutRef.current) {
         clearTimeout(scanTimeoutRef.current);
         scanTimeoutRef.current = null;
@@ -427,7 +327,7 @@ function TicketValidator({ initializeWithScanner = true }) {
       showTemporaryMessage('Biglietto validato con successo!', 'success');
       setLastScannedTicketDetails({
         ...ticketDataForDisplay,
-        isValidated: true, // Aggiorna anche qui per coerenza immediata UI
+        isValidated: true,
         status: 'valid',
         statusMessage: 'Validato con successo',
         validatedAt: new Date().toLocaleString('it-IT')
@@ -483,7 +383,6 @@ function TicketValidator({ initializeWithScanner = true }) {
         <button 
           className={`method-button ${scannerActive ? 'active' : ''}`}
           onClick={() => {
-            // Quando passiamo a scanner, forziamo una reinizializzazione completa
             setScannerActive(false);
             setTimeout(() => setScannerActive(true), 300);
           }}
@@ -508,39 +407,18 @@ function TicketValidator({ initializeWithScanner = true }) {
         <div className="scanner-wrapper">
           <div className="scanner-container" style={{
             height: "350px", 
-            background: "#000", // Sfondo nero per contrasto migliore
+            background: "#000",
             border: "1px solid #444",
             borderRadius: "12px",
             overflow: "hidden",
             position: "relative"
           }}>
-            {/* Elemento contenitore per QR */}
+            {/* Container QR base senza modifiche */}
             <div id="qr-reader" style={{
               width: "100%", 
               height: "100%",
               position: "relative"
             }}></div>
-            
-            {/* Mirino centrale per QR code - con classe per evitare che venga nascosto */}
-            <div className="custom-scanner-viewfinder" style={{
-              position: "absolute",
-              top: "50%",
-              left: "50%",
-              transform: "translate(-50%, -50%)",
-              width: "200px",
-              height: "200px",
-              border: "2px solid rgba(255, 255, 255, 0.5)",
-              borderRadius: "20px",
-              boxShadow: "0 0 0 4000px rgba(0, 0, 0, 0.3)",
-              zIndex: 5,
-              pointerEvents: "none"
-            }}>
-              {/* Angoli del mirino */}
-              <div style={{ position: "absolute", top: 0, left: 0, width: "30px", height: "30px", borderTop: "4px solid #fff", borderLeft: "4px solid #fff", borderTopLeftRadius: "16px" }}></div>
-              <div style={{ position: "absolute", top: 0, right: 0, width: "30px", height: "30px", borderTop: "4px solid #fff", borderRight: "4px solid #fff", borderTopRightRadius: "16px" }}></div>
-              <div style={{ position: "absolute", bottom: 0, left: 0, width: "30px", height: "30px", borderBottom: "4px solid #fff", borderLeft: "4px solid #fff", borderBottomLeftRadius: "16px" }}></div>
-              <div style={{ position: "absolute", bottom: 0, right: 0, width: "30px", height: "30px", borderBottom: "4px solid #fff", borderRight: "4px solid #fff", borderBottomRightRadius: "16px" }}></div>
-            </div>
             
             {loading && (
               <div className="scanner-loading-overlay">
