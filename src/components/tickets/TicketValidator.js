@@ -21,6 +21,9 @@ function TicketValidator({ initializeWithScanner = true }) {
   const scannerContainerRef = useRef(null);
   const [scannerInitialized, setScannerInitialized] = useState(false);
   const [lastScannedTicketDetails, setLastScannedTicketDetails] = useState(null);
+  const [manualCameraActive, setManualCameraActive] = useState(false);
+  const videoRef = useRef(null);
+  const streamRef = useRef(null);
 
   // Check user permissions
   useEffect(() => {
@@ -236,6 +239,91 @@ function TicketValidator({ initializeWithScanner = true }) {
     };
   }, [scannerActive, scannerInitialized, loading, currentUser]);
 
+  // Modifica all'useEffect per gestire manualmente la fotocamera solo su mobile reale
+  useEffect(() => {
+    // Rilevamento REALE mobile (non basato solo su user agent)
+    const isMobileDevice = () => {
+      // Verifica dimensione schermo piuttosto che user-agent
+      return (window.innerWidth <= 768) && ('ontouchstart' in window);
+    };
+    
+    // Fallback manuale che si attiva SOLO su dispositivi mobile REALI
+    async function setupManualCamera() {
+      // Uscita rapida se non siamo su mobile o la fotocamera manuale è già attiva
+      if (!scannerActive || !isMobileDevice() || manualCameraActive) return;
+
+      console.log("[MANUAL CAMERA] Verifica se attivare fallback su dispositivo mobile");
+      
+      try {
+        // Verifica più accurata degli elementi video dopo un tempo maggiore
+        setTimeout(async () => {
+          if (!scannerActive) return; // Uscita se nel frattempo lo scanner è disattivato
+          
+          const videos = document.querySelectorAll('#html5qr-code-full-region video');
+          const visibleVideos = Array.from(videos).filter(v => {
+            // Verifica se il video è realmente visibile
+            const rect = v.getBoundingClientRect();
+            const style = window.getComputedStyle(v);
+            return rect.width > 0 && rect.height > 0 && 
+                style.display !== 'none' && 
+                style.visibility !== 'hidden' && 
+                style.opacity !== '0';
+          });
+          
+          console.log("[MANUAL CAMERA] Video totali:", videos.length, "Video visibili:", visibleVideos.length);
+          
+          // Attiva fallback SOLO se non ci sono video visibili su un dispositivo mobile
+          if (videos.length === 0 && isMobileDevice() && scannerActive && !manualCameraActive) {
+            console.log("[MANUAL CAMERA] Attivazione fallback su mobile");
+            setManualCameraActive(true);
+            
+            try {
+              // Richiesta fotocamera in modo esplicito
+              const constraints = { 
+                video: { 
+                  facingMode: "environment",
+                  width: { min: 480, ideal: 720, max: 1280 },
+                  height: { min: 360, ideal: 540, max: 720 }
+                } 
+              };
+              
+              const stream = await navigator.mediaDevices.getUserMedia(constraints);
+              streamRef.current = stream;
+              
+              // Collegamento stream dopo che il DOM è aggiornato
+              setTimeout(() => {
+                if (videoRef.current) {
+                  console.log("[MANUAL CAMERA] Collegamento stream a video");
+                  videoRef.current.srcObject = stream;
+                  videoRef.current.play().catch(e => console.error("[MANUAL CAMERA] Errore play:", e));
+                }
+              }, 100);
+            } catch (err) {
+              console.error("[MANUAL CAMERA] Errore attivazione fallback:", err);
+              setManualCameraActive(false);
+            }
+          }
+        }, 5000); // Tempo aumentato a 5 secondi 
+      } catch (err) {
+        console.error("[MANUAL CAMERA] Errore generale:", err);
+      }
+    }
+    
+    // Attiva il fallback solo all'inizio di scannerActive
+    if (scannerActive && !manualCameraActive) {
+      setupManualCamera();
+    }
+    
+    // Cleanup
+    return () => {
+      if (streamRef.current) {
+        console.log("[MANUAL CAMERA] Rilascio stream");
+        streamRef.current.getTracks().forEach(track => track.stop());
+        streamRef.current = null;
+      }
+    };
+  }, [scannerActive, manualCameraActive]); // Dipendenze ridotte
+
   const showTemporaryMessage = (msg, type = 'info', duration = 4000) => {
     console.log(`[MESSAGE] Type: ${type}, Message: ${msg}`);
     setMessage(msg);
@@ -404,6 +492,40 @@ function TicketValidator({ initializeWithScanner = true }) {
         <div className="scanner-wrapper">
           <div className="scanner-container" ref={scannerContainerRef}>
             <div id="html5qr-code-full-region"></div>
+            
+            {manualCameraActive && (
+              <div className="manual-camera-container">
+                <video 
+                  ref={videoRef} 
+                  className="camera-video" 
+                  autoPlay 
+                  playsInline
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    borderRadius: '8px',
+                    zIndex: 4
+                  }}
+                ></video>
+                <div className="qr-scanner-overlay" style={{
+                  position: 'absolute',
+                  top: '50%',
+                  left: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  width: '250px',
+                  height: '250px',
+                  border: '3px solid rgba(255,255,255,0.8)',
+                  borderRadius: '8px',
+                  boxShadow: '0 0 0 4000px rgba(0,0,0,0.6)',
+                  zIndex: 5
+                }}></div>
+              </div>
+            )}
+            
             {loading && (
               <div className="scanner-loading-overlay">
                 <div className="loading-spinner"></div>
