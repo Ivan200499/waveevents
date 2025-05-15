@@ -314,158 +314,134 @@ function TicketValidator({ initializeWithScanner = true }) {
     
     // Funzione per configurare la scansione QR sul video manuale
     async function setupQRScanner(stream) {
-      console.log("[MANUAL CAMERA] Configurazione scanner QR sul video manuale");
-      
+      console.log("[MANUAL CAMERA] Inizio setupQRScanner");
+      let frameCounter = 0;
+      let anId; // Per requestAnimationFrame ID
+
       try {
-        // Importiamo dinamicamente la libreria jsQR (la libreria più leggera e compatibile per la decodifica QR)
         let jsQR;
         try {
           jsQR = await import('jsqr');
-          console.log("[MANUAL CAMERA] Libreria jsqr caricata con successo");
+          console.log("[MANUAL CAMERA] Libreria jsqr caricata");
         } catch (e) {
-          console.error("[MANUAL CAMERA] Libreria jsqr non trovata. Esegui 'npm install jsqr --save' e riprova.");
-          showTemporaryMessage("Per il riconoscimento QR, installa jsqr: 'npm install jsqr --save'", "error", 10000);
-          return;
+          console.error("[MANUAL CAMERA] Fallito caricamento jsqr", e);
+          showTemporaryMessage("Errore caricamento libreria QR", "error");
+          return () => cancelAnimationFrame(anId); // Ritorna una funzione di cleanup vuota o specifica
         }
-        
-        const canvasRef = document.createElement('canvas');
-        const canvasCtx = canvasRef.getContext('2d');
-        const videoElem = videoRef.current;
-        
-        if (!videoElem || !canvasCtx) {
-          console.error("[MANUAL CAMERA] Elementi video o canvas non disponibili");
-          return;
+
+        const canvasElement = document.createElement('canvas');
+        const canvasContext = canvasElement.getContext('2d', { willReadFrequently: true }); // Ottimizzazione
+        const videoElement = videoRef.current;
+
+        if (!videoElement || !canvasContext) {
+          console.error("[MANUAL CAMERA] videoElement o canvasContext non disponibili");
+          return () => cancelAnimationFrame(anId);
         }
-        
-        // Funzione che analizza i frame video alla ricerca di QR code
+
+        console.log("[MANUAL CAMERA] Elementi pronti, avvio scanQRFrame loop");
+
         const scanQRFrame = () => {
-          if (!videoElem || !scannerActive || !manualCameraActive || isScanPaused) {
-            return; // Non continuare se lo scanner è disattivato o in pausa
+          frameCounter++;
+        //   console.log(`[MANUAL CAMERA DEBUG] Frame: ${frameCounter}, Paused: ${isScanPaused}, Active: ${scannerActive && manualCameraActive}`);
+
+          if (!videoElement || !scannerActive || !manualCameraActive || isScanPaused) {
+            // console.log("[MANUAL CAMERA] Uscita anticipata da scanQRFrame");
+            return; // Non continuare il loop se le condizioni non sono soddisfatte
           }
-          
+
           try {
-            if (videoElem.readyState === videoElem.HAVE_ENOUGH_DATA) {
-              // Configura canvas per catturare l'immagine dalla fotocamera
-              canvasRef.height = videoElem.videoHeight;
-              canvasRef.width = videoElem.videoWidth;
-              canvasCtx.drawImage(videoElem, 0, 0, canvasRef.width, canvasRef.height);
-              
-              // Ottieni i dati dell'immagine per l'analisi
-              const imageData = canvasCtx.getImageData(0, 0, canvasRef.width, canvasRef.height);
-              
-              // Prova a decodificare il QR code
-              console.log("[MANUAL CAMERA] Analisi frame per QR code...");
+            if (videoElement.readyState >= videoElement.HAVE_METADATA && videoElement.videoWidth > 0) {
+              if (canvasElement.width !== videoElement.videoWidth) canvasElement.width = videoElement.videoWidth;
+              if (canvasElement.height !== videoElement.videoHeight) canvasElement.height = videoElement.videoHeight;
+
+              canvasContext.drawImage(videoElement, 0, 0, videoElement.videoWidth, videoElement.videoHeight);
+              const imageData = canvasContext.getImageData(0, 0, videoElement.videoWidth, videoElement.videoHeight);
               const code = jsQR.default(imageData.data, imageData.width, imageData.height, {
-                inversionAttempts: "attemptBoth", // Prova sia invertito che non invertito
+                inversionAttempts: "attemptBoth",
               });
-              
+
               if (code && code.data) {
-                console.log("[MANUAL CAMERA] QR Code rilevato:", code.data);
-                
-                // Mostra un feedback visivo che abbiamo trovato un QR
-                canvasCtx.beginPath();
-                canvasCtx.lineWidth = 4;
-                canvasCtx.strokeStyle = "#FF3B58";
-                canvasCtx.rect(
-                  code.location.topLeftCorner.x, 
-                  code.location.topLeftCorner.y, 
-                  code.location.bottomRightCorner.x - code.location.topLeftCorner.x, 
-                  code.location.bottomRightCorner.y - code.location.topLeftCorner.y
-                );
-                canvasCtx.stroke();
-                
-                // Pausa la scansione per evitare scansioni multiple
+                console.log(`[MANUAL CAMERA] QR RILEVATO (Frame ${frameCounter}): ${code.data}`);
                 setIsScanPaused(true);
+                showTemporaryMessage("QR Code Rilevato! Elaborazione...", "success", 2000);
                 
-                // Aggiungi suono di scansione riuscita (opzionale)
-                try {
-                  const beep = new Audio("data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU3LjU2LjEwMAAAAAAAAAAAAAAA//tAwAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAACAAABIADAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV6urq6urq6urq6urq6urq6urq6urq6urq6v////////////////////////////////8AAAAATGF2YzU3LjY0AAAAAAAAAAAAAAAAJAAAAAAAAAAAASDs4EcUAAAAAAAAAAAAAAAAAP/7UMQAAAesTXWUEQBBilO7IAgCDaqbubm5uVVVVVVVyqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqg==");
-                  beep.play();
-                } catch (e) {
-                  // Ignora errori audio
-                }
-                
-                // Mostra messaggio di elaborazione QR
-                showTemporaryMessage("QR Code rilevato, elaborazione...", "info", 2000);
-                
-                // Usa la stessa funzione di validazione dello scanner originale
-                // Piccolo delay per dare il tempo all'utente di vedere il feedback
+                // Esegui la validazione
                 setTimeout(() => {
-                  try {
-                    console.log("[MANUAL CAMERA] Chiamo handleValidateTicket con:", code.data);
-                    handleValidateTicket(code.data);
-                  } catch (err) {
-                    console.error("[MANUAL CAMERA] Errore durante handleValidateTicket:", err);
-                    showTemporaryMessage("Errore durante la validazione del QR", "error");
-                    setIsScanPaused(false); // Riprendi la scansione in caso di errore
-                  }
-                }, 800);
-                
-                // Ripristina la scansione dopo un ritardo
+                  handleValidateTicket(code.data);
+                  // Ripresa scansione gestita nel timeout separato sotto
+                }, 500); // Breve delay per messaggio
+
+                // Pausa e ripresa scansione
                 setTimeout(() => {
-                  if (scannerActive && manualCameraActive) {
+                  if (scannerActive && manualCameraActive) { // Ricontrolla stato prima di riprendere
                     setIsScanPaused(false);
-                    console.log("[MANUAL CAMERA] Scansione ripresa");
+                    console.log("[MANUAL CAMERA] Scansione ripresa.");
+                    anId = requestAnimationFrame(scanQRFrame); // Continua il loop
                   }
-                }, 3000);
-                
-                return; // Esci dalla funzione dopo aver trovato un QR
+                }, 2500); // Pausa di 2.5s dopo una scansione riuscita
+                return; // Esce da questa esecuzione di scanQRFrame dopo successo
+              } else {
+                // console.log(`[MANUAL CAMERA DEBUG] Nessun QR nel frame ${frameCounter}`);
               }
+            } else {
+            //   console.log(`[MANUAL CAMERA DEBUG] Video non pronto (readyState: ${videoElement.readyState})`);
             }
-          } catch (e) {
-            console.error("[MANUAL CAMERA] Errore durante la scansione del frame:", e);
+          } catch (error) {
+            console.error(`[MANUAL CAMERA] Errore in scanQRFrame (frame ${frameCounter}):`, error);
           }
           
-          // Continua la scansione al prossimo frame se ancora attiva
+          // Se non è stato trovato un codice e non siamo in pausa, continua il loop
           if (scannerActive && manualCameraActive && !isScanPaused) {
-            requestAnimationFrame(scanQRFrame);
-          } else {
-            console.log("[MANUAL CAMERA] Loop di scansione interrotto:", {
-              scannerActive, manualCameraActive, isScanPaused
-            });
+            anId = requestAnimationFrame(scanQRFrame);
           }
         };
-        
-        // Avvia il loop di scansione e assicurati che non si fermi
-        console.log("[MANUAL CAMERA] Avvio loop di scansione QR");
-        scanQRFrame();
-        
-        // Riavvia il loop di scansione ogni 5 secondi se si è fermato per qualche motivo
-        const scanInterval = setInterval(() => {
-          if (scannerActive && manualCameraActive && !isScanPaused) {
-            const videos = document.querySelectorAll('#html5qr-code-full-region video');
-            console.log("[MANUAL CAMERA] Controllo loop di scansione. Video attivi:", videos.length);
-            if (videoElem.readyState === videoElem.HAVE_ENOUGH_DATA) {
-              scanQRFrame();
-            }
-          } else if (!scannerActive || !manualCameraActive) {
-            clearInterval(scanInterval);
-          }
-        }, 5000);
-        
-        // Pulisci l'intervallo quando il componente si smonta
+
+        anId = requestAnimationFrame(scanQRFrame); // Avvia il loop
+
+        // Funzione di cleanup per questo specifico setup (da chiamare quando stream/scanner si ferma)
         return () => {
-          clearInterval(scanInterval);
+            console.log("[MANUAL CAMERA] Cleanup per setupQRScanner, anId:", anId);
+            if (anId) cancelAnimationFrame(anId);
         };
-      } catch (err) {
-        console.error("[MANUAL CAMERA] Errore nel setup del decoder QR:", err);
+
+      } catch (error) {
+        console.error("[MANUAL CAMERA] Errore grave in setupQRScanner:", error);
+        return () => {}; // Funzione di cleanup vuota in caso di errore grave iniziale
       }
     }
     
-    // Attiva il fallback solo all'inizio di scannerActive
+    // useEffect per il fallback manuale
+    let cleanupScanLoop = () => {}; // Inizializza a funzione vuota
+
     if (scannerActive && !manualCameraActive) {
-      setupManualCamera();
+        const isMobile = isMobileDevice();
+        if (isMobile) {
+            console.log("[MANUAL CAMERA] Dispositivo mobile rilevato, avvio setupManualCamera.");
+            setupManualCamera().then(returnedCleanup => {
+                if (typeof returnedCleanup === 'function') {
+                    cleanupScanLoop = returnedCleanup; 
+                }
+            }).catch(err => {
+                console.error("[MANUAL CAMERA] Errore in setupManualCamera promise chain:", err);
+            });
+        } else {
+            console.log("[MANUAL CAMERA] Non è un dispositivo mobile, fallback non attivato.");
+        }
     }
-    
-    // Cleanup
+
     return () => {
+      console.log("[MANUAL CAMERA] Cleanup principale useEffect fallback manuale.");
       if (streamRef.current) {
-        console.log("[MANUAL CAMERA] Rilascio stream");
+        console.log("[MANUAL CAMERA] Rilascio streamRef.");
         streamRef.current.getTracks().forEach(track => track.stop());
         streamRef.current = null;
       }
+      cleanupScanLoop(); // Chiama la funzione di pulizia restituita da setupQRScanner
+      setManualCameraActive(false); // Assicurati che lo stato sia resettato
     };
-  }, [scannerActive, manualCameraActive, isScanPaused]); // Aggiungi isScanPaused alle dipendenze
+    // Rimuovi isScanPaused dalle dipendenze principali di questo useEffect se causa loop indesiderati.
+    // L'attivazione del setup non dovrebbe dipendere da isScanPaused, ma il loop interno sì.
+  }, [scannerActive, manualCameraActive]); // Tolto isScanPaused se crea problemi di ri-esecuzione dell'effetto
 
   const showTemporaryMessage = (msg, type = 'info', duration = 4000) => {
     console.log(`[MESSAGE] Type: ${type}, Message: ${msg}`);
