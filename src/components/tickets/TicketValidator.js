@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { db } from '../../firebase/config';
 import { doc, getDoc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { useAuth } from '../../contexts/AuthContext';
-import { Html5QrcodeScanner } from 'html5-qrcode';
+import { Html5QrcodeScanner, Html5QrcodeSupportedFormats } from 'html5-qrcode';
 import { FaQrcode, FaKeyboard, FaTicketAlt, FaUser, FaCalendarAlt, FaMapMarkerAlt, FaCheck, FaTimes } from 'react-icons/fa';
 import './TicketValidator.css';
 
@@ -98,7 +98,8 @@ function TicketValidator({ initializeWithScanner = true }) {
         qrbox: { width: 250, height: 250 },
         videoConstraints: { facingMode: "environment" },
         rememberLastUsedCamera: true, 
-        supportedScanTypes: [0] // SCAN_TYPE_CAMERA
+        supportedScanTypes: [0], // SCAN_TYPE_CAMERA
+        formatsToSupport: [ Html5QrcodeSupportedFormats.QR_CODE ] // Specifica solo QR_CODE
       };
       console.log("Scanner config:", config);
 
