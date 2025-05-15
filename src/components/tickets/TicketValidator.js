@@ -21,6 +21,8 @@ function TicketValidator({ initializeWithScanner = true }) {
   const scannerRef = useRef(null);
   const inputRef = useRef(null);
   const messageTimeoutRef = useRef(null);
+  const lastScanTimeRef = useRef(0); // Riferimento per l'ultimo tempo di scansione
+  const scanTimeoutRef = useRef(null); // Riferimento per il timeout tra scansioni
 
   // Check user permissions
   useEffect(() => {
@@ -106,6 +108,16 @@ function TicketValidator({ initializeWithScanner = true }) {
         // Successo: QR Code decodificato
         console.log("QR Code decodificato:", decodedText);
         
+        // Verifica se è troppo presto per una nuova scansione (2 secondi di timeout)
+        const now = Date.now();
+        if (now - lastScanTimeRef.current < 2000) {
+          console.log("Ignorata scansione troppo rapida");
+          return; // Ignora questa scansione, è troppo presto
+        }
+        
+        // Aggiorna l'ultimo tempo di scansione
+        lastScanTimeRef.current = now;
+        
         // Feedback audio alla scansione
         try {
           const beep = new Audio();
@@ -116,7 +128,7 @@ function TicketValidator({ initializeWithScanner = true }) {
           // Ignora errori audio
         }
         
-        // Pausa la scansione
+        // Pausa la scansione 
         try {
           const pausePromise = html5QrCode.pause();
           // Solo se .pause() restituisce una promise con .catch, la usiamo
@@ -131,7 +143,7 @@ function TicketValidator({ initializeWithScanner = true }) {
         handleValidateTicket(decodedText)
           .finally(() => {
             // Riprendi la scansione dopo 2 secondi
-            setTimeout(() => {
+            scanTimeoutRef.current = setTimeout(() => {
               if (scannerActive && scannerRef.current) {
                 try {
                   const resumePromise = html5QrCode.resume();
@@ -162,11 +174,12 @@ function TicketValidator({ initializeWithScanner = true }) {
       setTimeout(() => {
         // Rimuovi eventuali elementi UI indesiderati creati dalla libreria
         try {
-          // Inietta uno stile CSS direttamente nel documento per nascondere tutti i mirini
+          // Inietta uno stile CSS direttamente nel documento per nascondere tutti i mirini della libreria
+          // ma NON il nostro mirino personalizzato con classe custom-scanner-viewfinder
           const style = document.createElement('style');
           style.type = 'text/css';
           style.innerHTML = `
-            /* Nascondi tutti i div con bordi bianchi che potrebbero essere mirini */
+            /* Nascondi solo i mirini generati dalla libreria ma non il nostro mirino personalizzato */
             div[style*="border: 6px solid rgb(255, 255, 255)"],
             div[style*="border:6px solid rgb(255,255,255)"],
             div[style*="border: 2px solid rgb(255, 255, 255)"],
@@ -176,9 +189,17 @@ function TicketValidator({ initializeWithScanner = true }) {
               opacity: 0 !important;
               visibility: hidden !important;
             }
+            
+            /* Assicurati che il nostro mirino rimanga sempre visibile */
+            .custom-scanner-viewfinder {
+              display: block !important;
+              opacity: 1 !important;
+              visibility: visible !important;
+              z-index: 1000 !important; /* Z-index più alto per rimanere sopra altri elementi */
+            }
           `;
           document.head.appendChild(style);
-          console.log('Iniettato CSS per nascondere i mirini');
+          console.log('Iniettato CSS per gestire i mirini');
           
           // Rimuovi tutti gli span e div superflui che la libreria crea
           const scanTypeSelector = document.getElementById('html5-qrcode-select-camera');
@@ -195,30 +216,6 @@ function TicketValidator({ initializeWithScanner = true }) {
           // Rimuovi l'header con testo duplicato (se presente)
           const headers = qrContainer.querySelectorAll('div[style*="border-bottom"]');
           headers.forEach(header => header.style.display = 'none');
-          
-          // Nascondi il mirino della libreria HTML5-QRCode - APPROCCIO AGGRESSIVO
-          const allDivsInQrReader = qrContainer.querySelectorAll('div');
-          allDivsInQrReader.forEach(div => {
-            // Controlla se questo div sembra un mirino (bordi, posizione assoluta, ecc.)
-            const style = window.getComputedStyle(div);
-            if (style.border !== 'none' || style.position === 'absolute') {
-              // Escludiamo i nostri elementi di UI personalizzati
-              if (!div.className.includes('loading-spinner') &&
-                  !div.className.includes('scanner-loading-overlay')) {
-                div.style.display = 'none';
-                console.log('Nascosto elemento con bordo o posizione assoluta');
-              }
-            }
-          });
-          
-          // Nascondi anche eventuali canvas o overlay della libreria
-          const canvasElements = qrContainer.querySelectorAll('canvas');
-          canvasElements.forEach(canvas => {
-            if (canvas.style.position === 'absolute') {
-              canvas.style.display = 'none';
-              console.log('Nascosto canvas/overlay della libreria');
-            }
-          });
           
           // Assicurati che ci sia un solo video attivo
           const videos = qrContainer.querySelectorAll('video');
@@ -245,32 +242,26 @@ function TicketValidator({ initializeWithScanner = true }) {
         }
       }, 500);
       
-      // Controlla una seconda volta dopo un po' di tempo (utile per alcuni dispositivi più lenti)
-      setTimeout(() => {
+      // Assicurati che il mirino personalizzato sia sempre visibile anche dopo che la libreria prova a modificare l'UI
+      setInterval(() => {
         try {
-          // Approccio radicale: trova e nascondi tutti i possibili mirini
-          const allDivs = document.querySelectorAll('div');
-          allDivs.forEach(div => {
-            const rect = div.getBoundingClientRect();
-            const style = window.getComputedStyle(div);
-            
-            // Se sembra un mirino (quadrato, posizionato al centro, con bordo)
-            if (rect.width > 150 && rect.width < 300 &&
-                rect.height > 150 && rect.height < 300 &&
-                style.border !== 'none' &&
-                style.position === 'absolute') {
-              // Non nascondere i nostri elementi di UI (caricamento, ecc.)
-              if (!div.className.includes('loading-spinner') && 
-                  !div.className.includes('scanner-loading-overlay')) {
-                console.log('Secondo tentativo: Nascosto possibile mirino');
-                div.style.display = 'none';
-              }
-            }
-          });
+          // Controlla e ripristina il mirino personalizzato se necessario
+          const customViewfinder = document.querySelector('.custom-scanner-viewfinder');
+          if (customViewfinder && (
+              customViewfinder.style.display === 'none' || 
+              customViewfinder.style.visibility === 'hidden' ||
+              customViewfinder.style.opacity === '0'
+          )) {
+            console.log('Ripristino visibilità del mirino personalizzato');
+            customViewfinder.style.display = 'block';
+            customViewfinder.style.visibility = 'visible';
+            customViewfinder.style.opacity = '1';
+            customViewfinder.style.zIndex = '1000';
+          }
         } catch (e) {
-          console.warn("Errore durante la pulizia secondaria:", e);
+          // Ignora errori
         }
-      }, 2000);
+      }, 1000); // Controlla ogni secondo
     })
     .catch((err) => {
       console.error("Errore avvio scanner QR:", err);
@@ -289,6 +280,12 @@ function TicketValidator({ initializeWithScanner = true }) {
         console.log("Arresto scanner in cleanup");
         scannerRef.current.stop().catch(e => console.error("Errore arresto scanner:", e));
         scannerRef.current = null;
+      }
+      
+      // Pulisci anche i timeout se sono attivi
+      if (scanTimeoutRef.current) {
+        clearTimeout(scanTimeoutRef.current);
+        scanTimeoutRef.current = null;
       }
     };
   }, [scannerActive]);
