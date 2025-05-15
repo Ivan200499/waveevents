@@ -345,43 +345,108 @@ function TicketValidator({ initializeWithScanner = true }) {
           
           try {
             if (videoElem.readyState === videoElem.HAVE_ENOUGH_DATA) {
+              // Configura canvas per catturare l'immagine dalla fotocamera
               canvasRef.height = videoElem.videoHeight;
               canvasRef.width = videoElem.videoWidth;
               canvasCtx.drawImage(videoElem, 0, 0, canvasRef.width, canvasRef.height);
               
+              // Ottieni i dati dell'immagine per l'analisi
               const imageData = canvasCtx.getImageData(0, 0, canvasRef.width, canvasRef.height);
+              
+              // Prova a decodificare il QR code
+              console.log("[MANUAL CAMERA] Analisi frame per QR code...");
               const code = jsQR.default(imageData.data, imageData.width, imageData.height, {
-                inversionAttempts: "dontInvert",
+                inversionAttempts: "attemptBoth", // Prova sia invertito che non invertito
               });
               
-              if (code) {
+              if (code && code.data) {
                 console.log("[MANUAL CAMERA] QR Code rilevato:", code.data);
-                setIsScanPaused(true); // Pausa la scansione per evitare scansioni multiple
+                
+                // Mostra un feedback visivo che abbiamo trovato un QR
+                canvasCtx.beginPath();
+                canvasCtx.lineWidth = 4;
+                canvasCtx.strokeStyle = "#FF3B58";
+                canvasCtx.rect(
+                  code.location.topLeftCorner.x, 
+                  code.location.topLeftCorner.y, 
+                  code.location.bottomRightCorner.x - code.location.topLeftCorner.x, 
+                  code.location.bottomRightCorner.y - code.location.topLeftCorner.y
+                );
+                canvasCtx.stroke();
+                
+                // Pausa la scansione per evitare scansioni multiple
+                setIsScanPaused(true);
+                
+                // Aggiungi suono di scansione riuscita (opzionale)
+                try {
+                  const beep = new Audio("data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU3LjU2LjEwMAAAAAAAAAAAAAAA//tAwAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAACAAABIADAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV6urq6urq6urq6urq6urq6urq6urq6urq6v////////////////////////////////8AAAAATGF2YzU3LjY0AAAAAAAAAAAAAAAAJAAAAAAAAAAAASDs4EcUAAAAAAAAAAAAAAAAAP/7UMQAAAesTXWUEQBBilO7IAgCDaqbubm5uVVVVVVVyqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqg==");
+                  beep.play();
+                } catch (e) {
+                  // Ignora errori audio
+                }
+                
+                // Mostra messaggio di elaborazione QR
+                showTemporaryMessage("QR Code rilevato, elaborazione...", "info", 2000);
                 
                 // Usa la stessa funzione di validazione dello scanner originale
-                handleValidateTicket(code.data);
+                // Piccolo delay per dare il tempo all'utente di vedere il feedback
+                setTimeout(() => {
+                  try {
+                    console.log("[MANUAL CAMERA] Chiamo handleValidateTicket con:", code.data);
+                    handleValidateTicket(code.data);
+                  } catch (err) {
+                    console.error("[MANUAL CAMERA] Errore durante handleValidateTicket:", err);
+                    showTemporaryMessage("Errore durante la validazione del QR", "error");
+                    setIsScanPaused(false); // Riprendi la scansione in caso di errore
+                  }
+                }, 800);
                 
                 // Ripristina la scansione dopo un ritardo
                 setTimeout(() => {
                   if (scannerActive && manualCameraActive) {
                     setIsScanPaused(false);
+                    console.log("[MANUAL CAMERA] Scansione ripresa");
                   }
                 }, 3000);
+                
+                return; // Esci dalla funzione dopo aver trovato un QR
               }
             }
           } catch (e) {
             console.error("[MANUAL CAMERA] Errore durante la scansione del frame:", e);
           }
           
-          // Continua la scansione al prossimo frame
-          if (scannerActive && manualCameraActive) {
+          // Continua la scansione al prossimo frame se ancora attiva
+          if (scannerActive && manualCameraActive && !isScanPaused) {
             requestAnimationFrame(scanQRFrame);
+          } else {
+            console.log("[MANUAL CAMERA] Loop di scansione interrotto:", {
+              scannerActive, manualCameraActive, isScanPaused
+            });
           }
         };
         
-        // Avvia il loop di scansione
+        // Avvia il loop di scansione e assicurati che non si fermi
+        console.log("[MANUAL CAMERA] Avvio loop di scansione QR");
         scanQRFrame();
         
+        // Riavvia il loop di scansione ogni 5 secondi se si è fermato per qualche motivo
+        const scanInterval = setInterval(() => {
+          if (scannerActive && manualCameraActive && !isScanPaused) {
+            const videos = document.querySelectorAll('#html5qr-code-full-region video');
+            console.log("[MANUAL CAMERA] Controllo loop di scansione. Video attivi:", videos.length);
+            if (videoElem.readyState === videoElem.HAVE_ENOUGH_DATA) {
+              scanQRFrame();
+            }
+          } else if (!scannerActive || !manualCameraActive) {
+            clearInterval(scanInterval);
+          }
+        }, 5000);
+        
+        // Pulisci l'intervallo quando il componente si smonta
+        return () => {
+          clearInterval(scanInterval);
+        };
       } catch (err) {
         console.error("[MANUAL CAMERA] Errore nel setup del decoder QR:", err);
       }
