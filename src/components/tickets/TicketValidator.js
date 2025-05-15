@@ -96,10 +96,15 @@ function TicketValidator({ initializeWithScanner = true }) {
       const config = {
         fps: 10,
         qrbox: { width: 250, height: 250 },
-        videoConstraints: { facingMode: "environment" },
-        rememberLastUsedCamera: true, 
-        supportedScanTypes: [0], // SCAN_TYPE_CAMERA
-        formatsToSupport: [ Html5QrcodeSupportedFormats.QR_CODE ] // Specifica solo QR_CODE
+        videoConstraints: { 
+          facingMode: "environment",
+          width: { min: 640, ideal: 1280, max: 1920 },
+          height: { min: 480, ideal: 720, max: 1080 }
+        },
+        rememberLastUsedCamera: false,
+        formatsToSupport: [ Html5QrcodeSupportedFormats.QR_CODE ],
+        showTorchButtonIfSupported: true,
+        useBarCodeDetectorIfSupported: false,
       };
       console.log("Scanner config:", config);
 
@@ -131,9 +136,40 @@ function TicketValidator({ initializeWithScanner = true }) {
       
       try {
         console.log("[DEBUG] Prima di chiamare html5QrcodeScanner.render()");
+        
+        try {
+          console.log("[DEBUG] Richiesta esplicita permessi fotocamera");
+          const constraints = { video: { facingMode: "environment" } };
+          const stream = await navigator.mediaDevices.getUserMedia(constraints);
+          console.log("[DEBUG] Permessi fotocamera ottenuti, stream:", stream.id);
+          stream.getTracks().forEach(track => track.stop());
+        } catch (permissionError) {
+          console.error("[DEBUG] Errore permessi fotocamera:", permissionError);
+        }
+        
         await html5QrcodeScanner.render(onScanSuccess, onScanFailure);
         console.log("[DEBUG] Dopo aver chiamato html5QrcodeScanner.render() con successo");
         console.log("Scanner rendered successfully.");
+        
+        setTimeout(() => {
+          try {
+            const videos = document.querySelectorAll('#html5qr-code-full-region video');
+            console.log("[DEBUG] Video trovati dopo render:", videos.length);
+            videos.forEach((video, index) => {
+              video.style.width = "100%";
+              video.style.height = "100%";
+              video.style.objectFit = "cover";
+              video.style.display = "block";
+              video.style.opacity = "1";
+              video.style.visibility = "visible";
+              video.style.zIndex = "5";
+              console.log(`[DEBUG] Stili applicati a video[${index}]`);
+            });
+          } catch (cssError) {
+            console.error("[DEBUG] Errore nell'applicare stili video:", cssError);
+          }
+        }, 1000);
+        
         if (isEffectActive) {
           scannerRef.current = html5QrcodeScanner;
           setScannerInitialized(true);
