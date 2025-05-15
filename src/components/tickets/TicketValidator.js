@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { db } from '../../firebase/config';
 import { doc, getDoc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { useAuth } from '../../contexts/AuthContext';
-import { Html5QrcodeScanner, Html5QrcodeSupportedFormats } from 'html5-qrcode';
+import { Html5Qrcode } from 'html5-qrcode';
 import { FaQrcode, FaKeyboard, FaTicketAlt, FaUser, FaCalendarAlt, FaMapMarkerAlt, FaCheck, FaTimes } from 'react-icons/fa';
 import './TicketValidator.css';
 
@@ -14,18 +14,13 @@ function TicketValidator({ initializeWithScanner = true }) {
   const [loading, setLoading] = useState(false);
   const [userRole, setUserRole] = useState(null);
   const [scannerActive, setScannerActive] = useState(initializeWithScanner);
+  const [lastScannedTicketDetails, setLastScannedTicketDetails] = useState(null);
+  const [cameraError, setCameraError] = useState(false);
+  
+  // Refs
   const scannerRef = useRef(null);
   const inputRef = useRef(null);
   const messageTimeoutRef = useRef(null);
-  const [isScanPaused, setIsScanPaused] = useState(false);
-  const scannerContainerRef = useRef(null);
-  const [scannerInitialized, setScannerInitialized] = useState(false);
-  const [lastScannedTicketDetails, setLastScannedTicketDetails] = useState(null);
-  const [manualCameraActive, setManualCameraActive] = useState(false);
-  const videoRef = useRef(null);
-  const streamRef = useRef(null);
-  const qrAnimationRef = useRef(null);
-  const fallbackCheckTimerRef = useRef(null);
 
   // Check user permissions
   useEffect(() => {
@@ -59,387 +54,244 @@ function TicketValidator({ initializeWithScanner = true }) {
     checkUserRole();
   }, [currentUser]);
 
-  // Cleanup when component unmounts
+  // Nuova implementazione del QR scanner usando Html5Qrcode diretto
   useEffect(() => {
-    const instanceAtMount = scannerRef.current;
-    return () => {
-        if (instanceAtMount) {
-          try {
-          instanceAtMount.clear();
-        } catch (error) {
-          console.log("Cleanup error on unmount:", error);
-        }
-      }
-      if (messageTimeoutRef.current) {
-        clearTimeout(messageTimeoutRef.current);
-      }
-    };
-  }, []);
-  
-  // Initialize scanner when scannerActive changes
-  useEffect(() => {
-    let isEffectActive = true;
-
-    const initializeNewScanner = async () => {
-      console.log("Attempting to initialize scanner...");
-      if (!isEffectActive || !document.getElementById("html5qr-code-full-region")) {
-        console.log("Scanner initialization aborted: effect not active or element not found.");
-        return;
-      }
-
+    // Se lo scanner non è attivo, pulire le risorse
+    if (!scannerActive) {
       if (scannerRef.current) {
-        console.log("Clearing previous scanner instance...");
         try {
-          await scannerRef.current.clear();
-          console.log("Previous scanner cleared.");
-        } catch (e) { 
-          console.warn("Error clearing previous scanner:", e);
-        }
-        scannerRef.current = null;
-      }
-
-      const config = {
-        fps: 10,
-        qrbox: { width: 250, height: 250 },
-        videoConstraints: { 
-          facingMode: "environment",
-          width: { min: 640, ideal: 1280, max: 1920 },
-          height: { min: 480, ideal: 720, max: 1080 }
-        },
-        rememberLastUsedCamera: false,
-        formatsToSupport: [ Html5QrcodeSupportedFormats.QR_CODE ],
-        showTorchButtonIfSupported: true,
-        useBarCodeDetectorIfSupported: false,
-      };
-      console.log("Scanner config:", config);
-
-      console.log("[DEBUG] Prima di creare Html5QrcodeScanner");
-      const html5QrcodeScanner = new Html5QrcodeScanner("html5qr-code-full-region", config, true);
-      console.log("[DEBUG] Dopo aver creato Html5QrcodeScanner, oggetto:", html5QrcodeScanner);
-
-      const onScanSuccess = (decodedText, decodedResult) => {
-        console.log("[SCAN SUCCESS] Decoded Text:", decodedText, "Full Result:", decodedResult);
-        if (!isEffectActive || loading || isScanPaused) {
-          console.log("[SCAN SUCCESS] Aborted due to state:", { isEffectActive, loading, isScanPaused });
-          return;
-        }
-        setIsScanPaused(true);
-        console.log("[SCAN SUCCESS] Calling handleValidateTicket...");
-        handleValidateTicket(decodedText);
-        setTimeout(() => { 
-          if (isEffectActive) {
-            setIsScanPaused(false); 
-            console.log("[SCAN SUCCESS] Scan pause released.");
-          }
-        }, 2000);
-      };
-
-      const onScanFailure = (errorMessage) => {
-        if (!isEffectActive) return;
-        // console.warn("[SCAN FAILURE]:", errorMessage); // Decommenta per debug dettagliato fallimenti scansione
-      };
-      
-      try {
-        console.log("[DEBUG] Prima di chiamare html5QrcodeScanner.render()");
-        
-        try {
-          console.log("[DEBUG] Richiesta esplicita permessi fotocamera");
-          const constraints = { video: { facingMode: "environment" } };
-          const stream = await navigator.mediaDevices.getUserMedia(constraints);
-          console.log("[DEBUG] Permessi fotocamera ottenuti, stream:", stream.id);
-          stream.getTracks().forEach(track => track.stop());
-        } catch (permissionError) {
-          console.error("[DEBUG] Errore permessi fotocamera:", permissionError);
-        }
-        
-        await html5QrcodeScanner.render(onScanSuccess, onScanFailure);
-        console.log("[DEBUG] Dopo aver chiamato html5QrcodeScanner.render() con successo");
-        console.log("Scanner rendered successfully.");
-        
-        setTimeout(() => {
-          try {
-            const videos = document.querySelectorAll('#html5qr-code-full-region video');
-            console.log("[DEBUG] Video trovati dopo render:", videos.length);
-            videos.forEach((video, index) => {
-              video.style.width = "100%";
-              video.style.height = "100%";
-              video.style.objectFit = "cover";
-              video.style.display = "block";
-              video.style.opacity = "1";
-              video.style.visibility = "visible";
-              video.style.zIndex = "5";
-              console.log(`[DEBUG] Stili applicati a video[${index}]`);
-            });
-          } catch (cssError) {
-            console.error("[DEBUG] Errore nell'applicare stili video:", cssError);
-          }
-        }, 1000);
-        
-        if (isEffectActive) {
-          scannerRef.current = html5QrcodeScanner;
-          setScannerInitialized(true);
-          console.log("Scanner initialized and ref set.");
-        } else {
-          console.log("Effect became inactive during scanner render, clearing scanner.");
-          if(html5QrcodeScanner && html5QrcodeScanner.getState && html5QrcodeScanner.getState() === 2) {
-            html5QrcodeScanner.clear().catch(e => console.warn("Error clearing scanner on inactive effect:", e));
-           }
-        }
-      } catch (renderError) {
-        console.error("[DEBUG] Errore DENTRO il catch di render():", renderError);
-        console.error("Error rendering scanner:", renderError);
-        if (isEffectActive) {
-            setMessage("Errore nell'avvio dello scanner. Verifica permessi fotocamera e ricarica.");
-            setMessageType('error');
-            setScannerActive(false);
-            setScannerInitialized(false);
-        }
-      }
-    };
-
-    const cleanupCurrentScanner = async () => {
-      console.log("Cleaning up current scanner...");
-      if (scannerRef.current) {
-        const instanceToCleanup = scannerRef.current;
-        scannerRef.current = null; 
-        try {
-          if (instanceToCleanup && instanceToCleanup.getState && instanceToCleanup.getState() === 2) {
-             await instanceToCleanup.clear();
-            console.log("Scanner instance cleared in cleanup.");
-          }
+          scannerRef.current.stop().catch(e => console.error("Errore durante l'arresto dello scanner:", e));
+          scannerRef.current = null;
         } catch (error) {
-          console.warn("Error in cleanupCurrentScanner:", error);
+          console.error("Errore durante la pulizia dello scanner:", error);
         }
       }
-      if (isEffectActive) {
-        setScannerInitialized(false);
-        console.log("Scanner uninitialized.");
-      }
-    };
-
-    if (scannerActive) {
-      console.log("Scanner is active. Initialized:", scannerInitialized, "Loading:", loading);
-      if (!scannerInitialized && !loading) {
-        const initTimeout = setTimeout(() => {
-          if(isEffectActive) initializeNewScanner();
-        }, 100); // Ridotto il timeout, ma assicurati che il div sia nel DOM
-        return () => clearTimeout(initTimeout);
-      }
-    } else { 
-      console.log("Scanner is not active. Initialized:", scannerInitialized);
-      if (scannerInitialized) {
-        cleanupCurrentScanner();
-      }
+      return;
     }
 
-    return () => {
-      console.log("Effect cleanup for [scannerActive, scannerInitialized, loading, currentUser]");
-      isEffectActive = false;
-      // Considera se è necessario pulire lo scanner qui, 
-      // potrebbe essere già gestito dalla logica if/else sopra
-      // o dallo smontaggio del componente.
-    };
-  }, [scannerActive, scannerInitialized, loading, currentUser]);
+    // Reset errore fotocamera
+    setCameraError(false);
+    
+    const qrContainer = document.getElementById('qr-reader');
+    if (!qrContainer) {
+      console.error("Elemento 'qr-reader' non trovato nel DOM");
+      return;
+    }
 
-  // Modifica all'useEffect per gestire manualmente la fotocamera solo su mobile reale
-  useEffect(() => {
-    // Rilevamento REALE mobile (non basato solo su user agent)
-    const isMobileDevice = () => {
-      // Verifica dimensione schermo piuttosto che user-agent
-      return (window.innerWidth <= 768) && ('ontouchstart' in window);
+    console.log("Inizializzazione QR scanner diretto...");
+    
+    // Crea una nuova istanza di Html5Qrcode
+    const html5QrCode = new Html5Qrcode("qr-reader");
+    
+    // Configurazione della scansione
+    const qrConfig = {
+      fps: 10,
+      qrbox: 250,
+      aspectRatio: 1.0,
+      showTorchButtonIfSupported: true,
+      hideControls: true,
+      drawScanRegion: false // Disabilita il disegno del mirino della libreria
     };
     
-    // Funzione per configurare la scansione QR sul video manuale
-    async function setupQRScanner(stream) {
-      console.log("[MANUAL CAMERA FALLBACK] Inizio setupQRScanner per il fallback");
-      let frameCounter = 0;
+    // Scegli la fotocamera frontale per localhost, altrimenti quella posteriore
+    const cameraConfig = {
+      facingMode: window.location.hostname === "localhost" ? "user" : "environment"
+    };
 
-      if (qrAnimationRef.current) {
-        cancelAnimationFrame(qrAnimationRef.current);
-      }
-
-      try {
-        let jsQR;
+    // Avvia lo scanner
+    html5QrCode.start(
+      cameraConfig, 
+      qrConfig,
+      (decodedText) => {
+        // Successo: QR Code decodificato
+        console.log("QR Code decodificato:", decodedText);
+        
+        // Feedback audio alla scansione
         try {
-          jsQR = await import('jsqr');
-          console.log("[MANUAL CAMERA FALLBACK] Libreria jsqr caricata");
+          const beep = new Audio();
+          beep.src = "data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YUt..."; // Base64 troncato
+          beep.volume = 0.3;
+          beep.play().catch(e => {}); // Ignora errori audio
         } catch (e) {
-          console.error("[MANUAL CAMERA FALLBACK] Fallito caricamento jsqr", e);
-          showTemporaryMessage("Errore libreria QR", "error");
+          // Ignora errori audio
+        }
+        
+        // Pausa la scansione
+        html5QrCode.pause();
+        
+        // Elabora il codice
+        handleValidateTicket(decodedText)
+          .finally(() => {
+            // Riprendi la scansione dopo 2 secondi
+            setTimeout(() => {
+              if (scannerActive && scannerRef.current) {
+                html5QrCode.resume().catch(e => console.error("Errore ripresa scanner:", e));
+              }
+            }, 2000);
+          });
+      },
+      (errorMessage) => {
+        // Ignora gli errori di scansione normali
+        if (errorMessage.includes("No QR code found")) {
           return;
         }
-
-        const canvasElement = document.createElement('canvas');
-        const canvasContext = canvasElement.getContext('2d', { willReadFrequently: true });
-        const videoElement = videoRef.current;
-
-        if (!videoElement || !canvasContext) {
-          console.error("[MANUAL CAMERA FALLBACK] videoElement o canvasContext non disponibili");
-          return;
-        }
-
-        console.log("[MANUAL CAMERA FALLBACK] Elementi pronti, avvio scanQRFrame loop");
-
-        const scanQRFrame = () => {
-          frameCounter++;
-          if (!videoElement || !scannerActive || !manualCameraActive || isScanPaused) {
-            console.log("[MANUAL CAMERA FALLBACK] Uscita da scanQRFrame (condizioni non soddisfatte)");
-            qrAnimationRef.current = null;
-            return;
-          }
-          try {
-            if (videoElement.readyState >= videoElement.HAVE_METADATA && videoElement.videoWidth > 0) {
-              if (canvasElement.width !== videoElement.videoWidth) canvasElement.width = videoElement.videoWidth;
-              if (canvasElement.height !== videoElement.videoHeight) canvasElement.height = videoElement.videoHeight;
-              canvasContext.drawImage(videoElement, 0, 0, videoElement.videoWidth, videoElement.videoHeight);
-              const imageData = canvasContext.getImageData(0, 0, videoElement.videoWidth, videoElement.videoHeight);
-              const code = jsQR.default(imageData.data, imageData.width, imageData.height, { inversionAttempts: "attemptBoth" });
-              if (code && code.data) {
-                console.log(`[MANUAL CAMERA FALLBACK] QR RILEVATO (Frame ${frameCounter}): ${code.data}`);
-                setIsScanPaused(true);
-                showTemporaryMessage("QR Fallback: Rilevato!", "success", 1500);
-                setTimeout(() => handleValidateTicket(code.data), 200);
-                setTimeout(() => {
-                  if (scannerActive && manualCameraActive) {
-                    setIsScanPaused(false);
-                    console.log("[MANUAL CAMERA FALLBACK] Scansione ripresa.");
-                    qrAnimationRef.current = requestAnimationFrame(scanQRFrame);
-                  }
-                }, 2000);
-                return;
+        console.log("Errore scanner:", errorMessage);
+      }
+    )
+    .then(() => {
+      console.log("Scanner QR avviato con successo!");
+      scannerRef.current = html5QrCode;
+      
+      // Fix per l'interfaccia utente su mobile - rimuovi elementi duplicati
+      setTimeout(() => {
+        // Rimuovi eventuali elementi UI indesiderati creati dalla libreria
+        try {
+          // Inietta uno stile CSS direttamente nel documento per nascondere tutti i mirini
+          const style = document.createElement('style');
+          style.type = 'text/css';
+          style.innerHTML = `
+            /* Nascondi tutti i div con bordi bianchi che potrebbero essere mirini */
+            div[style*="border: 6px solid rgb(255, 255, 255)"],
+            div[style*="border:6px solid rgb(255,255,255)"],
+            div[style*="border: 2px solid rgb(255, 255, 255)"],
+            div[style*="border:2px solid rgb(255,255,255)"],
+            #html5-qrcode-code-full-region canvas {
+              display: none !important;
+              opacity: 0 !important;
+              visibility: hidden !important;
+            }
+          `;
+          document.head.appendChild(style);
+          console.log('Iniettato CSS per nascondere i mirini');
+          
+          // Rimuovi tutti gli span e div superflui che la libreria crea
+          const scanTypeSelector = document.getElementById('html5-qrcode-select-camera');
+          if (scanTypeSelector) scanTypeSelector.style.display = 'none';
+          
+          // Rimuovi tutti i bottoni tranne quello della torcia
+          const buttons = qrContainer.querySelectorAll('button');
+          buttons.forEach(button => {
+            if (!button.innerHTML.includes('torch')) {
+              button.style.display = 'none';
+            }
+          });
+          
+          // Rimuovi l'header con testo duplicato (se presente)
+          const headers = qrContainer.querySelectorAll('div[style*="border-bottom"]');
+          headers.forEach(header => header.style.display = 'none');
+          
+          // Nascondi il mirino della libreria HTML5-QRCode - APPROCCIO AGGRESSIVO
+          const allDivsInQrReader = qrContainer.querySelectorAll('div');
+          allDivsInQrReader.forEach(div => {
+            // Controlla se questo div sembra un mirino (bordi, posizione assoluta, ecc.)
+            const style = window.getComputedStyle(div);
+            if (style.border !== 'none' || style.position === 'absolute') {
+              // Escludiamo i nostri elementi di UI personalizzati
+              if (!div.className.includes('loading-spinner') &&
+                  !div.className.includes('scanner-loading-overlay')) {
+                div.style.display = 'none';
+                console.log('Nascosto elemento con bordo o posizione assoluta');
               }
             }
-          } catch (error) {
-            console.error(`[MANUAL CAMERA FALLBACK] Errore in scanQRFrame (frame ${frameCounter}):`, error);
-          }
-          if (scannerActive && manualCameraActive && !isScanPaused) {
-            qrAnimationRef.current = requestAnimationFrame(scanQRFrame);
-          }
-        };
-        qrAnimationRef.current = requestAnimationFrame(scanQRFrame);
-      } catch (error) {
-        console.error("[MANUAL CAMERA FALLBACK] Errore grave in setupQRScanner:", error);
-      }
-    }
-    
-    // useEffect per il fallback manuale - RISTRUTTURATO E SEMPLIFICATO
-    useEffect(() => {
-      const isMobile = isMobileDevice();
-
-      const attemptFallbackActivation = async () => {
-        if (!scannerActive || !isMobile || manualCameraActive) {
-          // console.log("[FALLBACK ATTEMPT] Condizioni non soddisfatte per attivare il timer.");
-          return; // Non fare nulla se non siamo nelle condizioni giuste
-        }
-
-        console.log("[FALLBACK ATTEMPT] Scanner attivo su mobile. Avvio timer (4s) per controllo html5-qrcode.");
-
-        // Pulisci un timer precedente se esiste, per evitare duplicati
-        if (fallbackCheckTimerRef.current) {
-          clearTimeout(fallbackCheckTimerRef.current);
-        }
-
-        fallbackCheckTimerRef.current = setTimeout(async () => {
-          if (!scannerActive || manualCameraActive) { // Ricontrolla prima di agire
-            console.log("[FALLBACK CHECK] Timeout: Scanner disattivato o fallback già attivo. Annullamento.");
-            return;
-          }
-
-          const videos = document.querySelectorAll('#html5qr-code-full-region video');
-          const visibleVideos = Array.from(videos).filter(v => {
-            const rect = v.getBoundingClientRect();
-            const style = window.getComputedStyle(v);
-            return rect.width > 0 && rect.height > 0 && style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0';
           });
-
-          console.log(`[FALLBACK CHECK] Esito timer: Video html5-qrcode trovati: ${videos.length}, Visibili: ${visibleVideos.length}`);
-
-          if (visibleVideos.length === 0) {
-            console.log("[FALLBACK TRIGGER] Nessun video visibile da html5-qrcode. Tentativo attivazione fallback manuale.");
-            // Ensure we are still on mobile before activating (isMobileDevice() is from outer scope)
-            if (isMobileDevice()) {
-                setManualCameraActive(true); // Segnala che stiamo provando ad attivare il fallback
-                try {
-                  const constraints = { video: { facingMode: "environment", width: { ideal: 720 }, height: { ideal: 540 } } };
-                  const stream = await navigator.mediaDevices.getUserMedia(constraints);
-                  streamRef.current = stream; // Salva lo stream
-                  if (videoRef.current) {
-                    videoRef.current.srcObject = stream;
-                    await videoRef.current.play();
-                    console.log("[FALLBACK TRIGGER] Stream manuale avviato e collegato al video element.");
-                    setupQRScanner(stream); // Ora avvia la scansione QR per il fallback
-                  } else {
-                      console.error("[FALLBACK TRIGGER] videoRef.current non disponibile dopo attivazione stream.");
-                      setManualCameraActive(false); // Resetta se il video element non c'è
-                      stream.getTracks().forEach(track => track.stop()); // Ferma lo stream se non possiamo usarlo
-                  }
-                } catch (err) {
-                  console.error("[FALLBACK TRIGGER] Errore durante l'attivazione dello stream manuale:", err);
-                  setManualCameraActive(false); // Resetta se l'attivazione fallisce
-                  if(streamRef.current) streamRef.current.getTracks().forEach(track => track.stop()); // Assicura pulizia stream
-                  streamRef.current = null;
-                }
-            } else {
-                 console.log("[FALLBACK TRIGGER] No longer mobile when timer fired. Fallback not activated.");
-                 if (manualCameraActive) setManualCameraActive(false);
+          
+          // Nascondi anche eventuali canvas o overlay della libreria
+          const canvasElements = qrContainer.querySelectorAll('canvas');
+          canvasElements.forEach(canvas => {
+            if (canvas.style.position === 'absolute') {
+              canvas.style.display = 'none';
+              console.log('Nascosto canvas/overlay della libreria');
             }
-          } else {
-            console.log("[FALLBACK CHECK] Video da html5-qrcode visibile. Fallback manuale non necessario.");
-            if (manualCameraActive) { // If fallback was active, turn it off
-              console.log("[FALLBACK CHECK] Disattivazione fallback manuale perchè html5-qrcode è ora visibile.");
-              setManualCameraActive(false);
+          });
+          
+          // Assicurati che ci sia un solo video attivo
+          const videos = qrContainer.querySelectorAll('video');
+          console.log(`Trovati ${videos.length} elementi video`);
+          
+          if (videos.length > 1) {
+            // Mantieni solo il primo video
+            for (let i = 1; i < videos.length; i++) {
+              videos[i].style.display = 'none';
             }
           }
-        }, 4000); // 4 secondi di attesa per html5-qrcode
-      };
-
-      if (scannerActive) {
-          attemptFallbackActivation();
+          
+          // Assicurati che il video principale sia ben visibile
+          if (videos.length > 0) {
+            const mainVideo = videos[0];
+            mainVideo.style.width = '100%';
+            mainVideo.style.height = '100%';
+            mainVideo.style.objectFit = 'cover';
+            mainVideo.style.borderRadius = '12px';
+            mainVideo.style.transform = 'scaleX(1)'; // Rimuove eventuali rotazioni
+          }
+        } catch (e) {
+          console.warn("Errore durante la pulizia dell'interfaccia:", e);
+        }
+      }, 500);
+      
+      // Controlla una seconda volta dopo un po' di tempo (utile per alcuni dispositivi più lenti)
+      setTimeout(() => {
+        try {
+          // Approccio radicale: trova e nascondi tutti i possibili mirini
+          const allDivs = document.querySelectorAll('div');
+          allDivs.forEach(div => {
+            const rect = div.getBoundingClientRect();
+            const style = window.getComputedStyle(div);
+            
+            // Se sembra un mirino (quadrato, posizionato al centro, con bordo)
+            if (rect.width > 150 && rect.width < 300 &&
+                rect.height > 150 && rect.height < 300 &&
+                style.border !== 'none' &&
+                style.position === 'absolute') {
+              // Non nascondere i nostri elementi di UI (caricamento, ecc.)
+              if (!div.className.includes('loading-spinner') && 
+                  !div.className.includes('scanner-loading-overlay')) {
+                console.log('Secondo tentativo: Nascosto possibile mirino');
+                div.style.display = 'none';
+              }
+            }
+          });
+        } catch (e) {
+          console.warn("Errore durante la pulizia secondaria:", e);
+        }
+      }, 2000);
+    })
+    .catch((err) => {
+      console.error("Errore avvio scanner QR:", err);
+      setCameraError(true);
+      
+      if (err.toString().includes("Permission")) {
+        showTemporaryMessage("Permessi fotocamera negati. Controlla le impostazioni del browser.", "error", 8000);
+      } else {
+        showTemporaryMessage("Errore nell'avvio dello scanner. Ricarica la pagina.", "error", 5000);
       }
+    });
 
-      // Funzione di cleanup per questo useEffect
-      return () => {
-        console.log("[FALLBACK CLEANUP] Eseguito cleanup useEffect (scannerActive cambiato o smontaggio).");
-        // Pulisci il timer del controllo fallback se è ancora attivo
-        if (fallbackCheckTimerRef.current) {
-          clearTimeout(fallbackCheckTimerRef.current);
-          fallbackCheckTimerRef.current = null;
-          console.log("[FALLBACK CLEANUP] Timer di controllo fallback cancellato.");
-        }
+    // Cleanup
+    return () => {
+      if (scannerRef.current) {
+        console.log("Arresto scanner in cleanup");
+        scannerRef.current.stop().catch(e => console.error("Errore arresto scanner:", e));
+        scannerRef.current = null;
+      }
+    };
+  }, [scannerActive]);
 
-        // Ferma lo stream e il loop di scansione del fallback SOLO se il fallback era attivo
-        if (manualCameraActive) { // Questa condizione è cruciale
-            console.log("[FALLBACK CLEANUP] Fallback era attivo. Pulizia risorse fallback...");
-            if (streamRef.current) {
-              streamRef.current.getTracks().forEach(track => track.stop());
-              streamRef.current = null;
-              console.log("[FALLBACK CLEANUP] Stream del fallback manuale rilasciato.");
-            }
-            if (qrAnimationRef.current) {
-              cancelAnimationFrame(qrAnimationRef.current);
-              qrAnimationRef.current = null;
-              console.log("[FALLBACK CLEANUP] Loop di scansione del fallback (qrAnimationRef) fermato.");
-            }
-        }
-      };
-    }, [scannerActive]); // Ora dipende SOLO da scannerActive.
-                         // manualCameraActive è gestito internamente e tramite il cleanup.
-
-  }, [scannerActive, manualCameraActive]); // Tolto isScanPaused se crea problemi di ri-esecuzione dell'effetto
-
+  // Funzione per mostrare messaggi temporanei
   const showTemporaryMessage = (msg, type = 'info', duration = 4000) => {
     console.log(`[MESSAGE] Type: ${type}, Message: ${msg}`);
     setMessage(msg);
     setMessageType(type);
     if (messageTimeoutRef.current) {
-        clearTimeout(messageTimeoutRef.current);
+      clearTimeout(messageTimeoutRef.current);
     }
     messageTimeoutRef.current = setTimeout(() => {
-        setMessage('');
-        setMessageType('info');
+      setMessage('');
+      setMessageType('info');
     }, duration);
   };
 
+  // La logica di validazione dei biglietti rimane invariata
   async function handleValidateTicket(code) {
     console.log("[VALIDATE] Called with code:", code);
     setLastScannedTicketDetails(null);
@@ -563,7 +415,25 @@ function TicketValidator({ initializeWithScanner = true }) {
       showTemporaryMessage('Inserisci un codice biglietto valido.', 'error');
       return;
     }
-      await handleValidateTicket(ticketCode);
+    await handleValidateTicket(ticketCode);
+  };
+  
+  // Funzione per richiedere manualmente i permessi fotocamera
+  const requestCameraPermission = async () => {
+    try {
+      showTemporaryMessage("Richiesta permessi fotocamera...", "info");
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      stream.getTracks().forEach(track => track.stop());
+      
+      setCameraError(false);
+      setScannerActive(false);
+      setTimeout(() => setScannerActive(true), 500);
+      
+      showTemporaryMessage("Permessi ottenuti, riavvio scanner...", "success");
+    } catch (error) {
+      console.error("Errore permessi fotocamera:", error);
+      showTemporaryMessage("Impossibile ottenere i permessi fotocamera.", "error");
+    }
   };
 
   return (
@@ -593,64 +463,83 @@ function TicketValidator({ initializeWithScanner = true }) {
 
       {scannerActive ? (
         <div className="scanner-wrapper">
-          <div className="scanner-container" ref={scannerContainerRef}>
-            <div id="html5qr-code-full-region"></div>
+          <div className="scanner-container" style={{
+            height: "350px", 
+            background: "#000", // Sfondo nero per contrasto migliore
+            border: "1px solid #444",
+            borderRadius: "12px",
+            overflow: "hidden",
+            position: "relative"
+          }}>
+            {/* Elemento contenitore per QR */}
+            <div id="qr-reader" style={{
+              width: "100%", 
+              height: "100%",
+              position: "relative"
+            }}></div>
             
-            {manualCameraActive && (
-              <div className="manual-camera-container">
-                <video 
-                  ref={videoRef} 
-                  className="camera-video" 
-                  autoPlay 
-                  playsInline
-                  style={{
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'cover',
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    borderRadius: '8px',
-                    zIndex: 4
-                  }}
-                ></video>
-                <div className="qr-scanner-overlay" style={{
-                  position: 'absolute',
-                  top: '50%',
-                  left: '50%',
-                  transform: 'translate(-50%, -50%)',
-                  width: '250px',
-                  height: '250px',
-                  border: '3px solid rgba(255,255,255,0.8)',
-                  borderRadius: '8px',
-                  boxShadow: '0 0 0 4000px rgba(0,0,0,0.6)',
-                  zIndex: 5
-                }}></div>
-                {isScanPaused && (
-                  <div style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    height: '100%',
-                    display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    background: 'rgba(0,0,0,0.7)',
-                    color: 'white',
-                    fontSize: '18px',
-                    zIndex: 6
-                  }}>
-                    <div>Elaborazione QR...</div>
-                  </div>
-                )}
-              </div>
-            )}
+            {/* Mirino centrale per QR code - con classe per evitare che venga nascosto */}
+            <div className="custom-scanner-viewfinder" style={{
+              position: "absolute",
+              top: "50%",
+              left: "50%",
+              transform: "translate(-50%, -50%)",
+              width: "200px",
+              height: "200px",
+              border: "2px solid rgba(255, 255, 255, 0.5)",
+              borderRadius: "20px",
+              boxShadow: "0 0 0 4000px rgba(0, 0, 0, 0.3)",
+              zIndex: 5,
+              pointerEvents: "none"
+            }}>
+              {/* Angoli del mirino */}
+              <div style={{ position: "absolute", top: 0, left: 0, width: "30px", height: "30px", borderTop: "4px solid #fff", borderLeft: "4px solid #fff", borderTopLeftRadius: "16px" }}></div>
+              <div style={{ position: "absolute", top: 0, right: 0, width: "30px", height: "30px", borderTop: "4px solid #fff", borderRight: "4px solid #fff", borderTopRightRadius: "16px" }}></div>
+              <div style={{ position: "absolute", bottom: 0, left: 0, width: "30px", height: "30px", borderBottom: "4px solid #fff", borderLeft: "4px solid #fff", borderBottomLeftRadius: "16px" }}></div>
+              <div style={{ position: "absolute", bottom: 0, right: 0, width: "30px", height: "30px", borderBottom: "4px solid #fff", borderRight: "4px solid #fff", borderBottomRightRadius: "16px" }}></div>
+            </div>
             
             {loading && (
               <div className="scanner-loading-overlay">
                 <div className="loading-spinner"></div>
                 <p>Validazione in corso...</p>
+              </div>
+            )}
+            
+            {cameraError && (
+              <div style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                width: "100%",
+                height: "100%",
+                background: "rgba(0, 0, 0, 0.8)",
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "center",
+                alignItems: "center",
+                color: "white",
+                padding: "20px",
+                textAlign: "center",
+                zIndex: 10
+              }}>
+                <div style={{ fontSize: "18px", marginBottom: "10px" }}>Errore fotocamera</div>
+                <p>Verifica i permessi del browser</p>
+                <button 
+                  onClick={requestCameraPermission}
+                  style={{
+                    padding: "10px 20px",
+                    background: "#4CAF50",
+                    color: "white",
+                    border: "none",
+                    borderRadius: "4px",
+                    marginTop: "15px",
+                    cursor: "pointer",
+                    fontSize: "16px"
+                  }}
+                >
+                  Autorizza Fotocamera
+                </button>
               </div>
             )}
           </div>
