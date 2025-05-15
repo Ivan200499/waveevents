@@ -117,7 +117,15 @@ function TicketValidator({ initializeWithScanner = true }) {
         }
         
         // Pausa la scansione
-        html5QrCode.pause();
+        try {
+          const pausePromise = html5QrCode.pause();
+          // Solo se .pause() restituisce una promise con .catch, la usiamo
+          if (pausePromise && typeof pausePromise.catch === 'function') {
+            pausePromise.catch(e => console.error("Errore pausa scanner:", e));
+          }
+        } catch (error) {
+          console.error("Errore durante la pausa dello scanner:", error);
+        }
         
         // Elabora il codice
         handleValidateTicket(decodedText)
@@ -125,7 +133,15 @@ function TicketValidator({ initializeWithScanner = true }) {
             // Riprendi la scansione dopo 2 secondi
             setTimeout(() => {
               if (scannerActive && scannerRef.current) {
-                html5QrCode.resume().catch(e => console.error("Errore ripresa scanner:", e));
+                try {
+                  const resumePromise = html5QrCode.resume();
+                  // Solo se .resume() restituisce una promise con .catch, la usiamo
+                  if (resumePromise && typeof resumePromise.catch === 'function') {
+                    resumePromise.catch(e => console.error("Errore ripresa scanner:", e));
+                  }
+                } catch (error) {
+                  console.error("Errore durante la ripresa dello scanner:", error);
+                }
               }
             }, 2000);
           });
@@ -350,8 +366,13 @@ function TicketValidator({ initializeWithScanner = true }) {
         ticketCode: currentTicketCode,
         id: ticketId,
         eventName: ticketData.eventName || 'N/D',
-        eventDate: ticketData.eventDate?.seconds ? new Date(ticketData.eventDate.seconds * 1000).toLocaleDateString('it-IT') : 'N/D',
+        eventDate: ticketData.eventDate ? (
+          ticketData.eventDate.seconds 
+          ? new Date(ticketData.eventDate.seconds * 1000).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' })
+          : new Date(ticketData.eventDate).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' })
+        ) : 'N/D',
         eventLocation: ticketData.eventLocation || 'N/D',
+        ticketType: ticketData.ticketType || 'Standard',
         customerName: ticketData.customerName || 'N/D',
         customerEmail: ticketData.customerEmail || 'N/D',
         quantity: ticketData.quantity || 1,
@@ -584,6 +605,9 @@ function TicketValidator({ initializeWithScanner = true }) {
               </div>
               <div className="ticket-detail-item">
                 <FaMapMarkerAlt /> <strong>Luogo:</strong> {lastScannedTicketDetails.eventLocation}
+              </div>
+              <div className="ticket-detail-item">
+                <strong>Tipo Biglietto:</strong> {lastScannedTicketDetails.ticketType || 'Standard'}
               </div>
               <div className="ticket-detail-item">
                 <FaUser /> <strong>Cliente:</strong> {lastScannedTicketDetails.customerName}
