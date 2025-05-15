@@ -97,12 +97,14 @@ function TicketValidator({ initializeWithScanner = true }) {
         fps: 10,
         qrbox: { width: 250, height: 250 },
         videoConstraints: { facingMode: "environment" },
-        rememberLastUsedCamera: true,
+        rememberLastUsedCamera: true, 
         supportedScanTypes: [0] // SCAN_TYPE_CAMERA
       };
       console.log("Scanner config:", config);
 
+      console.log("[DEBUG] Prima di creare Html5QrcodeScanner");
       const html5QrcodeScanner = new Html5QrcodeScanner("html5qr-code-full-region", config, true);
+      console.log("[DEBUG] Dopo aver creato Html5QrcodeScanner, oggetto:", html5QrcodeScanner);
 
       const onScanSuccess = (decodedText, decodedResult) => {
         console.log("[SCAN SUCCESS] Decoded Text:", decodedText, "Full Result:", decodedResult);
@@ -127,8 +129,9 @@ function TicketValidator({ initializeWithScanner = true }) {
       };
       
       try {
-        console.log("Rendering scanner...");
+        console.log("[DEBUG] Prima di chiamare html5QrcodeScanner.render()");
         await html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+        console.log("[DEBUG] Dopo aver chiamato html5QrcodeScanner.render() con successo");
         console.log("Scanner rendered successfully.");
         if (isEffectActive) {
           scannerRef.current = html5QrcodeScanner;
@@ -141,6 +144,7 @@ function TicketValidator({ initializeWithScanner = true }) {
            }
         }
       } catch (renderError) {
+        console.error("[DEBUG] Errore DENTRO il catch di render():", renderError);
         console.error("Error rendering scanner:", renderError);
         if (isEffectActive) {
             setMessage("Errore nell'avvio dello scanner. Verifica permessi fotocamera e ricarica.");
