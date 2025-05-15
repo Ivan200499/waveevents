@@ -102,7 +102,7 @@ function TicketValidator({ initializeWithScanner = true }) {
       };
       console.log("Scanner config:", config);
 
-      const html5QrcodeScanner = new Html5QrcodeScanner("html5qr-code-full-region", config, false);
+      const html5QrcodeScanner = new Html5QrcodeScanner("html5qr-code-full-region", config, true);
 
       const onScanSuccess = (decodedText, decodedResult) => {
         console.log("[SCAN SUCCESS] Decoded Text:", decodedText, "Full Result:", decodedResult);

@@ -259,12 +259,9 @@
 }
 
 /* Nascondi tutti i video tranne il primo, per evitare duplicati */
-/* Temporaneamente commentato per debug mobile */
-/*
 #html5qr-code-full-region video:not(:first-child) {
   display: none !important;
 }
-*/
 
 #html5qr-code-full-region::after {
   content: '';
