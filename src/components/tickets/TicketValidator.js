@@ -24,6 +24,8 @@ function TicketValidator({ initializeWithScanner = true }) {
   const [manualCameraActive, setManualCameraActive] = useState(false);
   const videoRef = useRef(null);
   const streamRef = useRef(null);
+  const qrAnimationRef = useRef(null);
+  const fallbackCheckTimerRef = useRef(null);
 
   // Check user permissions
   useEffect(() => {
@@ -247,200 +249,182 @@ function TicketValidator({ initializeWithScanner = true }) {
       return (window.innerWidth <= 768) && ('ontouchstart' in window);
     };
     
-    // Fallback manuale che si attiva SOLO su dispositivi mobile REALI
-    async function setupManualCamera() {
-      // Uscita rapida se non siamo su mobile o la fotocamera manuale è già attiva
-      if (!scannerActive || !isMobileDevice() || manualCameraActive) return;
-
-      console.log("[MANUAL CAMERA] Verifica se attivare fallback su dispositivo mobile");
-      
-      try {
-        // Verifica più accurata degli elementi video dopo un tempo maggiore
-        setTimeout(async () => {
-          if (!scannerActive) return; // Uscita se nel frattempo lo scanner è disattivato
-          
-          const videos = document.querySelectorAll('#html5qr-code-full-region video');
-          const visibleVideos = Array.from(videos).filter(v => {
-            // Verifica se il video è realmente visibile
-            const rect = v.getBoundingClientRect();
-            const style = window.getComputedStyle(v);
-            return rect.width > 0 && rect.height > 0 && 
-                style.display !== 'none' && 
-                style.visibility !== 'hidden' && 
-                style.opacity !== '0';
-          });
-          
-          console.log("[MANUAL CAMERA] Video totali:", videos.length, "Video visibili:", visibleVideos.length);
-          
-          // Attiva fallback SOLO se non ci sono video visibili su un dispositivo mobile
-          if (videos.length === 0 && isMobileDevice() && scannerActive && !manualCameraActive) {
-            console.log("[MANUAL CAMERA] Attivazione fallback su mobile");
-            setManualCameraActive(true);
-            
-            try {
-              // Richiesta fotocamera in modo esplicito
-              const constraints = { 
-                video: { 
-                  facingMode: "environment",
-                  width: { min: 480, ideal: 720, max: 1280 },
-                  height: { min: 360, ideal: 540, max: 720 }
-                } 
-              };
-              
-              const stream = await navigator.mediaDevices.getUserMedia(constraints);
-              streamRef.current = stream;
-              
-              // Collegamento stream dopo che il DOM è aggiornato
-              setTimeout(() => {
-                if (videoRef.current) {
-                  console.log("[MANUAL CAMERA] Collegamento stream a video");
-                  videoRef.current.srcObject = stream;
-                  videoRef.current.play().catch(e => console.error("[MANUAL CAMERA] Errore play:", e));
-                  
-                  // IMPORTANTE: Configuriamo la decodifica QR per il fallback manuale
-                  setupQRScanner(stream);
-                }
-              }, 100);
-            } catch (err) {
-              console.error("[MANUAL CAMERA] Errore attivazione fallback:", err);
-              setManualCameraActive(false);
-            }
-          }
-        }, 5000); // Tempo aumentato a 5 secondi 
-      } catch (err) {
-        console.error("[MANUAL CAMERA] Errore generale:", err);
-      }
-    }
-    
     // Funzione per configurare la scansione QR sul video manuale
     async function setupQRScanner(stream) {
-      console.log("[MANUAL CAMERA] Inizio setupQRScanner");
+      console.log("[MANUAL CAMERA FALLBACK] Inizio setupQRScanner per il fallback");
       let frameCounter = 0;
-      let anId; // Per requestAnimationFrame ID
+
+      if (qrAnimationRef.current) {
+        cancelAnimationFrame(qrAnimationRef.current);
+      }
 
       try {
         let jsQR;
         try {
           jsQR = await import('jsqr');
-          console.log("[MANUAL CAMERA] Libreria jsqr caricata");
+          console.log("[MANUAL CAMERA FALLBACK] Libreria jsqr caricata");
         } catch (e) {
-          console.error("[MANUAL CAMERA] Fallito caricamento jsqr", e);
-          showTemporaryMessage("Errore caricamento libreria QR", "error");
-          return () => cancelAnimationFrame(anId); // Ritorna una funzione di cleanup vuota o specifica
+          console.error("[MANUAL CAMERA FALLBACK] Fallito caricamento jsqr", e);
+          showTemporaryMessage("Errore libreria QR", "error");
+          return;
         }
 
         const canvasElement = document.createElement('canvas');
-        const canvasContext = canvasElement.getContext('2d', { willReadFrequently: true }); // Ottimizzazione
+        const canvasContext = canvasElement.getContext('2d', { willReadFrequently: true });
         const videoElement = videoRef.current;
 
         if (!videoElement || !canvasContext) {
-          console.error("[MANUAL CAMERA] videoElement o canvasContext non disponibili");
-          return () => cancelAnimationFrame(anId);
+          console.error("[MANUAL CAMERA FALLBACK] videoElement o canvasContext non disponibili");
+          return;
         }
 
-        console.log("[MANUAL CAMERA] Elementi pronti, avvio scanQRFrame loop");
+        console.log("[MANUAL CAMERA FALLBACK] Elementi pronti, avvio scanQRFrame loop");
 
         const scanQRFrame = () => {
           frameCounter++;
-        //   console.log(`[MANUAL CAMERA DEBUG] Frame: ${frameCounter}, Paused: ${isScanPaused}, Active: ${scannerActive && manualCameraActive}`);
-
           if (!videoElement || !scannerActive || !manualCameraActive || isScanPaused) {
-            // console.log("[MANUAL CAMERA] Uscita anticipata da scanQRFrame");
-            return; // Non continuare il loop se le condizioni non sono soddisfatte
+            console.log("[MANUAL CAMERA FALLBACK] Uscita da scanQRFrame (condizioni non soddisfatte)");
+            qrAnimationRef.current = null;
+            return;
           }
-
           try {
             if (videoElement.readyState >= videoElement.HAVE_METADATA && videoElement.videoWidth > 0) {
               if (canvasElement.width !== videoElement.videoWidth) canvasElement.width = videoElement.videoWidth;
               if (canvasElement.height !== videoElement.videoHeight) canvasElement.height = videoElement.videoHeight;
-
               canvasContext.drawImage(videoElement, 0, 0, videoElement.videoWidth, videoElement.videoHeight);
               const imageData = canvasContext.getImageData(0, 0, videoElement.videoWidth, videoElement.videoHeight);
-              const code = jsQR.default(imageData.data, imageData.width, imageData.height, {
-                inversionAttempts: "attemptBoth",
-              });
-
+              const code = jsQR.default(imageData.data, imageData.width, imageData.height, { inversionAttempts: "attemptBoth" });
               if (code && code.data) {
-                console.log(`[MANUAL CAMERA] QR RILEVATO (Frame ${frameCounter}): ${code.data}`);
+                console.log(`[MANUAL CAMERA FALLBACK] QR RILEVATO (Frame ${frameCounter}): ${code.data}`);
                 setIsScanPaused(true);
-                showTemporaryMessage("QR Code Rilevato! Elaborazione...", "success", 2000);
-                
-                // Esegui la validazione
+                showTemporaryMessage("QR Fallback: Rilevato!", "success", 1500);
+                setTimeout(() => handleValidateTicket(code.data), 200);
                 setTimeout(() => {
-                  handleValidateTicket(code.data);
-                  // Ripresa scansione gestita nel timeout separato sotto
-                }, 500); // Breve delay per messaggio
-
-                // Pausa e ripresa scansione
-                setTimeout(() => {
-                  if (scannerActive && manualCameraActive) { // Ricontrolla stato prima di riprendere
+                  if (scannerActive && manualCameraActive) {
                     setIsScanPaused(false);
-                    console.log("[MANUAL CAMERA] Scansione ripresa.");
-                    anId = requestAnimationFrame(scanQRFrame); // Continua il loop
+                    console.log("[MANUAL CAMERA FALLBACK] Scansione ripresa.");
+                    qrAnimationRef.current = requestAnimationFrame(scanQRFrame);
                   }
-                }, 2500); // Pausa di 2.5s dopo una scansione riuscita
-                return; // Esce da questa esecuzione di scanQRFrame dopo successo
-              } else {
-                // console.log(`[MANUAL CAMERA DEBUG] Nessun QR nel frame ${frameCounter}`);
+                }, 2000);
+                return;
               }
-            } else {
-            //   console.log(`[MANUAL CAMERA DEBUG] Video non pronto (readyState: ${videoElement.readyState})`);
             }
           } catch (error) {
-            console.error(`[MANUAL CAMERA] Errore in scanQRFrame (frame ${frameCounter}):`, error);
+            console.error(`[MANUAL CAMERA FALLBACK] Errore in scanQRFrame (frame ${frameCounter}):`, error);
           }
-          
-          // Se non è stato trovato un codice e non siamo in pausa, continua il loop
           if (scannerActive && manualCameraActive && !isScanPaused) {
-            anId = requestAnimationFrame(scanQRFrame);
+            qrAnimationRef.current = requestAnimationFrame(scanQRFrame);
           }
         };
-
-        anId = requestAnimationFrame(scanQRFrame); // Avvia il loop
-
-        // Funzione di cleanup per questo specifico setup (da chiamare quando stream/scanner si ferma)
-        return () => {
-            console.log("[MANUAL CAMERA] Cleanup per setupQRScanner, anId:", anId);
-            if (anId) cancelAnimationFrame(anId);
-        };
-
+        qrAnimationRef.current = requestAnimationFrame(scanQRFrame);
       } catch (error) {
-        console.error("[MANUAL CAMERA] Errore grave in setupQRScanner:", error);
-        return () => {}; // Funzione di cleanup vuota in caso di errore grave iniziale
+        console.error("[MANUAL CAMERA FALLBACK] Errore grave in setupQRScanner:", error);
       }
     }
     
-    // useEffect per il fallback manuale
-    let cleanupScanLoop = () => {}; // Inizializza a funzione vuota
+    // useEffect per il fallback manuale - RISTRUTTURATO E SEMPLIFICATO
+    useEffect(() => {
+      const isMobile = isMobileDevice();
 
-    if (scannerActive && !manualCameraActive) {
-        const isMobile = isMobileDevice();
-        if (isMobile) {
-            console.log("[MANUAL CAMERA] Dispositivo mobile rilevato, avvio setupManualCamera.");
-            setupManualCamera().then(returnedCleanup => {
-                if (typeof returnedCleanup === 'function') {
-                    cleanupScanLoop = returnedCleanup; 
-                }
-            }).catch(err => {
-                console.error("[MANUAL CAMERA] Errore in setupManualCamera promise chain:", err);
-            });
-        } else {
-            console.log("[MANUAL CAMERA] Non è un dispositivo mobile, fallback non attivato.");
+      const attemptFallbackActivation = async () => {
+        if (!scannerActive || !isMobile || manualCameraActive) {
+          // console.log("[FALLBACK ATTEMPT] Condizioni non soddisfatte per attivare il timer.");
+          return; // Non fare nulla se non siamo nelle condizioni giuste
         }
-    }
 
-    return () => {
-      console.log("[MANUAL CAMERA] Cleanup principale useEffect fallback manuale.");
-      if (streamRef.current) {
-        console.log("[MANUAL CAMERA] Rilascio streamRef.");
-        streamRef.current.getTracks().forEach(track => track.stop());
-        streamRef.current = null;
+        console.log("[FALLBACK ATTEMPT] Scanner attivo su mobile. Avvio timer (4s) per controllo html5-qrcode.");
+
+        // Pulisci un timer precedente se esiste, per evitare duplicati
+        if (fallbackCheckTimerRef.current) {
+          clearTimeout(fallbackCheckTimerRef.current);
+        }
+
+        fallbackCheckTimerRef.current = setTimeout(async () => {
+          if (!scannerActive || manualCameraActive) { // Ricontrolla prima di agire
+            console.log("[FALLBACK CHECK] Timeout: Scanner disattivato o fallback già attivo. Annullamento.");
+            return;
+          }
+
+          const videos = document.querySelectorAll('#html5qr-code-full-region video');
+          const visibleVideos = Array.from(videos).filter(v => {
+            const rect = v.getBoundingClientRect();
+            const style = window.getComputedStyle(v);
+            return rect.width > 0 && rect.height > 0 && style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0';
+          });
+
+          console.log(`[FALLBACK CHECK] Esito timer: Video html5-qrcode trovati: ${videos.length}, Visibili: ${visibleVideos.length}`);
+
+          if (visibleVideos.length === 0) {
+            console.log("[FALLBACK TRIGGER] Nessun video visibile da html5-qrcode. Tentativo attivazione fallback manuale.");
+            // Ensure we are still on mobile before activating (isMobileDevice() is from outer scope)
+            if (isMobileDevice()) {
+                setManualCameraActive(true); // Segnala che stiamo provando ad attivare il fallback
+                try {
+                  const constraints = { video: { facingMode: "environment", width: { ideal: 720 }, height: { ideal: 540 } } };
+                  const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                  streamRef.current = stream; // Salva lo stream
+                  if (videoRef.current) {
+                    videoRef.current.srcObject = stream;
+                    await videoRef.current.play();
+                    console.log("[FALLBACK TRIGGER] Stream manuale avviato e collegato al video element.");
+                    setupQRScanner(stream); // Ora avvia la scansione QR per il fallback
+                  } else {
+                      console.error("[FALLBACK TRIGGER] videoRef.current non disponibile dopo attivazione stream.");
+                      setManualCameraActive(false); // Resetta se il video element non c'è
+                      stream.getTracks().forEach(track => track.stop()); // Ferma lo stream se non possiamo usarlo
+                  }
+                } catch (err) {
+                  console.error("[FALLBACK TRIGGER] Errore durante l'attivazione dello stream manuale:", err);
+                  setManualCameraActive(false); // Resetta se l'attivazione fallisce
+                  if(streamRef.current) streamRef.current.getTracks().forEach(track => track.stop()); // Assicura pulizia stream
+                  streamRef.current = null;
+                }
+            } else {
+                 console.log("[FALLBACK TRIGGER] No longer mobile when timer fired. Fallback not activated.");
+                 if (manualCameraActive) setManualCameraActive(false);
+            }
+          } else {
+            console.log("[FALLBACK CHECK] Video da html5-qrcode visibile. Fallback manuale non necessario.");
+            if (manualCameraActive) { // If fallback was active, turn it off
+              console.log("[FALLBACK CHECK] Disattivazione fallback manuale perchè html5-qrcode è ora visibile.");
+              setManualCameraActive(false);
+            }
+          }
+        }, 4000); // 4 secondi di attesa per html5-qrcode
+      };
+
+      if (scannerActive) {
+          attemptFallbackActivation();
       }
-      cleanupScanLoop(); // Chiama la funzione di pulizia restituita da setupQRScanner
-      setManualCameraActive(false); // Assicurati che lo stato sia resettato
-    };
-    // Rimuovi isScanPaused dalle dipendenze principali di questo useEffect se causa loop indesiderati.
-    // L'attivazione del setup non dovrebbe dipendere da isScanPaused, ma il loop interno sì.
+
+      // Funzione di cleanup per questo useEffect
+      return () => {
+        console.log("[FALLBACK CLEANUP] Eseguito cleanup useEffect (scannerActive cambiato o smontaggio).");
+        // Pulisci il timer del controllo fallback se è ancora attivo
+        if (fallbackCheckTimerRef.current) {
+          clearTimeout(fallbackCheckTimerRef.current);
+          fallbackCheckTimerRef.current = null;
+          console.log("[FALLBACK CLEANUP] Timer di controllo fallback cancellato.");
+        }
+
+        // Ferma lo stream e il loop di scansione del fallback SOLO se il fallback era attivo
+        if (manualCameraActive) { // Questa condizione è cruciale
+            console.log("[FALLBACK CLEANUP] Fallback era attivo. Pulizia risorse fallback...");
+            if (streamRef.current) {
+              streamRef.current.getTracks().forEach(track => track.stop());
+              streamRef.current = null;
+              console.log("[FALLBACK CLEANUP] Stream del fallback manuale rilasciato.");
+            }
+            if (qrAnimationRef.current) {
+              cancelAnimationFrame(qrAnimationRef.current);
+              qrAnimationRef.current = null;
+              console.log("[FALLBACK CLEANUP] Loop di scansione del fallback (qrAnimationRef) fermato.");
+            }
+        }
+      };
+    }, [scannerActive]); // Ora dipende SOLO da scannerActive.
+                         // manualCameraActive è gestito internamente e tramite il cleanup.
+
   }, [scannerActive, manualCameraActive]); // Tolto isScanPaused se crea problemi di ri-esecuzione dell'effetto
 
   const showTemporaryMessage = (msg, type = 'info', duration = 4000) => {
