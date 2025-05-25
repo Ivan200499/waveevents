@@ -11,6 +11,7 @@ import AssignmentModal from './AssignmentModal';
 import { generateDetailedPDFReport } from '../../services/ReportService';
 import TicketHistory from './TicketHistory';
 import TeamOverview from './TeamOverview';
+import SalesReports from './SalesReports';
 
 function AdminDashboard() {
   const [users, setUsers] = useState([]);
@@ -210,6 +211,12 @@ function AdminDashboard() {
           >
             <FaHistory /> Storico Biglietti
           </button>
+          <button 
+            className={`tab-button ${activeTab === 'salesReports' ? 'active' : ''}`}
+            onClick={() => setActiveTab('salesReports')}
+          >
+            Report Vendite
+          </button>
         </div>
 
         {activeTab === 'users' ? (
@@ -315,9 +322,11 @@ function AdminDashboard() {
         ) : activeTab === 'events' ? (
           <EventManagement />
         ) : activeTab === 'team' ? (
-          <TeamOverview />
+          <TeamOverview users={users} usersMap={usersMap} teamLeaders={teamLeaders} managers={managers} fetchUsers={fetchUsers} />
         ) : activeTab === 'tickets' ? (
           <TicketHistory />
+        ) : activeTab === 'salesReports' ? (
+          <SalesReports usersMap={usersMap} />
         ) : null}
 
         {showCreateModal && (

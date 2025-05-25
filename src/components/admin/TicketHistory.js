@@ -64,7 +64,7 @@ function TicketHistory() {
           id: doc.id,
           ...data,
           eventId: data.eventId || data.event_id || null,
-          createdAtFormatted: formatDate(data.createdAt),
+          createdAtFormatted: formatDate(data.soldAt || data.createdAt),
           qrCode: data.qrCode || data.qr_code || null,
           code: data.code || data.ticketCode || null,
           eventName: data.eventName || data.event_name || 'Evento non specificato',
