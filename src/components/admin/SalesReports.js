@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../../firebase/config';
-import { collection, getDocs, query, where } from 'firebase/firestore';
-import './SalesReports.css'; // This path should be correct as SalesReports.css is in the same directory
-import SellerTicketsDetailModal from './SellerTicketsDetailModal'; // This path should be correct as SellerTicketsDetailModal.js is in the same directory
+import { collection, getDocs, query, where, doc, updateDoc } from 'firebase/firestore';
+import './SalesReports.css'; // Aggiungeremo un file CSS per lo stile
+import SellerTicketsDetailModal from './SellerTicketsDetailModal'; // Importa il nuovo modale
 
 // Funzione di utilità per formattare le date (se necessario in futuro)
 // const formatDateForDisplay = (dateString) => {
@@ -28,6 +28,7 @@ function SalesReports({ usersMap }) { // Ricevi usersMap come prop
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedSellerTickets, setSelectedSellerTickets] = useState([]);
   const [selectedSellerNameForModal, setSelectedSellerNameForModal] = useState('');
+  const [selectedSellerIdForModal, setSelectedSellerIdForModal] = useState(null); // Stato per l'ID del venditore nel modale
 
   useEffect(() => {
     const fetchEvents = async () => {
@@ -148,15 +149,69 @@ function SalesReports({ usersMap }) { // Ricevi usersMap come prop
     generateReport();
   }, [selectedEventId, selectedEventDate, usersMap]); // Aggiungi usersMap alle dipendenze
 
+  const handleUpdateTicketPaymentStatus = async (ticketId, newPaymentStatus) => {
+    if (!selectedSellerIdForModal) {
+      console.error("Seller ID for modal is not set, cannot update payment status.");
+      setError("Impossibile aggiornare lo stato del pagamento: venditore non identificato.");
+      return;
+    }
+    try {
+      const ticketRef = doc(db, 'tickets', ticketId);
+      await updateDoc(ticketRef, {
+        paymentStatus: newPaymentStatus
+      });
+
+      // Aggiorna lo stato locale per riflettere immediatamente la modifica nel modale
+      const updatedTicketsForSeller = selectedSellerTickets.map(ticket => 
+        ticket.id === ticketId ? { ...ticket, paymentStatus: newPaymentStatus } : ticket
+      );
+      setSelectedSellerTickets(updatedTicketsForSeller);
+
+      // Aggiorna anche reportData.ticketsBySellerForModal per persistenza se il modale viene chiuso e riaperto senza ricaricare i dati
+      // Questa parte è cruciale per vedere lo stato aggiornato se l'utente chiude e riapre il modale per lo stesso venditore
+      // senza cambiare i filtri principali (evento/data) che causerebbero un ricaricamento completo dei dati.
+      setReportData(prevReportData => {
+        if (!prevReportData || !prevReportData.ticketsBySellerForModal) return prevReportData;
+
+        const sellerTickets = prevReportData.ticketsBySellerForModal[selectedSellerIdForModal] || [];
+        const updatedSellerSpecificTickets = sellerTickets.map(ticket => 
+          ticket.id === ticketId ? { ...ticket, paymentStatus: newPaymentStatus } : ticket
+        );
+
+        return {
+          ...prevReportData,
+          ticketsBySellerForModal: {
+            ...prevReportData.ticketsBySellerForModal,
+            [selectedSellerIdForModal]: updatedSellerSpecificTickets
+          }
+        };
+      });
+
+      // Potresti voler mostrare un messaggio di successo qui se necessario
+      console.log(`Stato pagamento per il biglietto ${ticketId} aggiornato a ${newPaymentStatus}`);
+
+    } catch (err) {
+      console.error("Error updating ticket payment status:", err);
+      setError("Errore nell'aggiornamento dello stato di pagamento del biglietto.");
+    }
+  };
+
   const handleShowSellerTicketDetails = (sellerId, sellerName) => {
     if (reportData && reportData.ticketsBySellerForModal && reportData.ticketsBySellerForModal[sellerId]) {
+      setSelectedSellerIdForModal(sellerId); // Imposta l'ID del venditore quando apri il modale
       setSelectedSellerTickets(reportData.ticketsBySellerForModal[sellerId]);
       setSelectedSellerNameForModal(sellerName);
       setIsDetailModalOpen(true);
     } else {
       console.warn("Dati biglietti per il venditore non trovati.");
-      // Potresti voler mostrare un errore all'utente qui
     }
+  };
+  
+  const handleCloseSellerTicketDetails = () => {
+    setIsDetailModalOpen(false);
+    setSelectedSellerIdForModal(null); // Resetta l'ID del venditore quando chiudi il modale
+    // Non è necessario resettare selectedSellerTickets o selectedSellerNameForModal qui,
+    // verranno sovrascritti alla prossima apertura.
   };
 
   return (
@@ -211,22 +266,24 @@ function SalesReports({ usersMap }) { // Ricevi usersMap come prop
           {Object.keys(reportData.aggregated).length > 0 && (
             <>
               <h3 className="report-subtitle">Riepilogo Generale</h3>
-              <table className="summary-table">
-                <thead>
-                  <tr>
-                    <th>Totale Biglietti Venduti</th>
-                    <th>Incasso Totale</th>
-                    <th>Commissioni Totali</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td>{reportData.totals.tickets}</td>
-                    <td>€{reportData.totals.revenue.toFixed(2)}</td>
-                    <td>€{reportData.totals.commissions.toFixed(2)}</td>
-                  </tr>
-                </tbody>
-              </table>
+              <div className="summary-table-container">
+                <table className="summary-table">
+                  <thead>
+                    <tr>
+                      <th>Totale Biglietti Venduti</th>
+                      <th>Incasso Totale</th>
+                      <th>Commissioni Totali</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td data-label="Totale Biglietti Venduti">{reportData.totals.tickets}</td>
+                      <td data-label="Incasso Totale">€{reportData.totals.revenue.toFixed(2)}</td>
+                      <td data-label="Commissioni Totali">€{reportData.totals.commissions.toFixed(2)}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
 
               <h3 className="report-subtitle">Dettaglio per Venditore</h3>
               {Object.entries(reportData.aggregated).map(([sellerId, data]) => (
@@ -261,10 +318,11 @@ function SalesReports({ usersMap }) { // Ricevi usersMap come prop
       {isDetailModalOpen && (
         <SellerTicketsDetailModal
           isOpen={isDetailModalOpen}
-          onClose={() => setIsDetailModalOpen(false)}
+          onClose={handleCloseSellerTicketDetails} // Usa la nuova funzione per chiudere
           sellerName={selectedSellerNameForModal}
           tickets={selectedSellerTickets}
-          eventDate={selectedEventDate} // Passiamo anche la data dell'evento per riferimento
+          eventDate={selectedEventDate}
+          onUpdateTicketPaymentStatus={handleUpdateTicketPaymentStatus} // Passa la nuova funzione handler
         />
       )}
     </div>

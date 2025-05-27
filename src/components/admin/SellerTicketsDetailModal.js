@@ -19,8 +19,13 @@ const formatDate = (timestamp) => {
   });
 };
 
-function SellerTicketsDetailModal({ isOpen, onClose, sellerName, tickets, eventDate }) {
+function SellerTicketsDetailModal({ isOpen, onClose, sellerName, tickets, eventDate, onUpdateTicketPaymentStatus }) {
   if (!isOpen) return null;
+
+  const handlePaymentStatusChange = (ticketId, currentStatus) => {
+    const newStatus = currentStatus === 'paid' ? 'unpaid' : 'paid';
+    onUpdateTicketPaymentStatus(ticketId, newStatus);
+  };
 
   return (
     <div className="modal-overlay-st">
@@ -43,6 +48,7 @@ function SellerTicketsDetailModal({ isOpen, onClose, sellerName, tickets, eventD
                   <th>Comm. Uni.</th>
                   <th>Subtot. Vendita</th>
                   <th>Subtot. Comm.</th>
+                  <th>Stato Pagamento</th>
                 </tr>
               </thead>
               <tbody>
@@ -52,18 +58,28 @@ function SellerTicketsDetailModal({ isOpen, onClose, sellerName, tickets, eventD
                   const unitCommission = quantity > 0 ? (Number(ticket.commissionAmount || 0) / quantity) : 0;
                   const subtotalSale = Number(ticket.totalPrice || 0);
                   const subtotalCommission = Number(ticket.commissionAmount || 0);
+                  const paymentStatus = ticket.paymentStatus || 'unpaid';
 
                   return (
                     <tr key={ticket.id}>
-                      <td data-label="Codice Biglietto">{ticket.ticketCode || 'N/A'}</td>
-                      <td data-label="Cliente">{ticket.customerName || 'N/A'}</td>
-                      <td data-label="Data Vendita">{formatDate(ticket.soldAt)}</td>
-                      <td data-label="Tipo Biglietto">{ticket.itemName || 'N/A'}</td>
-                      <td data-label="Qtà">{quantity}</td>
-                      <td data-label="Prezzo Uni.">€{unitPrice.toFixed(2)}</td>
-                      <td data-label="Comm. Uni.">€{unitCommission.toFixed(2)}</td>
-                      <td data-label="Subtot. Vendita">€{subtotalSale.toFixed(2)}</td>
-                      <td data-label="Subtot. Comm.">€{subtotalCommission.toFixed(2)}</td>
+                      <td data-label="Codice Biglietto"><span>{ticket.ticketCode || 'N/A'}</span></td>
+                      <td data-label="Cliente"><span>{ticket.customerName || 'N/A'}</span></td>
+                      <td data-label="Data Vendita"><span>{formatDate(ticket.soldAt)}</span></td>
+                      <td data-label="Tipo Biglietto"><span>{ticket.itemName || 'N/A'}</span></td>
+                      <td data-label="Qtà"><span>{quantity}</span></td>
+                      <td data-label="Prezzo Uni."><span>€{unitPrice.toFixed(2)}</span></td>
+                      <td data-label="Comm. Uni."><span>€{unitCommission.toFixed(2)}</span></td>
+                      <td data-label="Subtot. Vendita"><span>€{subtotalSale.toFixed(2)}</span></td>
+                      <td data-label="Subtot. Comm."><span>€{subtotalCommission.toFixed(2)}</span></td>
+                      <td data-label="Stato Pagamento">
+                        <input
+                          type="checkbox"
+                          checked={paymentStatus === 'paid'}
+                          onChange={() => handlePaymentStatusChange(ticket.id, paymentStatus)}
+                          style={{ marginRight: '5px' }}
+                        />
+                        <span>{paymentStatus === 'paid' ? 'Pagato' : 'Non Pagato'}</span>
+                      </td>
                     </tr>
                   );
                 })}

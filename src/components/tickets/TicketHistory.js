@@ -157,6 +157,11 @@ function TicketHistory() {
               </div>
 
               <div className="detail-row">
+                <span className="label">Codice Biglietto:</span>
+                <span className="value">{ticket.ticketCode || 'N/A'}</span>
+              </div>
+
+              <div className="detail-row">
                 <span className="label">Cliente:</span>
                 <span className="value">{ticket.customerName}</span>
               </div>
@@ -184,6 +189,11 @@ function TicketHistory() {
               <div className="detail-row total">
                 <span className="label">Totale:</span>
                 <span className="value">€{ticket.totalPrice?.toFixed(2) || '0.00'}</span>
+              </div>
+
+              <div className="detail-row">
+                <span className="label">Stato Pagamento:</span>
+                <span className="value">{ticket.paymentStatus === 'paid' ? 'Pagato' : 'Non Pagato'}</span>
               </div>
 
               {typeof ticket.commissionAmount === 'number' && (
