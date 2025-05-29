@@ -76,11 +76,13 @@ function TeamLeaderDashboard() {
         leaderCommissions += ticket.commissionAmount || 0;
       });
 
-      const promotersSnapshot = await getDocs(query(collection(db, 'users'), where('teamLeaderId', '==', currentUser.uid)));
+      const promotersSnapshot = await getDocs(query(collection(db, 'users'), where('teamLeaderId', '==', currentUser.uid), where('role', '==', 'promoter')));
       const promoterIds = promotersSnapshot.docs.map(doc => doc.id);
 
       let teamSales = 0;
-      let teamCommissions = 0;
+      let teamCommissionsFromPromoters = 0;
+      let indirectCommissionsForTL = 0;
+
       if (promoterIds.length > 0) {
         const teamTicketsQuery = query(
           collection(db, 'tickets'),
@@ -90,15 +92,17 @@ function TeamLeaderDashboard() {
         teamSnapshot.forEach(doc => {
           const ticket = doc.data();
           teamSales += ticket.quantity || 0;
-          teamCommissions += ticket.commissionAmount || 0;
+          teamCommissionsFromPromoters += ticket.commissionAmount || 0;
+
+          indirectCommissionsForTL += ticket.commissionAmount || 0;
         });
       }
 
       setStats({
         totalSales: leaderSales + teamSales,
-        totalCommissions: leaderCommissions + teamCommissions,
+        totalCommissions: leaderCommissions + indirectCommissionsForTL,
         promoterSales: teamSales,
-        promoterCommissions: teamCommissions
+        promoterCommissions: teamCommissionsFromPromoters
       });
     } catch (error) {
       console.error('Errore nel recupero delle statistiche TL:', error);
