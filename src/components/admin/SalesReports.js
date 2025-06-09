@@ -289,6 +289,14 @@ function SalesReports({ usersMap }) { // Ricevi usersMap come prop
               {Object.entries(reportData.aggregated).map(([sellerId, data]) => (
                 <div key={sellerId} className="seller-report-card">
                   <h4>Venditore: {data.sellerName}</h4>
+                  {usersMap[sellerId]?.role === 'promoter' && usersMap[sellerId]?.teamLeaderId && (
+                    <p><strong>Team Leader:</strong> {usersMap[usersMap[sellerId].teamLeaderId]?.name || 'Non disponibile'}</p>
+                  )}
+                  {(usersMap[sellerId]?.role === 'teamLeader' || usersMap[sellerId]?.role === 'promoter') && 
+                   usersMap[sellerId]?.managerId && (
+                    <p><strong>Manager:</strong> {usersMap[usersMap[sellerId].managerId]?.name || 'Non disponibile'}</p>
+                  )}
+                  <p><strong>Ruolo:</strong> {usersMap[sellerId]?.role || 'Non specificato'}</p>
                   <p><strong>Biglietti Totali Venduti:</strong> {data.totalTicketsSold}</p>
                   <p><strong>Incasso Totale:</strong> €{data.totalRevenue.toFixed(2)}</p>
                   <p><strong>Commissioni Totali:</strong> €{data.totalCommissions.toFixed(2)}</p>
