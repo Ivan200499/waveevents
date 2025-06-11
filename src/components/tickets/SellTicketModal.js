@@ -234,7 +234,49 @@ function SellTicketModal({ event, selectedDateItem, onClose, onSold }) {
       setLoading(false);
       return;
     }
-     if (!includeTable && (!selectedTicketTypeId || quantity < 1)) {
+
+    // Validazione data di vendita
+    const eventDate = new Date(selectedDateItem.date);
+    const nextDay = new Date(eventDate);
+    nextDay.setDate(nextDay.getDate() + 1);
+    nextDay.setHours(4, 0, 0, 0); // Imposta a 04:00 AM del giorno successivo
+    
+    const now = new Date();
+    
+    // Log dettagliati per debug
+    console.log('=== Debug Date ===');
+    console.log('Data evento (raw):', selectedDateItem.date);
+    console.log('Data evento (parsed):', eventDate.toLocaleString('it-IT'));
+    console.log('Data limite vendita:', nextDay.toLocaleString('it-IT'));
+    console.log('Ora attuale:', now.toLocaleString('it-IT'));
+    console.log('Timestamp evento:', eventDate.getTime());
+    console.log('Timestamp limite:', nextDay.getTime());
+    console.log('Timestamp attuale:', now.getTime());
+    console.log('Differenza in ore:', (now.getTime() - nextDay.getTime()) / (1000 * 60 * 60));
+    console.log('================');
+    
+    // Assicuriamoci che le date siano valide
+    if (isNaN(eventDate.getTime()) || isNaN(nextDay.getTime())) {
+      console.error('Date non valide:', { 
+        eventDate: eventDate.toLocaleString('it-IT'),
+        nextDay: nextDay.toLocaleString('it-IT'),
+        rawEventDate: selectedDateItem.date
+      });
+      setError("Errore nella validazione della data dell'evento.");
+      setLoading(false);
+      return;
+    }
+    
+    // Confronta le date usando getTime() per evitare problemi di fuso orario
+    if (now.getTime() > nextDay.getTime()) {
+      console.log('Vendita bloccata: ora attuale oltre il limite');
+      console.log('Differenza in ore:', (now.getTime() - nextDay.getTime()) / (1000 * 60 * 60));
+      setError("Le vendite per questo evento sono chiuse. La vendita dei biglietti termina alle 04:00 AM del giorno successivo all'evento.");
+      setLoading(false);
+      return;
+    }
+
+    if (!includeTable && (!selectedTicketTypeId || quantity < 1)) {
       setError("Seleziona un tipo di biglietto e una quantità valida (almeno 1).");
       setLoading(false);
       return;

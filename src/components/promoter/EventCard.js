@@ -15,15 +15,24 @@ function EventCard({ event, onSell }) {
   useEffect(() => {
     if (event?.eventDates && Array.isArray(event.eventDates)) {
       const validDates = event.eventDates
-        .map(dateItem => ({ ...dateItem, dateObj: new Date(dateItem.date) })) 
-        .filter(dateItem => !isNaN(dateItem.dateObj.getTime())) 
-        .sort((a, b) => a.dateObj - b.dateObj); 
+        .map(dateItem => {
+          const dateObj = new Date(dateItem.date);
+          // Assicuriamoci che la data sia valida
+          if (isNaN(dateObj.getTime())) {
+            console.error('Data non valida:', dateItem.date);
+            return null;
+          }
+          return { ...dateItem, dateObj };
+        })
+        .filter(Boolean) // Rimuove le date non valide
+        .sort((a, b) => a.dateObj - b.dateObj);
+      
       setSortedDates(validDates);
       
       // Pre-calcola le date con disponibilità per il DatePicker
       const datesWithAvailability = validDates
         .filter(dateItem => calculateAvailabilityForDate(dateItem) > 0)
-        .map(dateItem => dateItem.dateObj); // Array di oggetti Date
+        .map(dateItem => dateItem.dateObj);
       setAvailableDates(datesWithAvailability);
     } else {
       setSortedDates([]);
@@ -34,8 +43,14 @@ function EventCard({ event, onSell }) {
   const handleDirectSell = () => {
     if (hasSingleDate) {
       // Trova l'oggetto dateItem completo per la data singola disponibile
-      const singleAvailableDateItem = sortedDates.find(d => d.dateObj.getTime() === availableDates[0].getTime());
+      const singleAvailableDateItem = sortedDates.find(d => {
+        const dateStr = d.dateObj.toLocaleDateString('it-IT');
+        const availableDateStr = availableDates[0].toLocaleDateString('it-IT');
+        return dateStr === availableDateStr;
+      });
+      
       if(singleAvailableDateItem) {
+        console.log('Data selezionata per vendita diretta:', singleAvailableDateItem);
         onSell(event, singleAvailableDateItem);
       }
     }
@@ -43,36 +58,25 @@ function EventCard({ event, onSell }) {
 
   const handleDateSelectFromPicker = (selectedDateObj) => {
     if (!selectedDateObj) return;
-    console.log(`[DatePicker onChange] Data selezionata RAW: ${selectedDateObj.toISOString()}, Time: ${selectedDateObj.getTime()}`);
+    console.log(`[DatePicker onChange] Data selezionata: ${selectedDateObj.toLocaleString('it-IT')}`);
 
-    // Normalizza la data selezionata a mezzanotte UTC
-    const normalizedSelectedDate = new Date(Date.UTC(selectedDateObj.getFullYear(), selectedDateObj.getMonth(), selectedDateObj.getDate()));
-    const normalizedSelectedTime = normalizedSelectedDate.getTime();
-    console.log(`[DatePicker onChange] Data selezionata NORMALIZZATA a UTC 00:00: ${normalizedSelectedDate.toISOString()}, Time: ${normalizedSelectedTime}`);
-
-    // Trova l'oggetto dateItem originale confrontando le date normalizzate
+    // Trova l'oggetto dateItem originale confrontando le date
     const selectedDateItem = sortedDates.find(item => {
-      const itemDate = item.dateObj;
+      const itemDateStr = item.dateObj.toLocaleDateString('it-IT');
+      const selectedDateStr = selectedDateObj.toLocaleDateString('it-IT');
       
-      // Normalizza la data dell'item a mezzanotte UTC
-      const normalizedItemDate = new Date(Date.UTC(itemDate.getFullYear(), itemDate.getMonth(), itemDate.getDate()));
-      const normalizedItemTime = normalizedItemDate.getTime();
-
-      // Log di confronto per ogni data in sortedDates (con date normalizzate)
-      console.log(`--- Confronto Normalizzato: Item ${normalizedItemDate.toISOString()} (${normalizedItemTime}) vs Sel ${normalizedSelectedDate.toISOString()} (${normalizedSelectedTime})`);
-      
-      return normalizedItemTime === normalizedSelectedTime;
+      console.log(`Confronto date: ${itemDateStr} vs ${selectedDateStr}`);
+      return itemDateStr === selectedDateStr;
     });
 
     if (selectedDateItem) {
-      console.log("[DatePicker onChange] Corrispondenza TROVATA (normalizzata):", selectedDateItem);
+      console.log("[DatePicker onChange] Corrispondenza trovata:", selectedDateItem);
       onSell(event, selectedDateItem);
     } else {
-      console.error("[DatePicker onChange] NESSUNA corrispondenza trovata (normalizzata) in sortedDates per la data selezionata!");
+      console.error("[DatePicker onChange] Nessuna corrispondenza trovata in sortedDates per la data selezionata!");
       console.log("Date disponibili (sortedDates):");
       sortedDates.forEach(d => {
-        const normalized = new Date(Date.UTC(d.dateObj.getFullYear(), d.dateObj.getMonth(), d.dateObj.getDate()));
-        console.log(`- Originale: ${d.dateObj.toISOString()}, Normalizzata UTC 00:00: ${normalized.toISOString()}, Time Norm: ${normalized.getTime()}`);
+        console.log(`- ${d.dateObj.toLocaleString('it-IT')}`);
       });
     }
   };
