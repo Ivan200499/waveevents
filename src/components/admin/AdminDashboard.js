@@ -36,6 +36,11 @@ function AdminDashboard() {
   const [downloadError, setDownloadError] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
 
+  const handleAssign = (user) => {
+    setSelectedUser(user);
+    setShowAssignModal(true);
+  };
+
   const usersMap = users.reduce((map, user) => {
     map[user.id] = user;
     return map;

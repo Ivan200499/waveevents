@@ -20,6 +20,28 @@ function SalesReports({ usersMap }) {
   const [selectedSellerNameForModal, setSelectedSellerNameForModal] = useState('');
   const [selectedSellerIdForModal, setSelectedSellerIdForModal] = useState(null);
 
+  // Helper function to chunk array into smaller arrays of max size
+  const chunkArray = (array, size) => {
+    const chunks = [];
+    for (let i = 0; i < array.length; i += size) {
+      chunks.push(array.slice(i, i + size));
+    }
+    return chunks;
+  };
+
+  // Helper function to fetch tickets for a chunk of seller IDs
+  const fetchTicketsForSellerIds = async (sellerIds, eventId, eventDate) => {
+    const ticketsQuery = query(
+      collection(db, 'tickets'),
+      where('eventId', '==', eventId),
+      where('eventDate', '==', eventDate),
+      where('sellerId', 'in', sellerIds),
+      where('itemType', '==', 'ticket')
+    );
+    const ticketSnapshot = await getDocs(ticketsQuery);
+    return ticketSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  };
+
   useEffect(() => {
     const fetchEvents = async () => {
       try {
@@ -71,34 +93,35 @@ function SalesReports({ usersMap }) {
           const teamLeaderIds = teamLeadersSnapshot.docs.map(doc => doc.id);
 
           // Query per ottenere i promoter sotto i team leader
-          const promotersQuery = query(
-            collection(db, 'users'),
-            where('teamLeaderId', 'in', teamLeaderIds)
-          );
-          const promotersSnapshot = await getDocs(promotersQuery);
-          const promoterIds = promotersSnapshot.docs.map(doc => doc.id);
+          let allPromoters = [];
+          // Chunk team leader IDs into groups of 30 for the 'in' clause
+          const teamLeaderChunks = chunkArray(teamLeaderIds, 30);
+          for (const chunk of teamLeaderChunks) {
+            const promotersQuery = query(
+              collection(db, 'users'),
+              where('teamLeaderId', 'in', chunk)
+            );
+            const promotersSnapshot = await getDocs(promotersQuery);
+            allPromoters = [...allPromoters, ...promotersSnapshot.docs.map(doc => doc.id)];
+          }
 
           // Combina tutti gli ID dei venditori (manager, team leader e promoter)
-          const allSellerIds = [currentUser.uid, ...teamLeaderIds, ...promoterIds];
+          const allSellerIds = [currentUser.uid, ...teamLeaderIds, ...allPromoters];
 
-          // Query per i biglietti venduti da tutti i venditori nel team
-          const ticketsQuery = query(
-            collection(db, 'tickets'),
-            where('eventId', '==', selectedEventId),
-            where('eventDate', '==', selectedEventDate),
-            where('sellerId', 'in', allSellerIds),
-            where('itemType', '==', 'ticket')
-          );
-          
-          const ticketSnapshot = await getDocs(ticketsQuery);
-          const tickets = ticketSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          // Fetch tickets in chunks of 30 seller IDs
+          let allTickets = [];
+          const sellerIdChunks = chunkArray(allSellerIds, 30);
+          for (const chunk of sellerIdChunks) {
+            const tickets = await fetchTicketsForSellerIds(chunk, selectedEventId, selectedEventDate);
+            allTickets = [...allTickets, ...tickets];
+          }
 
-          if (tickets.length === 0) {
+          if (allTickets.length === 0) {
             setReportData({ aggregated: {}, totals: { tickets: 0, revenue: 0, commissions: 0 }, ticketsBySellerForModal: {} });
             return;
           }
 
-          const ticketsBySellerForModal = tickets.reduce((acc, ticket) => {
+          const ticketsBySellerForModal = allTickets.reduce((acc, ticket) => {
             const sellerId = ticket.sellerId;
             if (!acc[sellerId]) {
               acc[sellerId] = [];
@@ -107,7 +130,7 @@ function SalesReports({ usersMap }) {
             return acc;
           }, {});
 
-          const aggregatedReport = tickets.reduce((acc, ticket) => {
+          const aggregatedReport = allTickets.reduce((acc, ticket) => {
             const sellerId = ticket.sellerId;
             const sellerName = usersMap && usersMap[sellerId]?.name ? usersMap[sellerId].name : (ticket.sellerName || 'Venditore Sconosciuto');
             

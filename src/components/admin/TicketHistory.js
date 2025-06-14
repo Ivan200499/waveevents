@@ -465,22 +465,78 @@ function TicketHistory() {
     }
   }
 
-  function handleSearch() {
-    // Filtra i biglietti localmente in base alla query di ricerca
+  async function handleSearch() {
     if (!searchQuery.trim()) {
       fetchTickets(); // Se la ricerca è vuota, ricarica tutti i biglietti
       return;
     }
 
-    const lowerQuery = searchQuery.toLowerCase();
-    const filtered = tickets.filter(ticket => 
-      (ticket.code && ticket.code.toLowerCase().includes(lowerQuery)) ||
-      (ticket.customerName && ticket.customerName.toLowerCase().includes(lowerQuery)) ||
-      (ticket.customerEmail && ticket.customerEmail.toLowerCase().includes(lowerQuery)) ||
-      (ticket.eventName && ticket.eventName.toLowerCase().includes(lowerQuery))
-    );
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const lowerQuery = searchQuery.toLowerCase();
+      
+      // Se sembra un codice biglietto (solo numeri e lettere, nessuno spazio)
+      if (/^[a-zA-Z0-9]+$/.test(searchQuery)) {
+        // Cerca prima per codice esatto
+        const ticketsRef = collection(db, 'tickets');
+        const exactQuery = query(
+          ticketsRef,
+          where('code', '==', searchQuery)
+        );
+        const exactSnapshot = await getDocs(exactQuery);
+        
+        if (!exactSnapshot.empty) {
+          const ticketsData = exactSnapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+              id: doc.id,
+              ...data,
+              eventId: data.eventId || data.event_id || null,
+              createdAtFormatted: formatDate(data.soldAt || data.createdAt),
+              qrCode: data.qrCode || data.qr_code || null,
+              code: data.code || data.ticketCode || null,
+              eventName: data.eventName || data.event_name || 'Evento non specificato',
+              customerName: data.customerName || data.customer_name || 'Cliente non specificato',
+              customerEmail: data.customerEmail || data.customer_email || 'Email non specificata',
+              status: data.status || 'active',
+              price: data.price || data.ticketPrice || 0,
+              totalPrice: data.totalPrice || data.total_price || 0,
+              quantity: data.quantity || 1,
+              eventDate: data.eventDate || data.event_date,
+              eventLocation: data.eventLocation || data.event_location,
+              ticketType: data.ticketType || data.ticket_type || 'Standard',
+              tableNumber: data.tableNumber || data.table_number,
+              sellerId: data.sellerId || data.seller_id,
+              sellerName: data.sellerName || data.seller_name,
+              usedAt: data.usedAt || data.used_at,
+              cancelledAt: data.cancelledAt || data.cancelled_at,
+              previousStatus: data.previousStatus || data.previous_status
+            };
+          });
+          setTickets(ticketsData);
+          setLoading(false);
+          return;
+        }
+      }
+      
+      // Se non è stato trovato un codice esatto o la ricerca non è un codice,
+      // filtra i biglietti localmente
+      const filtered = tickets.filter(ticket => 
+        (ticket.code && ticket.code.toLowerCase().includes(lowerQuery)) ||
+        (ticket.customerName && ticket.customerName.toLowerCase().includes(lowerQuery)) ||
+        (ticket.customerEmail && ticket.customerEmail.toLowerCase().includes(lowerQuery)) ||
+        (ticket.eventName && ticket.eventName.toLowerCase().includes(lowerQuery))
+      );
 
-    setTickets(filtered);
+      setTickets(filtered);
+    } catch (error) {
+      console.error('Errore nella ricerca:', error);
+      setError('Si è verificato un errore durante la ricerca.');
+    } finally {
+      setLoading(false);
+    }
   }
 
   const getStatusLabel = (status) => {
