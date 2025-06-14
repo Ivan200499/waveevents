@@ -24,6 +24,7 @@ import TicketPage from './components/tickets/TicketPage';
 import PrivacyPolicy from './components/legal/PrivacyPolicy';
 import TermsOfService from './components/legal/TermsOfService';
 import ValidatorPage from './pages/ValidatorPage';
+import TicketManagement from './components/TicketManagement/TicketManagement';
 
 function App() {
   const [isAppReady, setIsAppReady] = useState(false);
@@ -121,6 +122,14 @@ function App() {
                     element={
                       <ProtectedRoute requiredRole="canViewAllUsers">
                         <AdminDashboard />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/admin/tickets" 
+                    element={
+                      <ProtectedRoute requiredRole="canViewAllUsers">
+                        <TicketManagement />
                       </ProtectedRoute>
                     } 
                   />

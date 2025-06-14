@@ -12,6 +12,7 @@ import { generateDetailedPDFReport } from '../../services/ReportService';
 import TicketHistory from './TicketHistory';
 import TeamOverview from './TeamOverview';
 import SalesReports from './SalesReports';
+import TicketManagement from '../TicketManagement/TicketManagement';
 
 function AdminDashboard() {
   const [users, setUsers] = useState([]);
@@ -212,6 +213,12 @@ function AdminDashboard() {
             <FaHistory /> Storico Biglietti
           </button>
           <button 
+            className={`tab-button ${activeTab === 'ticketManagement' ? 'active' : ''}`}
+            onClick={() => setActiveTab('ticketManagement')}
+          >
+            <FaTicketAlt /> Gestione Biglietti
+          </button>
+          <button 
             className={`tab-button ${activeTab === 'salesReports' ? 'active' : ''}`}
             onClick={() => setActiveTab('salesReports')}
           >
@@ -322,9 +329,15 @@ function AdminDashboard() {
         ) : activeTab === 'events' ? (
           <EventManagement />
         ) : activeTab === 'team' ? (
-          <TeamOverview users={users} usersMap={usersMap} teamLeaders={teamLeaders} managers={managers} fetchUsers={fetchUsers} />
+          <TeamOverview 
+            managers={managers}
+            teamLeaders={teamLeaders}
+            onAssign={handleAssign}
+          />
         ) : activeTab === 'tickets' ? (
           <TicketHistory />
+        ) : activeTab === 'ticketManagement' ? (
+          <TicketManagement />
         ) : activeTab === 'salesReports' ? (
           <SalesReports usersMap={usersMap} />
         ) : null}

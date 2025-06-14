@@ -10,6 +10,7 @@ import TeamLeaderStats from '../statistics/TeamLeaderStats';
 import SellTicketModal from '../tickets/SellTicketModal';
 import TicketHistory from '../tickets/TicketHistory';
 import EventCard from '../promoter/EventCard';
+import SalesReports from './SalesReports';
 import { 
   getMemoryCache, 
   setMemoryCache, 
@@ -41,15 +42,35 @@ function ManagerDashboard() {
   const [showSellModal, setShowSellModal] = useState(false);
   const [error, setError] = useState(null);
   const [showValidator, setShowValidator] = useState(false);
+  const [usersMap, setUsersMap] = useState({});
 
   useEffect(() => {
-    // Pulisci la cache scaduta ogni volta che la dashboard si carica
     cleanExpiredCache();
-    
     fetchEvents();
     fetchTeamLeaders();
     fetchStatistics();
+    fetchUsersMap();
   }, [currentUser.uid]);
+
+  const fetchUsersMap = async () => {
+    try {
+      const usersRef = collection(db, 'users');
+      const usersSnapshot = await getDocs(usersRef);
+      const usersMapData = {};
+      
+      usersSnapshot.forEach((doc) => {
+        const userData = doc.data();
+        usersMapData[doc.id] = {
+          name: userData.name || userData.displayName || 'Utente sconosciuto',
+          role: userData.role || 'Ruolo sconosciuto'
+        };
+      });
+      
+      setUsersMap(usersMapData);
+    } catch (error) {
+      console.error('Errore nel caricamento della mappa utenti:', error);
+    }
+  };
 
   async function fetchTeamLeaders() {
     try {
@@ -127,11 +148,6 @@ function ManagerDashboard() {
       setError('Si è verificato un errore nel caricamento dei team leader.');
     }
   }
-
-  // Rimuoviamo o commentiamo la vecchia fetchTeamLeaderStats se non più usata per le stats aggregate del manager
-  /* async function fetchTeamLeaderStats(teamLeaderId) {
-    // ... vecchia logica ...
-  } */
 
   const handleTeamLeaderClick = (leader) => {
     setSelectedTeamLeader(leader);
@@ -285,13 +301,6 @@ function ManagerDashboard() {
     }
   };
 
-  // La funzione fetchTeamLeaderStatsForSummary è ancora presente nello snippet dalla ricerca.
-  // Se non è più necessaria per le stats aggregate del Manager, può essere rimossa o modificata.
-  // Per ora, la si lascia per non rompere altre possibili dipendenze non viste.
-  async function fetchTeamLeaderStatsForSummary(teamLeaderId) {
-    // ... (codice esistente di fetchTeamLeaderStatsForSummary) ...
-  }
-
   const handleSellTicket = (event, dateItem) => {
     if (!event || !dateItem) {
         console.error("Tentativo di vendita Manager senza evento o data valida", event, dateItem);
@@ -328,11 +337,6 @@ function ManagerDashboard() {
   return (
     <div className="manager-dashboard">
       <Header />
-      <div className="dashboard-header">
-        <h1 className="header-title">Dashboard Manager</h1>
-        <p className="header-subtitle">Gestisci il tuo team e monitora le vendite</p>
-      </div>
-
       <div className="tabs-container">
         <button
           className={`tab-button ${activeTab === 'dashboard' ? 'active' : ''}`}
@@ -348,10 +352,7 @@ function ManagerDashboard() {
         </button>
         <button
           className={`tab-button ${activeTab === 'validate' ? 'active' : ''}`}
-          onClick={() => {
-            setActiveTab('validate');
-            setShowValidator(true);
-          }}
+          onClick={() => setActiveTab('validate')}
         >
           Valida Biglietti
         </button>
@@ -360,6 +361,12 @@ function ManagerDashboard() {
           onClick={() => setActiveTab('team')}
         >
           Gestione Team
+        </button>
+        <button
+          className={`tab-button ${activeTab === 'sales-reports' ? 'active' : ''}`}
+          onClick={() => setActiveTab('sales-reports')}
+        >
+          Report Vendite
         </button>
       </div>
 
@@ -507,8 +514,8 @@ function ManagerDashboard() {
                   </div>
                 </div>
               </div>
-                  );
-                })}
+                );
+              })}
           </div>
           )}
 
@@ -521,12 +528,16 @@ function ManagerDashboard() {
         </div>
       )}
 
-      {selectedEvent && selectedDateItem && (
+      {activeTab === 'sales-reports' && (
+        <SalesReports usersMap={usersMap} />
+      )}
+
+      {showSellModal && selectedEvent && selectedDateItem && (
         <SellTicketModal
           event={selectedEvent}
-          selectedDateItem={selectedDateItem}
+          dateItem={selectedDateItem}
           onClose={handleModalClose}
-          onSold={handleTicketSold}
+          onTicketSold={handleTicketSold}
         />
       )}
     </div>
