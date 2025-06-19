@@ -236,7 +236,10 @@ function SellTicketModal({ event, selectedDateItem, onClose, onSold }) {
     }
 
     // Validazione data di vendita
-    const eventDate = new Date(selectedDateItem.date);
+    const eventDate = selectedDateItem.date instanceof Date ? 
+      selectedDateItem.date : 
+      new Date(selectedDateItem.date.seconds ? selectedDateItem.date.seconds * 1000 : selectedDateItem.date);
+    
     const nextDay = new Date(eventDate);
     nextDay.setDate(nextDay.getDate() + 1);
     nextDay.setHours(4, 0, 0, 0); // Imposta a 04:00 AM del giorno successivo

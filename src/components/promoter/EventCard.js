@@ -16,7 +16,17 @@ function EventCard({ event, onSell }) {
     if (event?.eventDates && Array.isArray(event.eventDates)) {
       const validDates = event.eventDates
         .map(dateItem => {
-          const dateObj = new Date(dateItem.date);
+          const dateObj = dateItem.date instanceof Date ? 
+            dateItem.date : 
+            new Date(dateItem.date.seconds ? dateItem.date.seconds * 1000 : dateItem.date);
+          
+          // Log per debug
+          console.log('Processing date:', {
+            original: dateItem.date,
+            parsed: dateObj,
+            formatted: dateObj.toLocaleString('it-IT')
+          });
+
           // Assicuriamoci che la data sia valida
           if (isNaN(dateObj.getTime())) {
             console.error('Data non valida:', dateItem.date);
@@ -31,8 +41,18 @@ function EventCard({ event, onSell }) {
       
       // Pre-calcola le date con disponibilità per il DatePicker
       const datesWithAvailability = validDates
-        .filter(dateItem => calculateAvailabilityForDate(dateItem) > 0)
+        .filter(dateItem => {
+          const hasAvailability = calculateAvailabilityForDate(dateItem) > 0;
+          console.log('Date availability check:', {
+            date: dateItem.dateObj.toLocaleString('it-IT'),
+            availability: calculateAvailabilityForDate(dateItem),
+            isAvailable: hasAvailability
+          });
+          return hasAvailability;
+        })
         .map(dateItem => dateItem.dateObj);
+
+      console.log('Available dates:', datesWithAvailability.map(d => d.toLocaleString('it-IT')));
       setAvailableDates(datesWithAvailability);
     } else {
       setSortedDates([]);
@@ -198,7 +218,6 @@ function EventCard({ event, onSell }) {
                 locale="it"
                 className="date-picker-input"
                 calendarClassName="custom-calendar"
-                minDate={new Date()}
                 inline={false}
                 popperPlacement="top-start"
               />
