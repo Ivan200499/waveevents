@@ -205,7 +205,7 @@ function TicketManagement() {
     }
     acc[dateKey].tickets.push(ticket);
     acc[dateKey].total += ticket.quantity || 1;
-    if (ticket.status === 'validated') {
+    if (ticket.isValidated === true) {
       acc[dateKey].validated += ticket.quantity || 1;
     }
     return acc;
@@ -309,7 +309,7 @@ function TicketManagement() {
       {/* Contatori totali dell'evento */}
       <div className="event-stats">
         <div className="stat-box">
-          <div className="stat-value validated">{tickets.filter(t => t.status === 'validated').reduce((sum, t) => sum + t.quantity, 0)}</div>
+          <div className="stat-value validated">{tickets.filter(t => t.isValidated === true).reduce((sum, t) => sum + t.quantity, 0)}</div>
           <div className="stat-label">Biglietti Validati</div>
         </div>
         <div className="stat-box">
@@ -319,7 +319,7 @@ function TicketManagement() {
         <div className="stat-box">
           <div className="stat-value pending">
             {tickets.reduce((sum, t) => sum + t.quantity, 0) - 
-             tickets.filter(t => t.status === 'validated').reduce((sum, t) => sum + t.quantity, 0)}
+             tickets.filter(t => t.isValidated === true).reduce((sum, t) => sum + t.quantity, 0)}
           </div>
           <div className="stat-label">Da Validare</div>
         </div>

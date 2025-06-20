@@ -479,16 +479,24 @@ function TicketHistory() {
       
       // Se sembra un codice biglietto (solo numeri e lettere, nessuno spazio)
       if (/^[a-zA-Z0-9]+$/.test(searchQuery)) {
-        // Cerca prima per codice esatto
+        // Cerca prima per codice esatto in entrambi i campi
         const ticketsRef = collection(db, 'tickets');
-        const exactQuery = query(
+        const exactQueryCode = query(
           ticketsRef,
           where('code', '==', searchQuery)
         );
-        const exactSnapshot = await getDocs(exactQuery);
+        const exactQueryTicketCode = query(
+          ticketsRef,
+          where('ticketCode', '==', searchQuery)
+        );
         
-        if (!exactSnapshot.empty) {
-          const ticketsData = exactSnapshot.docs.map(doc => {
+        const [exactSnapshotCode, exactSnapshotTicketCode] = await Promise.all([
+          getDocs(exactQueryCode),
+          getDocs(exactQueryTicketCode)
+        ]);
+        
+        if (!exactSnapshotCode.empty || !exactSnapshotTicketCode.empty) {
+          const ticketsData = [...exactSnapshotCode.docs, ...exactSnapshotTicketCode.docs].map(doc => {
             const data = doc.data();
             return {
               id: doc.id,
@@ -525,6 +533,7 @@ function TicketHistory() {
       // filtra i biglietti localmente
       const filtered = tickets.filter(ticket => 
         (ticket.code && ticket.code.toLowerCase().includes(lowerQuery)) ||
+        (ticket.ticketCode && ticket.ticketCode.toLowerCase().includes(lowerQuery)) ||
         (ticket.customerName && ticket.customerName.toLowerCase().includes(lowerQuery)) ||
         (ticket.customerEmail && ticket.customerEmail.toLowerCase().includes(lowerQuery)) ||
         (ticket.eventName && ticket.eventName.toLowerCase().includes(lowerQuery))
