@@ -17,7 +17,7 @@ import InitialSetup from './components/auth/InitialSetup';
 import ProtectedRoute from './components/shared/ProtectedRoute';
 import AdminDashboard from './components/admin/AdminDashboard';
 import ManagerDashboard from './components/manager/ManagerDashboard';
-import TeamLeaderDashboard from './components/teamleader/TeamLeaderDashboard';
+import TeamLeaderDashboard from './components/team-leader/TeamLeaderDashboard';
 import PromoterDashboard from './components/promoter/PromoterDashboard';
 import TicketHistory from './components/tickets/TicketHistory';
 import TicketPage from './components/tickets/TicketPage';

@@ -475,71 +475,118 @@ function TicketHistory() {
     setError(null);
     
     try {
-      const lowerQuery = searchQuery.toLowerCase();
+      const lowerQuery = searchQuery.toLowerCase().trim();
+      const ticketsRef = collection(db, 'tickets');
       
-      // Se sembra un codice biglietto (solo numeri e lettere, nessuno spazio)
-      if (/^[a-zA-Z0-9]+$/.test(searchQuery)) {
-        // Cerca prima per codice esatto in entrambi i campi
-        const ticketsRef = collection(db, 'tickets');
-        const exactQueryCode = query(
-          ticketsRef,
-          where('code', '==', searchQuery)
-        );
-        const exactQueryTicketCode = query(
-          ticketsRef,
-          where('ticketCode', '==', searchQuery)
-        );
-        
-        const [exactSnapshotCode, exactSnapshotTicketCode] = await Promise.all([
-          getDocs(exactQueryCode),
-          getDocs(exactQueryTicketCode)
-        ]);
-        
-        if (!exactSnapshotCode.empty || !exactSnapshotTicketCode.empty) {
-          const ticketsData = [...exactSnapshotCode.docs, ...exactSnapshotTicketCode.docs].map(doc => {
-            const data = doc.data();
-            return {
-              id: doc.id,
-              ...data,
-              eventId: data.eventId || data.event_id || null,
-              createdAtFormatted: formatDate(data.soldAt || data.createdAt),
-              qrCode: data.qrCode || data.qr_code || null,
-              code: data.code || data.ticketCode || null,
-              eventName: data.eventName || data.event_name || 'Evento non specificato',
-              customerName: data.customerName || data.customer_name || 'Cliente non specificato',
-              customerEmail: data.customerEmail || data.customer_email || 'Email non specificata',
-              status: data.status || 'active',
-              price: data.price || data.ticketPrice || 0,
-              totalPrice: data.totalPrice || data.total_price || 0,
-              quantity: data.quantity || 1,
-              eventDate: data.eventDate || data.event_date,
-              eventLocation: data.eventLocation || data.event_location,
-              ticketType: data.ticketType || data.ticket_type || 'Standard',
-              tableNumber: data.tableNumber || data.table_number,
-              sellerId: data.sellerId || data.seller_id,
-              sellerName: data.sellerName || data.seller_name,
-              usedAt: data.usedAt || data.used_at,
-              cancelledAt: data.cancelledAt || data.cancelled_at,
-              previousStatus: data.previousStatus || data.previous_status
-            };
-          });
-          setTickets(ticketsData);
-          setLoading(false);
-          return;
-        }
-      }
+      // Prima cerca per corrispondenza esatta
+      console.log('Ricerca per:', lowerQuery);
       
-      // Se non è stato trovato un codice esatto o la ricerca non è un codice,
-      // filtra i biglietti localmente
-      const filtered = tickets.filter(ticket => 
-        (ticket.code && ticket.code.toLowerCase().includes(lowerQuery)) ||
-        (ticket.ticketCode && ticket.ticketCode.toLowerCase().includes(lowerQuery)) ||
-        (ticket.customerName && ticket.customerName.toLowerCase().includes(lowerQuery)) ||
-        (ticket.customerEmail && ticket.customerEmail.toLowerCase().includes(lowerQuery)) ||
-        (ticket.eventName && ticket.eventName.toLowerCase().includes(lowerQuery))
-      );
+      const exactMatches = await Promise.all([
+        getDocs(query(ticketsRef, where('code', '==', searchQuery))),
+        getDocs(query(ticketsRef, where('ticketCode', '==', searchQuery))),
+        getDocs(query(ticketsRef, where('id', '==', searchQuery)))
+      ]);
 
-      setTickets(filtered);
+      let searchResults = [];
+      
+      // Se non troviamo corrispondenze esatte, cerca in modo più ampio
+      if (exactMatches.every(snapshot => snapshot.empty)) {
+        console.log('Nessuna corrispondenza esatta trovata, cerco in modo più ampio...');
+        
+        // Recupera un batch più grande di biglietti
+        const allTicketsSnapshot = await getDocs(query(ticketsRef, limit(1000)));
+        console.log('Totale biglietti recuperati:', allTicketsSnapshot.size);
+        
+        // Filtra i biglietti lato client
+        searchResults = allTicketsSnapshot.docs.filter(doc => {
+          const data = doc.data();
+          
+          // Log dei dati del biglietto per debug
+          console.log('Analizzo biglietto:', {
+            id: doc.id,
+            code: data.code,
+            ticketCode: data.ticketCode,
+            customerName: data.customerName,
+            customerEmail: data.customerEmail,
+            eventName: data.eventName
+          });
+          
+          // Normalizza i campi del codice
+          const ticketCode = (data.ticketCode || '').toString().toLowerCase();
+          const code = (data.code || '').toString().toLowerCase();
+          const id = doc.id.toLowerCase();
+          
+          // Cerca corrispondenze nei vari campi
+          const matches = 
+            code.includes(lowerQuery) || 
+            ticketCode.includes(lowerQuery) || 
+            id.includes(lowerQuery) ||
+            (data.customerName || '').toString().toLowerCase().includes(lowerQuery) ||
+            (data.customerEmail || '').toString().toLowerCase().includes(lowerQuery) ||
+            (data.eventName || '').toString().toLowerCase().includes(lowerQuery);
+          
+          if (matches) {
+            console.log('Trovata corrispondenza in:', {
+              code,
+              ticketCode,
+              id,
+              customerName: data.customerName,
+              customerEmail: data.customerEmail,
+              eventName: data.eventName
+            });
+          }
+          
+          return matches;
+        });
+      } else {
+        // Usa i risultati delle corrispondenze esatte
+        searchResults = exactMatches.flatMap(snapshot => snapshot.docs);
+      }
+
+      console.log('Risultati trovati:', searchResults.length);
+
+      // Mappa i risultati nel formato corretto
+      const ticketsData = searchResults.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          eventId: data.eventId || data.event_id || null,
+          createdAtFormatted: formatDate(data.soldAt || data.createdAt),
+          qrCode: data.qrCode || data.qr_code || null,
+          code: data.code || data.ticketCode || null,
+          eventName: data.eventName || data.event_name || 'Evento non specificato',
+          customerName: data.customerName || data.customer_name || 'Cliente non specificato',
+          customerEmail: data.customerEmail || data.customer_email || 'Email non specificata',
+          status: data.status || 'active',
+          price: data.price || data.ticketPrice || 0,
+          totalPrice: data.totalPrice || data.total_price || 0,
+          quantity: data.quantity || 1,
+          eventDate: data.eventDate || data.event_date,
+          eventLocation: data.eventLocation || data.event_location,
+          ticketType: data.ticketType || data.ticket_type || 'Standard',
+          tableNumber: data.tableNumber || data.table_number,
+          sellerId: data.sellerId || data.seller_id,
+          sellerName: data.sellerName || data.seller_name,
+          usedAt: data.usedAt || data.used_at,
+          cancelledAt: data.cancelledAt || data.cancelled_at,
+          previousStatus: data.previousStatus || data.previous_status
+        };
+      });
+
+      // Ordina i risultati per data di creazione (più recenti prima)
+      ticketsData.sort((a, b) => {
+        const dateA = a.createdAt?.seconds || 0;
+        const dateB = b.createdAt?.seconds || 0;
+        return dateB - dateA;
+      });
+
+      setTickets(ticketsData);
+      
+      if (ticketsData.length === 0) {
+        console.log('Nessun risultato trovato per la ricerca:', searchQuery);
+        setError('Nessun biglietto trovato con i criteri di ricerca specificati.');
+      }
     } catch (error) {
       console.error('Errore nella ricerca:', error);
       setError('Si è verificato un errore durante la ricerca.');
@@ -663,6 +710,7 @@ function TicketHistory() {
     const lowerQuery = searchQuery.toLowerCase();
     return (
       (ticket.code && ticket.code.toLowerCase().includes(lowerQuery)) ||
+      (ticket.ticketCode && ticket.ticketCode.toLowerCase().includes(lowerQuery)) ||
       (ticket.customerName && ticket.customerName.toLowerCase().includes(lowerQuery)) ||
       (ticket.customerEmail && ticket.customerEmail.toLowerCase().includes(lowerQuery)) ||
       (ticket.eventName && ticket.eventName.toLowerCase().includes(lowerQuery))

@@ -6,12 +6,16 @@ import Header from '../common/Header';
 import SellTicketModal from '../tickets/SellTicketModal';
 import TicketHistory from '../tickets/TicketHistory';
 import PromoterStats from './PromoterStats';
+import PromoterReports from './PromoterReports';
 import EventCard from '../promoter/EventCard';
-import { FaTicketAlt, FaEuroSign, FaUsers, FaCalendarAlt, FaMapMarkerAlt } from 'react-icons/fa';
+import { FaTicketAlt, FaEuroSign, FaUsers, FaCalendarAlt, FaMapMarkerAlt, FaChartBar } from 'react-icons/fa';
 import './TeamLeaderDashboard.css';
 
 function TeamLeaderDashboard() {
+  console.log('==================== TEAM LEADER DASHBOARD ====================');
   const { currentUser } = useAuth();
+  console.log('Current User:', currentUser);
+
   const [events, setEvents] = useState([]);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [selectedDateItem, setSelectedDateItem] = useState(null);
@@ -28,7 +32,23 @@ function TeamLeaderDashboard() {
   const [promoters, setPromoters] = useState([]);
   const [selectedPromoter, setSelectedPromoter] = useState(null);
 
+  console.log('Initial State:', {
+    loading,
+    error,
+    activeTab,
+    stats
+  });
+
   useEffect(() => {
+    console.log('useEffect triggered - checking currentUser');
+    if (!currentUser) {
+      console.log('No current user found - showing error');
+      setError('Devi effettuare il login come Team Leader per accedere a questa pagina.');
+      setLoading(false);
+      return;
+    }
+
+    console.log('Starting data fetch for user:', currentUser.email);
     setLoading(true);
     Promise.all([
       fetchEvents(), 
@@ -38,6 +58,7 @@ function TeamLeaderDashboard() {
         console.error("Errore caricamento dati Team Leader:", error);
         setError('Errore nel caricamento dei dati.');
     }).finally(() => {
+        console.log('Data fetch completed');
         setLoading(false);
     });
   }, [currentUser]);
@@ -142,6 +163,7 @@ function TeamLeaderDashboard() {
 
         return {
           id: doc.id,
+          uid: doc.id,
           ...promoterData,
           totalSales,
           totalCommissions
@@ -215,6 +237,12 @@ function TeamLeaderDashboard() {
           I Miei Promoter
         </button>
         <button
+          className={`tab-button ${activeTab === 'reports' ? 'active' : ''}`}
+          onClick={() => setActiveTab('reports')}
+        >
+          Report Promoter
+        </button>
+        <button
           className={`tab-button ${activeTab === 'history' ? 'active' : ''}`}
           onClick={() => setActiveTab('history')}
         >
@@ -243,29 +271,44 @@ function TeamLeaderDashboard() {
               <div className="stat-card">
                 <FaUsers />
                 <div>
+                  <h3>Promoter Attivi</h3>
+                  <p>{promoters.length}</p>
+                </div>
+              </div>
+              <div className="stat-card">
+                <FaChartBar />
+                <div>
                   <h3>Vendite Promoter</h3>
                   <p>{stats.promoterSales}</p>
                 </div>
+              </div>
+            </div>
+
+            <div className="events-section">
+              <h2>Eventi Disponibili</h2>
+              <div className="events-grid">
+                {events.map(event => (
+                  <EventCard
+                    key={event.id}
+                    event={event}
+                    onSellTicket={handleSellTicket}
+                  />
+                ))}
               </div>
             </div>
           </div>
         )}
 
         {activeTab === 'sell' && (
-          <div className="sell-tickets-container">
-            <h2>Seleziona un Evento e una Data per la Vendita</h2>
-            <div className="events-grid promoter-events-grid">
-              {events.length > 0 ? (
-                events.map((event) => (
-                  <EventCard 
-                    key={event.id} 
-                    event={event} 
-                    onSell={handleSellTicket}
-                  />
-                ))
-              ) : (
-                <p>Nessun evento disponibile per la vendita al momento.</p>
-              )}
+          <div className="sell-section">
+            <div className="events-grid">
+              {events.map(event => (
+                <EventCard
+                  key={event.id}
+                  event={event}
+                  onSellTicket={handleSellTicket}
+                />
+              ))}
             </div>
           </div>
         )}
@@ -275,28 +318,21 @@ function TeamLeaderDashboard() {
             <h2>I Miei Promoter</h2>
             <div className="promoters-grid">
               {promoters.map(promoter => (
-                <div 
-                  key={promoter.id} 
+                <div
+                  key={promoter.id}
                   className="promoter-card"
                   onClick={() => handlePromoterClick(promoter)}
                 >
-                  <div className="promoter-header">
-                    <div className="avatar-circle">
-                      {promoter.name?.charAt(0)?.toUpperCase() || 'P'}
-                    </div>
-                    <div className="promoter-info">
-                      <h3>{promoter.name}</h3>
-                      <p>{promoter.email}</p>
-                    </div>
-                  </div>
+                  <h3>{promoter.name}</h3>
+                  <p>{promoter.email}</p>
                   <div className="promoter-stats">
-                    <div className="stat-item">
-                      <div className="stat-label">Vendite Totali</div>
-                      <div className="stat-value">{promoter.totalSales}</div>
+                    <div className="stat">
+                      <FaTicketAlt />
+                      <span>{promoter.totalSales} Biglietti</span>
                     </div>
-                    <div className="stat-item">
-                      <div className="stat-label">Commissioni Totali</div>
-                      <div className="stat-value">€{promoter.totalCommissions.toFixed(2)}</div>
+                    <div className="stat">
+                      <FaEuroSign />
+                      <span>€ {promoter.totalCommissions.toFixed(2)}</span>
                     </div>
                   </div>
                 </div>
@@ -305,17 +341,21 @@ function TeamLeaderDashboard() {
           </div>
         )}
 
+        {activeTab === 'reports' && currentUser && (
+          <PromoterReports teamLeaderId={currentUser.uid} />
+        )}
+
         {activeTab === 'history' && (
-          <TicketHistory userId={currentUser.uid} showSellerFilter={true} />
+          <TicketHistory />
         )}
       </div>
 
       {selectedEvent && selectedDateItem && (
         <SellTicketModal
           event={selectedEvent}
-          selectedDateItem={selectedDateItem}
+          dateItem={selectedDateItem}
           onClose={handleModalClose}
-          onSold={handleTicketSold}
+          onTicketSold={handleTicketSold}
         />
       )}
 
