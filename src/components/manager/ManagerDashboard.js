@@ -309,11 +309,13 @@ function ManagerDashboard() {
     }
     setSelectedEvent(event);
     setSelectedDateItem(dateItem);
+    setShowSellModal(true);
   };
 
   const handleModalClose = () => {
     setSelectedEvent(null);
     setSelectedDateItem(null);
+    setShowSellModal(false);
   };
 
   const handleTicketSold = () => {
@@ -535,7 +537,7 @@ function ManagerDashboard() {
       {showSellModal && selectedEvent && selectedDateItem && (
         <SellTicketModal
           event={selectedEvent}
-          dateItem={selectedDateItem}
+          selectedDateItem={selectedDateItem}
           onClose={handleModalClose}
           onTicketSold={handleTicketSold}
         />

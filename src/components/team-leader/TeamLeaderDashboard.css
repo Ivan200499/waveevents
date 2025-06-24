@@ -345,4 +345,174 @@
     padding: 4px 8px;
     font-size: 0.8em;
   }
+}
+
+/* Stili responsive per i report dei promoter */
+@media screen and (max-width: 768px) {
+  .promoter-reports {
+    padding: 10px;
+  }
+
+  .filters-container {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .filters-container select,
+  .filters-container button {
+    width: 100%;
+    margin: 5px 0;
+  }
+
+  .report-card {
+    margin: 10px 0;
+    padding: 15px;
+  }
+
+  .report-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .report-stats {
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  .stat-item {
+    width: 100%;
+    margin: 5px 0;
+  }
+
+  .tickets-table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .tickets-table th,
+  .tickets-table td {
+    padding: 8px;
+    font-size: 14px;
+  }
+
+  .ticket-details {
+    padding: 10px;
+  }
+
+  .ticket-row {
+    flex-direction: column;
+    padding: 10px;
+  }
+
+  .ticket-info {
+    width: 100%;
+    margin-bottom: 10px;
+  }
+
+  .ticket-actions {
+    width: 100%;
+    justify-content: flex-start;
+    gap: 10px;
+  }
+
+  .ticket-expand-button {
+    width: 100%;
+    margin-top: 10px;
+  }
+
+  .expanded-details {
+    padding: 10px;
+  }
+
+  .payment-checkbox {
+    margin: 5px 0;
+  }
+
+  /* Migliora la leggibilità delle tabelle su mobile */
+  .responsive-table {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+  }
+
+  .responsive-table table {
+    width: 100%;
+    min-width: 500px; /* Assicura che la tabella non diventi troppo stretta */
+  }
+
+  /* Stile per i bottoni su mobile */
+  .mobile-button {
+    width: 100%;
+    padding: 12px;
+    margin: 5px 0;
+    font-size: 16px;
+  }
+
+  /* Migliora la visualizzazione delle statistiche su mobile */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .stat-card {
+    padding: 15px;
+    border-radius: 8px;
+    background-color: #f8f9fa;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+
+  .stat-card h3 {
+    margin: 0 0 10px 0;
+    font-size: 16px;
+  }
+
+  .stat-card p {
+    margin: 0;
+    font-size: 20px;
+    font-weight: bold;
+  }
+
+  /* Migliora la visualizzazione dei filtri su mobile */
+  .filter-group {
+    margin-bottom: 15px;
+  }
+
+  .filter-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+  }
+
+  .filter-group select,
+  .filter-group input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 16px;
+  }
+}
+
+/* Aggiungi stili per il tema scuro su mobile */
+@media screen and (max-width: 768px) and (prefers-color-scheme: dark) {
+  .stat-card {
+    background-color: #2d3436;
+    color: #fff;
+  }
+
+  .filter-group select,
+  .filter-group input {
+    background-color: #2d3436;
+    color: #fff;
+    border-color: #4a4a4a;
+  }
+
+  .ticket-row {
+    background-color: #2d3436;
+    border-color: #4a4a4a;
+  }
 } 

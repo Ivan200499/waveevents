@@ -186,11 +186,13 @@ function TeamLeaderDashboard() {
     }
     setSelectedEvent(event);
     setSelectedDateItem(dateItem);
+    setShowSellModal(true);
   };
 
   const handleModalClose = () => {
     setSelectedEvent(null);
     setSelectedDateItem(null);
+    setShowSellModal(false);
   };
 
   const handleTicketSold = () => {
@@ -291,7 +293,7 @@ function TeamLeaderDashboard() {
                   <EventCard
                     key={event.id}
                     event={event}
-                    onSellTicket={handleSellTicket}
+                    onSell={handleSellTicket}
                   />
                 ))}
               </div>
@@ -306,7 +308,7 @@ function TeamLeaderDashboard() {
                 <EventCard
                   key={event.id}
                   event={event}
-                  onSellTicket={handleSellTicket}
+                  onSell={handleSellTicket}
                 />
               ))}
             </div>
@@ -353,7 +355,7 @@ function TeamLeaderDashboard() {
       {selectedEvent && selectedDateItem && (
         <SellTicketModal
           event={selectedEvent}
-          dateItem={selectedDateItem}
+          selectedDateItem={selectedDateItem}
           onClose={handleModalClose}
           onTicketSold={handleTicketSold}
         />
